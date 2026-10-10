@@ -7,3 +7,4 @@ export { Sid, SID_CLOCK, type SidOptions } from './sid';
 export { ImageDrive, type DiskDrive } from './drive';
 export { D64, DiskError, petscii } from './d64';
 export { openSource, type FileSource } from './container';
+export { Datasette, parseTap } from './datasette';

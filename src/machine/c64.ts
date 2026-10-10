@@ -2,6 +2,7 @@ import { MOS6502 } from '../core';
 import { C64Bus } from './bus';
 import { Cia } from './cia';
 import { CpuPort } from './cpu-port';
+import { Datasette } from './datasette';
 import { ImageDrive } from './drive';
 import { KernalTraps } from './kernal-traps';
 import { Keyboard, type C64Key } from './keyboard';
@@ -39,6 +40,7 @@ export class C64 {
   private readonly cia2: Cia;
   private readonly vic: VicII;
   readonly sid: Sid;
+  readonly tape: Datasette;
   private readonly drives = new Map<number, ImageDrive>();
   private readonly traps: KernalTraps;
   private readonly keyboard = new Keyboard();
@@ -58,6 +60,11 @@ export class C64 {
       inputB: () => this.keyboard.scanColumns(this.cia1.outputA()),
     });
     this.cia2 = new Cia({ inputA: () => 0xff, inputB: () => 0xff });
+    this.tape = new Datasette({
+      motorOn: () => this.port.motorOn,
+      pulse: () => this.cia1.pulseFlag(),
+    });
+    this.port.senseLow = () => this.tape.sense;
     this.vic = new VicII({
       readMem: (a) => this.bus.vicRead(a),
       readColor: (i) => this.bus.colorRam[i & 0x3ff]!,
@@ -101,6 +108,11 @@ export class C64 {
     const pc = this.cpu.regs.pc;
     if (this.traps.map[pc] !== 0 && this.traps.handle(pc)) return this.cpu.step();
     return this.cpu.step();
+  }
+
+  /** True while the tape is moving: the browser layer may run faster than real time. */
+  get warp(): boolean {
+    return this.tape.running;
   }
 
   get frame() {
@@ -252,6 +264,7 @@ export class C64 {
     this.cia2.tick();
     this.vic.tick();
     this.sid.tick();
+    this.tape.tick();
     this.bus.vicBank = ~this.cia2.outputA() & 3;
     let restoreActive = false;
     if (this.restoreCountdown > 0) {
