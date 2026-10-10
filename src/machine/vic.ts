@@ -37,6 +37,8 @@ export class VicII implements IoChip {
   private denSeen = false;
   /** Cycle at which BA went low for the current badline, or -1. */
   private baStart = -1;
+  private mainBorder = true;
+  private verticalBorder = true;
   private readonly regs = new Uint8Array(0x40);
   private status = 0;
   private enable = 0;
@@ -91,6 +93,8 @@ export class VicII implements IoChip {
     this.denSeen = false;
     this.displayState = false;
     this.baStart = -1;
+    this.mainBorder = true;
+    this.verticalBorder = true;
     this.baLow = false;
     this.lineWrapPending = false;
     this.vcBase = this.vc = this.rc = this.vmli = 0;
@@ -226,6 +230,14 @@ export class VicII implements IoChip {
       if (this.displayState) this.rc = (this.rc + 1) & 7;
     }
 
+    if (c === 63) {
+      const rsel = (regs[0x11]! & 0x08) !== 0;
+      const bottom = rsel ? 251 : 247;
+      const top = rsel ? 51 : 55;
+      if (this.raster === bottom) this.verticalBorder = true;
+      else if (this.raster === top && (regs[0x11]! & 0x10) !== 0) this.verticalBorder = false;
+    }
+
     // BA for this cycle: the CPU consults it before its access.
     let ba = this.baStart >= 0 && c <= LAST_C_CYCLE;
     if (!ba) ba = (SPRITE_BA[c]! & this.sprites.dmaMask()) !== 0;
@@ -309,11 +321,10 @@ export class VicII implements IoChip {
     const csel = (regs[0x16]! & 0x08) !== 0;
     const rsel = (regs[0x11]! & 0x08) !== 0;
     const den = (regs[0x11]! & 0x10) !== 0;
-    const left = csel ? 32 : 39;
-    const right = csel ? 352 : 343;
+    const left = csel ? 24 : 31;
+    const right = csel ? 344 : 335;
     const top = rsel ? 51 : 55;
     const bottom = rsel ? 251 : 247;
-    const verticalOpen = den && this.raster >= top && this.raster < bottom;
     const border = regs[0x20]! & 0x0f;
     const writeFrame =
       visible && this.raster >= FIRST_VISIBLE_RASTER && this.raster <= LAST_VISIBLE_RASTER;
@@ -323,12 +334,20 @@ export class VicII implements IoChip {
     const spritesOn = this.sprites.active !== 0;
 
     for (let i = 0; i < 8; i++) {
-      const fx = fx0 + i;
-      const inWindow = visible && verticalOpen && fx >= left && fx < right;
+      const x = (x0 + i) % 504;
+      if (visible) {
+        // Bauer 3.9: the border flip-flops are driven by the X and Y comparisons.
+        if (x === right) this.mainBorder = true;
+        if (x === left) {
+          if (this.raster === bottom) this.verticalBorder = true;
+          else if (this.raster === top && den) this.verticalBorder = false;
+          if (!this.verticalBorder) this.mainBorder = false;
+        }
+      }
       let colour = this.shiftedColor[i]!;
-      const fg = inWindow ? this.shiftedFg[i]! : 0;
+      const fg = this.shiftedFg[i]!;
       if (spritesOn) {
-        this.sprites.sample((x0 + i) % 504);
+        this.sprites.sample(x);
         const mask = this.sprites.mask;
         if (mask !== 0) {
           if ((mask & (mask - 1)) !== 0) this.hitSprites(mask);
@@ -337,7 +356,9 @@ export class VicII implements IoChip {
           if (!((regs[0x1b]! >> n) & 1 && fg)) colour = this.sprites.colors[n]!;
         }
       }
-      if (writeFrame) this.frame[rowBase + fx] = PALETTE[inWindow ? colour : border]!;
+      if (writeFrame) {
+        this.frame[rowBase + fx0 + i] = PALETTE[this.mainBorder ? border : colour]!;
+      }
     }
   }
 
