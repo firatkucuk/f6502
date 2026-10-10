@@ -10,51 +10,51 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Space+Grotesk:wght@300;400;500;600;700&family=Fira+Code:wght@400;500&family=VT323&display=swap">
   <link rel="stylesheet" href="css/style.css">
   <style>
-    /* Nyan Cat live-demo card */
+    /* Nyan Cat card — static CSS thumbnail */
     .thumb-nyancat {
-      background: #000814;
+      background: #000090;
       position: relative;
+      overflow: hidden;
     }
-    .thumb-nyancat canvas {
-      display: block;
-      width: 100%;
-      height: 100%;
-      image-rendering: pixelated;
-      image-rendering: crisp-edges;
+    .nc-stars {
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(circle 1.5px at 12% 18%, rgba(255,255,255,.8), transparent 3px),
+        radial-gradient(circle 1px  at 68% 12%, rgba(255,255,255,.7), transparent 2px),
+        radial-gradient(circle 1.5px at 82% 62%, rgba(255,255,255,.8), transparent 3px),
+        radial-gradient(circle 1px  at 28% 72%, rgba(255,255,255,.7), transparent 2px),
+        radial-gradient(circle 1.5px at 51% 83%, rgba(255,255,255,.8), transparent 3px),
+        radial-gradient(circle 1px  at 90% 30%, rgba(255,255,255,.7), transparent 2px),
+        radial-gradient(circle 1.5px at  5% 52%, rgba(255,255,255,.6), transparent 3px),
+        radial-gradient(circle 1px  at 44% 25%, rgba(255,255,255,.7), transparent 2px);
     }
-    .thumb-nyancat::after {
+    .nc-trail {
+      position: absolute;
+      left: 5%; right: 40%;
+      top: 44%; height: 16%;
+      background: linear-gradient(90deg,
+        #cc0000 0 17%, #cc5500 17% 33%, #cccc00 33% 50%,
+        #007700 50% 67%, #0000cc 67% 83%, #770099 83%);
+      border-radius: 0 2px 2px 0;
+      opacity: .85;
+    }
+    .nc-cat {
+      position: absolute;
+      width: 17%; height: 22%;
+      background: #c8c8c8;
+      border-radius: 2px 2px 3px 3px;
+      top: 37%; left: 38%;
+    }
+    .nc-cat::before, .nc-cat::after {
       content: '';
       position: absolute;
-      inset: 0;
-      background: repeating-linear-gradient(
-        0deg,
-        transparent 0px, transparent 2px,
-        rgba(0,0,0,0.12) 2px, rgba(0,0,0,0.12) 3px
-      );
-      pointer-events: none;
-      z-index: 5;
+      top: -28%; width: 28%; height: 30%;
+      background: #c8c8c8;
+      clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
     }
-    .nc-overlay {
-      position: absolute;
-      inset: 0;
-      background: #000814;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      text-align: center;
-      padding: 1.25rem;
-      font-family: var(--font-pixel);
-      font-size: 6px;
-      line-height: 2.2;
-      color: #6abfc6;
-      z-index: 10;
-      gap: 0;
-    }
-    .nc-overlay .nc-title   { font-size: 8px; color: #fff; }
-    .nc-overlay .nc-sub     { color: #887ecb; margin-top: 0.4em; }
-    .nc-overlay .nc-note    { font-size: 5px; color: #555; margin-top: 1em; line-height: 2; }
-    .nc-overlay .nc-note a  { color: #6abfc6; }
+    .nc-cat::before { left: 5%; }
+    .nc-cat::after  { right: 5%; }
 
     /* thumb-specific backgrounds */
     .thumb-rainbow {
@@ -186,18 +186,14 @@
     <div class="showcase-grid">
 
       <!-- 0. Nyan Cat (LIVE) -->
-      <div class="showcase-card reveal">
+      <a class="showcase-card reveal" href="demos/nyancat.html"
+         style="display:block; text-decoration:none; color:inherit">
         <div class="showcase-thumb thumb-nyancat">
-          <canvas id="nc-canvas" width="384" height="272"
-                  tabindex="0" aria-label="Nyan Cat C64Script demo"></canvas>
-          <div class="nc-overlay" id="nc-overlay">
-            <div class="nc-title">NYAN CAT</div>
-            <div class="nc-sub">C64SCRIPT DEMO</div>
-            <div class="nc-note">
-              Load ROMs on the<br>
-              <a href="index.html#demo">live demo page</a> to run this.
-            </div>
-          </div>
+          <div class="nc-stars"></div>
+          <div class="nc-trail"></div>
+          <div class="nc-cat"></div>
+          <div class="showcase-thumb-crt"></div>
+          <span class="thumb-label" style="z-index:6">▶ OPEN DEMO</span>
         </div>
         <div class="showcase-body">
           <h3>Nyan Cat</h3>
@@ -207,11 +203,12 @@
             <span class="tag tag-primary">Sprites</span>
             <span class="tag tag-green">LIVE</span>
           </div>
-          <a class="btn btn-outline" style="margin-top:1rem;font-size:0.78rem"
-             href="https://github.com/firatkucuk/f6502/blob/main/examples/nyancat.c64s"
-             target="_blank" rel="noopener">View C64Script source →</a>
+          <span class="btn btn-outline"
+                style="margin-top:1rem;font-size:0.78rem;display:inline-block;pointer-events:none">
+            Open showcase →
+          </span>
         </div>
-      </div>
+      </a>
 
       <!-- 1. Rainbow Border -->
       <div class="showcase-card reveal">
@@ -397,56 +394,5 @@
 </div><!-- /.page -->
 
 <script src="js/app.js"></script>
-<script src="dist/f6502.min.js"></script>
-<script>
-/* ── Nyan Cat live showcase ─────────────────────────────────────────────── */
-(function () {
-  const ROM_KEYS  = ['kernal', 'basic', 'chargen'];
-  const LS_PREFIX = 'f6502_rom_';
-
-  function loadRomFromStorage(name) {
-    try {
-      const b64 = localStorage.getItem(LS_PREFIX + name);
-      if (!b64) return null;
-      const bin = atob(b64);
-      const ab  = new Uint8Array(bin.length);
-      for (let i = 0; i < bin.length; i++) ab[i] = bin.charCodeAt(i);
-      return ab.buffer;
-    } catch (_) { return null; }
-  }
-
-  const canvas  = document.getElementById('nc-canvas');
-  const overlay = document.getElementById('nc-overlay');
-  if (!canvas) return;
-
-  const roms = {};
-  for (const k of ROM_KEYS) { const ab = loadRomFromStorage(k); if (ab) roms[k] = ab; }
-  if (!ROM_KEYS.every(k => roms[k])) { if (overlay) overlay.style.display = 'flex'; return; }
-
-  // ROMs cached — start the emulator and load nyancat.prg
-  if (overlay) overlay.style.display = 'none';
-  let player = null, paused = false;
-
-  async function start() {
-    if (!window.F6502) { setTimeout(start, 200); return; }
-    try {
-      const resp = await fetch('demos/nyancat.prg');
-      if (!resp.ok) throw new Error('Could not fetch demos/nyancat.prg');
-      const prg  = new File([await resp.arrayBuffer()], 'nyancat.prg');
-
-      player = await F6502.start({ canvas, roms, scale: 'fit', audio: false });
-      await player.load(prg);
-    } catch (err) {
-      console.error('[nyancat showcase]', err);
-      if (overlay) {
-        overlay.querySelector('.nc-note').innerHTML =
-          'Error: ' + err.message + '<br><a href="index.html#demo">Try main demo →</a>';
-        overlay.style.display = 'flex';
-      }
-    }
-  }
-  start();
-})();
-</script>
 </body>
 </html>
