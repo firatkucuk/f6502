@@ -231,10 +231,10 @@ export class KernalTraps {
     const ram = this.ram();
     const drive = this.host.drive(ram[0xba]!);
     if (!drive) return false;
-    const r = this.host.cpu.regs;
-    const zp = r.a;
-    const start = ram[zp]! | (ram[(zp + 1) & 0xff]! << 8);
-    const end = r.x | (r.y << 8);
+    // The KERNAL's SAVE entry has already stored the start pointer in $C1/$C2 and the end
+    // address in $AE/$AF before it jumps through the vector (A/X/Y are no longer the arguments).
+    const start = ram[0xc1]! | (ram[0xc2]! << 8);
+    const end = ram[0xae]! | (ram[0xaf]! << 8);
     if (ram[0xb7] === 0) return this.ret(true, { a: 8 });
     const name = this.nameBytes();
     const direct = (ram[0x9d]! & 0x80) !== 0;

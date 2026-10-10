@@ -105,10 +105,10 @@ describe('KERNAL traps', () => {
     const c64 = machine();
     setName(c64, 'HELLO', 8, 1);
     call(c64, 0xffd5, { a: 0 });
-    let r = call(c64, 0xffd5, { a: 1 });
+    call(c64, 0xffd5, { a: 1 });
     expect(c64.peek(0x90) & 0x10).toBe(0);
     c64.pokeRam(0x0801, 0x00);
-    r = call(c64, 0xffd5, { a: 1 });
+    const r = call(c64, 0xffd5, { a: 1 });
     expect(c64.peek(0x90) & 0x10).toBe(0x10);
     expect(r.p & 1).toBe(0);
   });
@@ -116,8 +116,11 @@ describe('KERNAL traps', () => {
   it('SAVE writes the memory range as a PRG', () => {
     const c64 = machine();
     for (let i = 0; i < 4; i++) c64.pokeRam(0x3000 + i, 0x10 + i);
-    c64.pokeRam(0xfb, 0x00);
-    c64.pokeRam(0xfc, 0x30);
+    // What the KERNAL's SAVE entry has stored before jumping through the vector:
+    c64.pokeRam(0xc1, 0x00); // start $3000
+    c64.pokeRam(0xc2, 0x30);
+    c64.pokeRam(0xae, 0x04); // end $3004
+    c64.pokeRam(0xaf, 0x30);
     setName(c64, 'SAVED', 8, 1);
     const r = call(c64, 0xffd8, { a: 0xfb, x: 0x04, y: 0x30 });
     expect(r.p & 1).toBe(0);
