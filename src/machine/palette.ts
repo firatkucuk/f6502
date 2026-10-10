@@ -1,0 +1,11 @@
+// Pepto's C64 colours, 0xRRGGBB.
+const RGB = [
+  0x000000, 0xffffff, 0x68372b, 0x70a4b2, 0x6f3d86, 0x588d43, 0x352879, 0xb8c76f, 0x6f4f25,
+  0x433900, 0x9a6759, 0x444444, 0x6c6c6c, 0x9ad284, 0x6c5eb5, 0x959595,
+];
+
+/** RGBA as a little-endian Uint32: 0xAABBGGRR. */
+export const PALETTE: Uint32Array = Uint32Array.from(
+  RGB,
+  (c) => (0xff000000 | ((c & 0xff) << 16) | (c & 0xff00) | ((c >> 16) & 0xff)) >>> 0,
+);
