@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>f6502 - C64 in the browser</title>
+    <style>
+      body {
+        background: #222;
+        color: #ddd;
+        font-family: sans-serif;
+        text-align: center;
+      }
+      canvas {
+        background: #000;
+        margin-top: 1rem;
+        outline: none;
+      }
+      #status {
+        min-height: 1.5rem;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>f6502</h1>
+    <canvas id="screen"></canvas>
+    <p id="status">loading...</p>
+    <p>
+      Click the screen to focus it, then type. Load a program:
+      <input id="prg" type="file" accept=".prg" />
+    </p>
+    <script src="../dist/f6502.min.js"></script>
+    <script>
+      const status = document.getElementById('status');
+      const roms = {
+        kernal: '../.testdata/openroms/bin/kernal_generic.rom',
+        basic: '../.testdata/openroms/bin/basic_generic.rom',
+        chargen: '../.testdata/openroms/bin/chargen_openroms.rom',
+      };
+      const prg = new URLSearchParams(location.search).get('prg');
+      F6502.start({ canvas: '#screen', roms, scale: 2, ...(prg ? { program: prg } : {}) })
+        .then((player) => {
+          status.textContent = 'running';
+          window.player = player;
+          document.getElementById('prg').addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (file) await player.load(file);
+          });
+        })
+        .catch((error) => {
+          status.textContent = error.name + ': ' + error.message;
+        });
+    </script>
+  </body>
+</html>

@@ -2,7 +2,7 @@ import js from '@eslint/js';
 import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
-  { ignores: ['dist', '.testdata', 'node_modules', 'scripts', '.superpowers'] },
+  { ignores: ['dist', '.testdata', 'node_modules', 'scripts', '.superpowers', '.playwright-mcp'] },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
@@ -20,6 +20,22 @@ export default tseslint.config(
             {
               group: ['**/machine', '**/machine/*', '**/browser', '**/browser/*'],
               message: 'core/ must not import from machine/ or browser/',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ['src/machine/**/*.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['**/browser', '**/browser/*'],
+              message: 'machine/ must not import from browser/',
             },
           ],
         },
