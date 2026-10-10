@@ -2,7 +2,7 @@
 //   node scripts/fetch-test-data.mjs          verify against the pinned manifest
 //   node scripts/fetch-test-data.mjs --pin    resolve HEAD SHAs, download, write the manifest
 //   node scripts/fetch-test-data.mjs --pin <source>...  pin only the named sources (klaus,
-//       singlestep, openroms, vicetests, sidtests); other manifest entries are kept. A bare --pin re-pins ALL sources
+//       singlestep, openroms, vicetests, sidtests, vdrive, tapetests); other manifest entries are kept. A bare --pin re-pins ALL sources
 //       and re-downloads everything (singlestep is about 1.1 GB).
 //   node scripts/fetch-test-data.mjs <source>...        verify/download only the named sources
 import { execSync } from 'node:child_process';
@@ -107,6 +107,16 @@ const SOURCES = {
     ],
   },
   vicetests: { repo: 'libsidplayfp/VICE-testprogs', dest: 'vicetests', list: listViceTests },
+  vdrive: {
+    repo: 'libsidplayfp/VICE-testprogs',
+    dest: 'vdrive',
+    list: (repo, sha) => listTree(repo, sha, 'vdrive'),
+  },
+  tapetests: {
+    repo: 'libsidplayfp/VICE-testprogs',
+    dest: 'tapetests',
+    list: (repo, sha) => listTree(repo, sha, 'tape'),
+  },
   sidtests: {
     repo: 'libsidplayfp/VICE-testprogs',
     dest: 'sidtests',

@@ -57,6 +57,11 @@ export class Cia implements IoChip {
   }
 
   /** Driven pin levels: output bits from the port register, input bits high. */
+  /** A falling edge on the FLAG pin (the cassette read line on CIA1). */
+  pulseFlag(): void {
+    this.pendingFlags |= 0x10;
+  }
+
   outputA(): number {
     return (this.pra | ~this.ddra) & 0xff;
   }

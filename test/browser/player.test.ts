@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { Player, type PlayerEnv, type PlayerKeyEvent } from '../../src/browser/player';
 import { C64 } from '../../src/machine/c64';
+import { D64, petscii } from '../../src/machine/d64';
 import { filled } from '../machine/helpers';
 
 function loopRoms() {
@@ -159,5 +160,56 @@ describe('Player audio', () => {
     player.pause();
     player.resume();
     expect(muted).toEqual([false, true, false]);
+  });
+});
+
+describe('Player media', () => {
+  it('mounts a D64, exports it after a SAVE through the drive, and rejects junk early', async () => {
+    const f = fakeEnv();
+    const player = new Player(new C64(loopRoms()), f.env);
+    const image = D64.format('X', '01').export();
+    await player.mountDisk(image);
+    player.c64.drive(8).saveFile(petscii('A'), Uint8Array.from([1, 8, 1]));
+    const out = player.exportDisk();
+    expect(out.length).toBe(image.length);
+    expect(out).not.toEqual(image);
+    await expect(player.mountDisk(new Uint8Array(1))).rejects.toThrow();
+    await expect(player.mountDisk(new Uint8Array(10), 'd64')).rejects.toThrow();
+  });
+
+  it('runs several frames per animation tick while the tape motor runs (warp), bounded', () => {
+    const f = fakeEnv();
+    const c64 = new C64(loopRoms());
+    const player = new Player(c64, f.env);
+    let frames = 0;
+    const orig = c64.runFrame.bind(c64);
+    c64.runFrame = () => {
+      frames++;
+      orig();
+    };
+    Object.defineProperty(c64, 'warp', { get: () => true });
+    player.resume();
+    f.fire(0);
+    const afterFirst = frames;
+    f.fire(20); // one real frame of wall time
+    expect(frames - afterFirst).toBeGreaterThan(1);
+    expect(frames - afterFirst).toBeLessThanOrEqual(10); // bounded per animation tick
+  });
+
+  it('mutes the audio while warping and restores it afterwards', () => {
+    const f = fakeEnv();
+    const c64 = new C64(loopRoms());
+    const muted: boolean[] = [];
+    const audio = { pump: () => 0, close: () => {}, setMuted: (m: boolean) => void muted.push(m) };
+    let warp = true;
+    Object.defineProperty(c64, 'warp', { get: () => warp });
+    const player = new Player(c64, f.env, { audio });
+    player.resume();
+    f.fire(0);
+    f.fire(20);
+    warp = false;
+    f.fire(40);
+    expect(muted).toContain(true);
+    expect(muted[muted.length - 1]).toBe(false);
   });
 });
