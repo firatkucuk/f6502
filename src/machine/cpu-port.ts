@@ -3,7 +3,15 @@ export class CpuPort {
   ddr = 0x00;
   data = 0x3f;
 
+  /** True while the cassette PLAY key is down (the sense line reads low). */
+  senseLow: () => boolean = () => false;
+
   constructor(private readonly onBankingChange: () => void) {}
+
+  /** The cassette motor runs when bit 5 is an output driven low. */
+  get motorOn(): boolean {
+    return ((this.data | ~this.ddr) & 0x20) === 0;
+  }
 
   /** Effective LORAM/HIRAM/CHAREN: input bits are pulled up. */
   get bankBits(): number {
@@ -12,7 +20,7 @@ export class CpuPort {
 
   /** Output bits from the data register, input bits from the pins (bit 4 sense = 1, bits 6-7 = 0). */
   readData(): number {
-    const pins = 0x3f;
+    const pins = 0x3f & ~(this.senseLow() ? 0x10 : 0);
     return ((this.data & this.ddr) | (pins & ~this.ddr)) & 0xff;
   }
 

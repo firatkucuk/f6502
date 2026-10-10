@@ -2,6 +2,9 @@ import { MOS6502 } from '../core';
 import { C64Bus } from './bus';
 import { Cia } from './cia';
 import { CpuPort } from './cpu-port';
+import { Datasette } from './datasette';
+import { ImageDrive } from './drive';
+import { KernalTraps } from './kernal-traps';
 import { Keyboard, type C64Key } from './keyboard';
 import { validateRoms, type RomSet } from './memory';
 import { parsePrg, rawProgram, type Prg } from './prg';
@@ -37,6 +40,9 @@ export class C64 {
   private readonly cia2: Cia;
   private readonly vic: VicII;
   readonly sid: Sid;
+  readonly tape: Datasette;
+  private readonly drives = new Map<number, ImageDrive>();
+  private readonly traps: KernalTraps;
   private readonly keyboard = new Keyboard();
   private restoreCountdown = 0;
   private credit = 0;
@@ -54,6 +60,11 @@ export class C64 {
       inputB: () => this.keyboard.scanColumns(this.cia1.outputA()),
     });
     this.cia2 = new Cia({ inputA: () => 0xff, inputB: () => 0xff });
+    this.tape = new Datasette({
+      motorOn: () => this.port.motorOn,
+      pulse: () => this.cia1.pulseFlag(),
+    });
+    this.port.senseLow = () => this.tape.sense;
     this.vic = new VicII({
       readMem: (a) => this.bus.vicRead(a),
       readColor: (i) => this.bus.colorRam[i & 0x3ff]!,
@@ -68,8 +79,41 @@ export class C64 {
       onCycle: () => this.tickChips(),
       rdy: () => !this.vic.baLow,
     });
+    this.traps = new KernalTraps({
+      cpu: this.cpu,
+      ram: this.bus.ram,
+      peek: (a) => this.bus.peek(a),
+      poke: (a, v) => this.bus.write(a, v),
+      drive: (n) => {
+        const d = this.drives.get(n);
+        return d?.present ? d : null;
+      },
+    });
     this.bus.powerOn();
     this.reset();
+  }
+
+  /** The disk drive for a device number (8-11); created on first use. */
+  drive(device: number): ImageDrive {
+    if (device < 8 || device > 11) throw new RangeError(`drive device must be 8-11, got ${device}`);
+    let d = this.drives.get(device);
+    if (!d) {
+      d = new ImageDrive(device);
+      this.drives.set(device, d);
+    }
+    return d;
+  }
+
+  /** One CPU step, with the KERNAL traps consulted at the instruction boundary. */
+  private stepCpu(): number {
+    const pc = this.cpu.regs.pc;
+    if (this.traps.map[pc] !== 0 && this.traps.handle(pc)) return this.cpu.step();
+    return this.cpu.step();
+  }
+
+  /** True while the tape is moving: the browser layer may run faster than real time. */
+  get warp(): boolean {
+    return this.tape.running;
   }
 
   get frame() {
@@ -89,17 +133,21 @@ export class C64 {
     this.restoreCountdown = 0;
     this.credit = 0;
     this.cpu.reset();
+    this.traps?.reset();
+    this.traps?.refresh();
   }
 
   runCycles(n: number): void {
+    this.traps.refresh();
     this.credit += n;
-    while (this.credit > 0) this.credit -= this.cpu.step();
+    while (this.credit > 0) this.credit -= this.stepCpu();
   }
 
   /** Runs until the VIC completes one frame. */
   runFrame(): void {
     const start = this.vic.frameCount;
-    while (this.vic.frameCount === start) this.cpu.step();
+    while (this.vic.frameCount === start) this.stepCpu();
+    this.traps.refresh();
     this.pumpTypeQueue();
     if (this.pendingLoad !== null && this.isReady()) {
       const { prg, options } = this.pendingLoad;
@@ -217,6 +265,7 @@ export class C64 {
     this.cia2.tick();
     this.vic.tick();
     this.sid.tick();
+    this.tape.tick();
     this.bus.vicBank = ~this.cia2.outputA() & 3;
     let restoreActive = false;
     if (this.restoreCountdown > 0) {

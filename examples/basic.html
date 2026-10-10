@@ -28,6 +28,13 @@
       Click the screen to focus it, then type. Load a program:
       <input id="prg" type="file" accept=".prg" />
     </p>
+    <p>
+      Disk (D64/T64/PRG/P00): <input id="disk" type="file" />
+      <button id="export" type="button">Export disk</button>
+      Tape (TAP): <input id="tape" type="file" accept=".tap" />
+      <button id="play" type="button">PLAY</button>
+      <span id="tapestate"></span>
+    </p>
     <script src="../dist/f6502.min.js"></script>
     <script>
       const status = document.getElementById('status');
@@ -36,17 +43,49 @@
         basic: '../.testdata/openroms/bin/basic_generic.rom',
         chargen: '../.testdata/openroms/bin/chargen_openroms.rom',
       };
-      const prg = new URLSearchParams(location.search).get('prg');
+      const query = new URLSearchParams(location.search);
+      const prg = query.get('prg');
+      const disk = query.get('disk');
+      const tape = query.get('tape');
       F6502.start({
         canvas: '#screen',
         roms,
         scale: 2,
-        audio: new URLSearchParams(location.search).has('audio'),
+        audio: query.has('audio'),
+        autostart: query.has('autostart'),
         ...(prg ? { program: prg } : {}),
+        ...(disk ? { disk } : {}),
+        ...(tape ? { tape } : {}),
       })
         .then((player) => {
           status.textContent = 'running';
           window.player = player;
+          const attach = (id, fn) =>
+            document.getElementById(id).addEventListener('change', async (e) => {
+              const file = e.target.files[0];
+              if (!file) return;
+              try {
+                await fn(file);
+                status.textContent = 'running';
+              } catch (error) {
+                status.textContent = error.name + ': ' + error.message;
+              }
+            });
+          attach('disk', (f) => player.mountDisk(f));
+          attach('tape', (f) => player.insertTape(f));
+          document.getElementById('play').addEventListener('click', () => player.tape.play());
+          document.getElementById('export').addEventListener('click', () => {
+            const url = URL.createObjectURL(new Blob([player.exportDisk()]));
+            Object.assign(document.createElement('a'), { href: url, download: 'disk.d64' }).click();
+            URL.revokeObjectURL(url);
+          });
+          setInterval(() => {
+            const t = player.tape;
+            document.getElementById('tapestate').textContent =
+              t.length > 0
+                ? `tape ${t.position}/${t.length}${player.c64.warp ? ' (warp)' : ''}`
+                : '';
+          }, 250);
           document.getElementById('prg').addEventListener('change', async (e) => {
             const file = e.target.files[0];
             if (!file) return;
