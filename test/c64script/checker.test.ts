@@ -75,4 +75,25 @@ describe('type checker', () => {
     const cp = compile('struct P { x: u8, y: u8, } let @zp p: P; program @ 0xC000 {}');
     expect(cp.structs.has('P')).toBe(true);
   });
+
+  it('throws when no program block is present', () => {
+    expect(() => compile('let @zp x: u8 = 0;')).toThrow(PsTypeError);
+  });
+
+  it('folds unannotated intLit var to constValue', () => {
+    const cp = compile('let myConst: u8 = 42; program @ 0xC000 {}');
+    const v = cp.vars.get('myConst');
+    expect(v?.constValue).toBe(42);
+    expect(v?.isConst).toBe(true);
+  });
+
+  it('folds color constant BLACK to constValue 0', () => {
+    const cp = compile('program @ 0xC000 {}');
+    expect(cp.vars.get('BLACK')?.constValue).toBe(0);
+    expect(cp.vars.get('WHITE')?.constValue).toBe(1);
+  });
+
+  it('throws when reading writeonly field inside binary expression', () => {
+    expect(() => compile('program @ 0xC000 { let @zp x: u8 = VIC2.rasterIRQ + 1; }')).toThrow(PsTypeError);
+  });
 });

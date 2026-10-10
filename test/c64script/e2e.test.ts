@@ -78,4 +78,75 @@ describe('c64script e2e', () => {
     const c64 = loadAndRun(src, 30);
     expect(c64.peek(0xD020) & 0x0F).toBe(6);
   });
+
+  it('BLACK color constant folds to zero at runtime', () => {
+    // First paint the border 7 so any missing LDA leaves A=7 — proving BLACK=0 was actually emitted
+    const src = `program @ 0xC000 {
+      VIC2.borderColor = 7;
+      VIC2.borderColor = BLACK;
+      loop {}
+    }`;
+    const c64 = loadAndRun(src, 20);
+    expect(c64.peek(0xD020) & 0x0F).toBe(0);
+  });
+
+  it('if/else executes else branch when condition is false', () => {
+    const src = `
+      let @zp x: u8 = 0;
+      program @ 0xC000 {
+        if (x == 1) { VIC2.borderColor = 1; }
+        else { VIC2.borderColor = 2; }
+        loop {}
+      }`;
+    const c64 = loadAndRun(src, 50);
+    expect(c64.peek(0xD020) & 0x0F).toBe(2);
+  });
+
+  it('break exits while loop before body decrement', () => {
+    const src = `
+      let @zp x: u8 = 5;
+      program @ 0xC000 {
+        while (x != 0) { break; }
+        VIC2.borderColor = x;
+        loop {}
+      }`;
+    const c64 = loadAndRun(src, 100);
+    expect(c64.peek(0xD020) & 0x0F).toBe(5);
+  });
+
+  it('ZP variable addition produces correct result', () => {
+    const src = `
+      let @zp a: u8 = 3;
+      let @zp b: u8 = 4;
+      program @ 0xC000 {
+        a = a + b;
+        VIC2.borderColor = a;
+        loop {}
+      }`;
+    const c64 = loadAndRun(src, 100);
+    expect(c64.peek(0xD020) & 0x0F).toBe(7);
+  });
+
+  it('hardware field ++ increments register value', () => {
+    const src = `program @ 0xC000 {
+      VIC2.borderColor = 3;
+      VIC2.borderColor++;
+      loop {}
+    }`;
+    const c64 = loadAndRun(src, 30);
+    expect(c64.peek(0xD020) & 0x0F).toBe(4);
+  });
+
+  it('while loop with > does not execute when x is below threshold', () => {
+    // x=1 < 2, so while (x > 2) should never run; buggy BEQ impl would loop forever
+    const src = `
+      let @zp x: u8 = 1;
+      program @ 0xC000 {
+        while (x > 2) { VIC2.borderColor = 15; }
+        VIC2.borderColor = x;
+        loop {}
+      }`;
+    const c64 = loadAndRun(src, 200);
+    expect(c64.peek(0xD020) & 0x0F).toBe(1);
+  });
 });
