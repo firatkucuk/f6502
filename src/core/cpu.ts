@@ -81,7 +81,7 @@ export class MOS6502 {
     const r = this.regs;
     if (this.halted) {
       this.read(0xffff); // a jammed CPU keeps the clock running
-      return 1;
+      return this.cycles - start;
     }
     if (this.serviceNext) {
       this.serviceNext = false;

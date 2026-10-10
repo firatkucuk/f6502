@@ -130,16 +130,17 @@ must still pass.
   produces sprite crunch.
 - A started shifter runs its full 24 (48) pixels regardless of the display flag and is not reset at
   the line boundary (fixes the two shifter items of #34).
-- MCBASE is a 6-bit counter that starts at `$3F` and is cleared when sprite display ends rather than
-  when DMA turns on (the 6569 behaviour documented by the VICE `spritemcbase` test). If the
-  reference screenshots disagree, Bauer's rule is kept and the ledger says so.
+- MCBASE is a 6-bit counter. *Amended during implementation:* it is cleared when sprite DMA turns on
+  (Bauer's rule), not at display end, and there is no `$3F` power-on anomaly. The spec first assumed
+  the VICE `spritemcbase` behaviour, but that test is not in the pinned VICE-testprogs tree and the
+  `spritedma/d017-*` reference screenshots match Bauer's rule (they do not match the anomaly).
+  Whether the 6569R3 truly differs remains unverified.
 
 ## 8. Verification
 
 Own timing tests (deterministic, unit suite): stolen cycles on badlines (43 / 40) and for lone,
 adjacent and all-eight sprites; BA waveforms including wrapping windows; border opening, FLD, DMA
-delay, sprite crunch and the MCBASE power-on glitch with exact pixels; interrupt timing across a
-stall.
+delay and sprite crunch with exact pixels; interrupt timing across a stall.
 
 Third-party subset (independent references):
 - `fetch-test-data` gains a pinned `vicetests` source (`libsidplayfp/VICE-testprogs`), a selective
@@ -151,6 +152,8 @@ Third-party subset (independent references):
   C64 colours and compares colour indices with our frame.
 - Selection: PAL 6569 variants only, one test per behaviour (DMA delay, sprite crunch, MCBASE,
   collision clear, border opening, FLD, sprite DMA), at least 10 tests, skipping NTSC and 8565.
+  *Amended:* the pinned tree has no MCBASE test, and the manifest holds every PAL test with a
+  reference screenshot (137) rather than one per behaviour; the 10 passing ones are the gate.
 
 ## 9. Definition of done
 

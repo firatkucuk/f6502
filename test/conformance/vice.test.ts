@@ -17,6 +17,8 @@ interface Entry {
    * test's text label, whose glyph shapes come from the stock character ROM we do not have.
    */
   ignore?: [number, number, number, number][];
+  /** Known-fail only: the exact number of differing pixels; any change (better or worse) fails. */
+  mismatches?: number;
   /** 'pass' or 'known-fail:<reason>' */
   expect: string;
 }
@@ -34,8 +36,18 @@ function roms() {
     if (!existsSync(file)) throw new Error(`${file} missing: run "npm run fetch-test-data"`);
     return new Uint8Array(readFileSync(file));
   };
+  const kernal = read('kernal_generic.rom');
+  // OpenROMs' IRQ entry ($EA53) takes 36 cycles to reach the $0314 handler, the stock KERNAL's
+  // ($FF48) 29. Cycle-exact programs install handlers via $0314, so use the stock sequence.
+  kernal.set(
+    [
+      0x48, 0x8a, 0x48, 0x98, 0x48, 0xba, 0xbd, 0x04, 0x01, 0x29, 0x10, 0xf0, 0x03, 0x6c, 0x16,
+      0x03, 0x6c, 0x14, 0x03,
+    ],
+    0xea53 - 0xe000,
+  );
   return {
-    kernal: read('kernal_generic.rom'),
+    kernal,
     basic: read('basic_generic.rom'),
     chargen: read('chargen_openroms.rom'),
   };
@@ -115,6 +127,10 @@ describe('VICE VIC-II reference screenshots', () => {
           mismatches,
           `${entry.name} is marked known-fail but now matches: remove the known-fail`,
         ).toBeGreaterThan(tolerance);
+        expect(
+          mismatches,
+          `${entry.name}: differing pixels changed (was ${entry.mismatches}); re-measure with VICE_REPORT=1 and update the manifest`,
+        ).toBe(entry.mismatches);
       }
     });
   }

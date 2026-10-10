@@ -89,6 +89,18 @@ describe('CpuHooks.rdy', () => {
     expect(cpu.cycles - start).toBe(2 + 2 * 4096);
   });
 
+  it('a jammed CPU reports the stall cycles too', () => {
+    let until = 0;
+    const { cpu } = rig([0x02], (c) => c.halted && c.cycles < until);
+    cpu.reset();
+    cpu.step(); // JAM
+    expect(cpu.halted).toBe(true);
+    const before = cpu.cycles;
+    until = before + 5;
+    const reported = cpu.step();
+    expect(reported).toBe(cpu.cycles - before);
+  });
+
   it('without the hook behaves exactly as before', () => {
     const bus = new RamBus();
     bus.mem.set([0xa9, 0x42], 0x0200);

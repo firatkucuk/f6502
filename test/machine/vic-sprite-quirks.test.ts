@@ -42,16 +42,18 @@ function line(
 }
 
 describe('MCBASE', () => {
-  it('is cleared when DMA turns on and again when the display ends', () => {
+  it('is cleared when DMA turns on and counts three bytes per row up to 63', () => {
     const r = rig();
     enable(r, 0, 100, 50);
+    r.sprites.mcBase[0] = 17; // stale value from an earlier sprite: DMA start must clear it
     const seen: number[] = [];
     for (let raster = 40; raster <= 80; raster++) {
       line(r, raster);
       seen.push(r.sprites.mcBase[0]!);
     }
-    expect(Math.max(...seen)).toBe(60); // 20 rows of 3 bytes fetched by the last line
-    expect(r.sprites.mcBase[0]).toBe(0);
+    expect(seen[seen.indexOf(Math.max(...seen)) - 1]).toBe(60);
+    expect(Math.max(...seen)).toBe(63);
+    expect(r.sprites.dma[0]).toBe(0); // 63 ends DMA
   });
 
   it('wraps as a 6-bit counter', () => {

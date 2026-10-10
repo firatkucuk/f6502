@@ -49,3 +49,12 @@ the manifest.
   exactly. Selection and expectations live in `test/conformance/vice-tests.json`.
 - Licence: the programs are distributed with VICE (GPL-2.0-or-later). They are **not vendored**;
   only fetched into the git-ignored `.testdata/`.
+
+### Start-up state the VICE harness restores
+
+The VICE programs assume the stock KERNAL. `test/conformance/vice.test.ts` therefore, after the
+OpenROMs boot: writes the stock VIC-II init values (border 14, background 6, `$D018 = $14`,
+multicolour and sprite colours), sets the cursor colour and colour RAM to light blue, and patches
+the in-memory KERNAL copy at `$EA53` with the stock 29-cycle IRQ entry (OpenROMs' takes 36 cycles
+to reach the `$0314` handler, which shifts every cycle-exact IRQ-driven program by 7 cycles).
+References start at raster line 16, ours at 15, so row y+1 of ours is compared with row y.

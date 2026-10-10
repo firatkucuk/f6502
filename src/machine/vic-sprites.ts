@@ -95,10 +95,8 @@ export class Sprites {
       case 58:
         for (let n = 0; n < 8; n++) {
           this.mc[n] = this.mcBase[n]!;
-          if (!this.dma[n]) {
-            if (this.display[n]) this.mcBase[n] = 0; // display ends: MCBASE is cleared now
-            this.display[n] = 0;
-          } else if (regs[1 + 2 * n] === (raster & 0xff)) this.display[n] = 1;
+          if (!this.dma[n]) this.display[n] = 0;
+          else if (regs[1 + 2 * n] === (raster & 0xff)) this.display[n] = 1;
         }
         this.updateActive();
         break;
