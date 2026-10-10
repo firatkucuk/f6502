@@ -72,8 +72,11 @@ export function buildNyanCatPrg() {
   const BLACK      = 0;
   const WHITE      = 1;
   const RED        = 2;
+  const PURPLE     = 4;
+  const GREEN      = 5;
   const BLUE       = 6;
   const YELLOW     = 7;
+  const ORANGE     = 8;
   const LIGHT_BLUE = 14;
   const LIGHT_GREY = 15;
 
@@ -88,19 +91,34 @@ export function buildNyanCatPrg() {
   const VIC_SPR0C  = 0xD027;
   const SPR_PTR0   = 0x07F8;
 
-  // Sprite data at $0D00  (pointer = $0D00 / 64 = 52)
-  const SPRITE_ADDR = 0x0D00;
-  const SPRITE_PTR  = SPRITE_ADDR / 64;   // 52
+  // Sprite data at $0D40  (pointer = $0D40 / 64 = 53)
+  // $0D00 is too tight after rainbow wave code; $0D40 gives headroom.
+  const SPRITE_ADDR = 0x0D40;
+  const SPRITE_PTR  = SPRITE_ADDR / 64;   // 53
 
   // ZP variables
   const ZP_CATX    = 0x02;
-  const ZP_RAINBOW = 0x03;
-  const ZP_FRAME   = 0x04;
+  const ZP_FRAME   = 0x03;   // wave phase timer (0-5, wraps every 6 frames)
+  const ZP_COL0    = 0x04;   // rainbow row 7 color
+  const ZP_COL1    = 0x05;   // rainbow row 8 color
+  const ZP_COL2    = 0x06;   // rainbow row 9 color
+  const ZP_COL3    = 0x07;   // rainbow row 10 color
+  const ZP_COL4    = 0x08;   // rainbow row 11 color
+  const ZP_COL5    = 0x09;   // rainbow row 12 color
+  const ZP_TEMP    = 0x0A;   // scratch for rotation
+
+  // Rainbow colors (Nyan Cat palette: red, orange, yellow, green, light-blue, purple)
+  const RAINBOW = [RED, ORANGE, YELLOW, GREEN, LIGHT_BLUE, PURPLE];
 
   // ── ZP initialisation (executes at load time, before program_start) ──────
-  poke(ZP_CATX,    220);   // catX starting X position
-  poke(ZP_RAINBOW, RED);   // border colour cycle starts at RED
-  poke(ZP_FRAME,   0);     // frame counter
+  poke(ZP_CATX,  220);
+  poke(ZP_FRAME, 0);
+  poke(ZP_COL0,  RAINBOW[0]);
+  poke(ZP_COL1,  RAINBOW[1]);
+  poke(ZP_COL2,  RAINBOW[2]);
+  poke(ZP_COL3,  RAINBOW[3]);
+  poke(ZP_COL4,  RAINBOW[4]);
+  poke(ZP_COL5,  RAINBOW[5]);
 
   // ════════════════════════════════════════════════════════════════════════════
   //  program_start — re-entered on emulator reset
@@ -178,30 +196,59 @@ export function buildNyanCatPrg() {
   // ════════════════════════════════════════════════════════════════════════════
 
   poke(VIC_BG0,    BLUE);            // sky blue background
-  poke(VIC_BORDER, RED);             // border = red (rainbow start)
+  poke(VIC_BORDER, RED);             // initial border = top stripe color
   poke(VIC_SPREN,  1);               // enable sprite 0
   poke(VIC_CTRL2,  0x08);            // 38-col, no multicolour
   poke(VIC_SPR0C,  LIGHT_GREY);      // sprite colour
   poke(VIC_SPR0Y,  100);             // sprite Y (pixel)
   poke(ZP_CATX,    220);             // reset catX
-  poke(ZP_RAINBOW, RED);             // restart rainbow at red
-  poke(ZP_FRAME,   0);               // frame counter
+  poke(ZP_FRAME,   0);
 
-  // ── Starfield: scattered '*' characters (colour = WHITE) ─────────────────
-  const STAR = 0x2A;                 // '*' screen code
+  // ── Fill screen rows 7-12 with solid block chars ($A0) for rainbow trail ──
+  //    Rows 7-12 = screen Y ≈ 106-145, overlapping cat body at Y=100
+  lda(0xA0); ldx(0);
+  label('rainbow_fill');
+  b(0x9D, lo(scr(7,0)),  hi(scr(7,0)));
+  b(0x9D, lo(scr(8,0)),  hi(scr(8,0)));
+  b(0x9D, lo(scr(9,0)),  hi(scr(9,0)));
+  b(0x9D, lo(scr(10,0)), hi(scr(10,0)));
+  b(0x9D, lo(scr(11,0)), hi(scr(11,0)));
+  b(0x9D, lo(scr(12,0)), hi(scr(12,0)));
+  inx();
+  b(0xE0, 40);                       // CPX #40
+  bne('rainbow_fill');
+
+  // ── Initialize color RAM for rainbow rows 7-12 from ZP_COL0-5 ─────────────
+  const CLR_ROWS = [
+    clr(7,0), clr(8,0), clr(9,0), clr(10,0), clr(11,0), clr(12,0),
+  ];
+  for (let i = 0; i < 6; i++) {
+    ldaZp(ZP_COL0 + i);
+    ldx(0);
+    label(`clr_init${i}`);
+    b(0x9D, lo(CLR_ROWS[i]), hi(CLR_ROWS[i]));
+    inx();
+    b(0xE0, 40);
+    bne(`clr_init${i}`);
+  }
+
+  // ── Starfield: scattered '*' characters — avoid rows 7-12 (rainbow zone) ──
+  const STAR = 0x2A;
   const starPositions = [
-    [0, 3], [0, 25],
-    [2, 12], [2, 36],
-    [3, 7],  [3, 28],
-    [4, 18], [4, 32],
-    // rows 5-9 avoided (sprite sits there at Y=100)
-    [10, 2],  [10, 38],
-    [12, 15],
-    [15, 6],  [15, 28],
-    [18, 10], [18, 35],
-    [20, 22],
-    [22, 8],
-    [24, 17],
+    [0, 3],  [0, 25],
+    [1, 14], [1, 36],
+    [2, 7],  [2, 28],
+    [3, 18], [3, 32],
+    [4, 2],  [4, 38],
+    [5, 11], [5, 22],
+    // rows 7-12: rainbow stripe zone (skipped)
+    [13, 5], [13, 30],
+    [14, 16],
+    [16, 8], [16, 33],
+    [18, 20],
+    [20, 3], [20, 28],
+    [22, 14],
+    [24, 22],
   ];
   for (const [r, c] of starPositions) {
     poke(scr(r, c), STAR);
@@ -231,28 +278,43 @@ export function buildNyanCatPrg() {
   b(0xE9, 2);                        // SBC #2
   staZp(ZP_CATX);
 
-  // Every 2 frames: advance rainbow border colour
+  // Every 6 frames: rotate rainbow stripes and update border + color RAM
   ldaZp(ZP_FRAME);
   clcOp();
   b(0x69, 1);                        // ADC #1
   staZp(ZP_FRAME);
-  b(0xC9, 2);                        // CMP #2
-  bne('skip_rainbow');
+  b(0xC9, 6);                        // CMP #6
+  bne('skip_wave');
 
   lda(0);
-  staZp(ZP_FRAME);                   // reset frame counter
+  staZp(ZP_FRAME);
 
-  ldaZp(ZP_RAINBOW);
-  staAbs(VIC_BORDER);                // borderColor = rainbow
-  clcOp();
-  b(0x69, 1);                        // rainbow++
-  staZp(ZP_RAINBOW);
-  b(0xC9, 16);                       // CMP #16
-  bne('skip_rainbow');
-  lda(0);
-  staZp(ZP_RAINBOW);                 // wrap rainbow 15→0
+  // Rotate ZP_COL0-5 upward: col0←col1←col2←col3←col4←col5←old_col0
+  // Colors flow downward visually — the wave effect
+  ldaZp(ZP_COL0); staZp(ZP_TEMP);
+  ldaZp(ZP_COL1); staZp(ZP_COL0);
+  ldaZp(ZP_COL2); staZp(ZP_COL1);
+  ldaZp(ZP_COL3); staZp(ZP_COL2);
+  ldaZp(ZP_COL4); staZp(ZP_COL3);
+  ldaZp(ZP_COL5); staZp(ZP_COL4);
+  ldaZp(ZP_TEMP); staZp(ZP_COL5);
 
-  label('skip_rainbow');
+  // Sync border color to top stripe (COL0)
+  ldaZp(ZP_COL0);
+  staAbs(VIC_BORDER);
+
+  // Update color RAM for rainbow rows 7-12 (40 chars each)
+  for (let i = 0; i < 6; i++) {
+    ldaZp(ZP_COL0 + i);
+    ldx(0);
+    label(`wave_row${i}`);
+    b(0x9D, lo(CLR_ROWS[i]), hi(CLR_ROWS[i]));
+    inx();
+    b(0xE0, 40);                     // CPX #40
+    bne(`wave_row${i}`);
+  }
+
+  label('skip_wave');
   jmp('anim_loop');
 
   // ── Delay subroutine: 256×256 inner iterations ≈ 0.33 s at 1 MHz ─────────
@@ -275,23 +337,24 @@ export function buildNyanCatPrg() {
   while (LOAD + code.length < SPRITE_ADDR) b(0x00);
 
   // ── Nyan Cat sprite: 24×21 px monochrome, 63 bytes ───────────────────────
-  //   Each row = 3 bytes.  Rows 15-20 are blank (tail trailing space).
+  //   Each row = 3 bytes (MSB = leftmost pixel).  Head/ears on left (x=2-7),
+  //   pop-tart body rows 3-12, two eye-holes rows 4-5, legs rows 13-14.
   b(
-    0x0C, 0x60, 0x00,  // row  0: ears
-    0x0C, 0x60, 0x00,  // row  1: ears
-    0x1F, 0xFC, 0x00,  // row  2: head
-    0x3F, 0xFE, 0x00,  // row  3
-    0x7F, 0xFF, 0x00,  // row  4: full width
-    0x67, 0x9F, 0x00,  // row  5: eye hollows
-    0x7F, 0xFF, 0x00,  // row  6
-    0x7F, 0xFF, 0x00,  // row  7
-    0x7F, 0xFF, 0x00,  // row  8
-    0x3F, 0xFE, 0x00,  // row  9
-    0x3F, 0xFE, 0x00,  // row 10
-    0x33, 0x32, 0x00,  // row 11: legs
-    0x33, 0x32, 0x00,  // row 12
-    0x33, 0x32, 0x00,  // row 13
-    0x30, 0x02, 0x00,  // row 14: paws
+    0x1B, 0x00, 0x00,  // row  0: ear tips   (x=3,4 | x=6,7)
+    0x3F, 0x00, 0x00,  // row  1: ear bases  (x=2..7)
+    0x3F, 0xFC, 0x00,  // row  2: body top   (x=2..13)
+    0x7F, 0xFE, 0x00,  // row  3: full width (x=1..14)
+    0x67, 0x9E, 0x00,  // row  4: eyes       (x=3-4 and x=9-10 OFF)
+    0x67, 0x9E, 0x00,  // row  5: eyes
+    0x7F, 0xFE, 0x00,  // row  6
+    0x7F, 0xFE, 0x00,  // row  7
+    0x7F, 0xFE, 0x00,  // row  8
+    0x7F, 0xFE, 0x00,  // row  9
+    0x7F, 0xFE, 0x00,  // row 10
+    0x7F, 0xFE, 0x00,  // row 11
+    0x3F, 0xFC, 0x00,  // row 12: body bottom (x=2..13)
+    0x60, 0x06, 0x00,  // row 13: legs (x=1-2 and x=13-14)
+    0x60, 0x06, 0x00,  // row 14: legs
     0x00, 0x00, 0x00,  // rows 15-20: blank
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,

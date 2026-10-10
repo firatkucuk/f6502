@@ -190,12 +190,7 @@
           <div class="rom-loader" id="rom-loader">
             <div class="rom-loader-logo">f6502</div>
             <div class="rom-loader-sub">COMMODORE 64</div>
-            <p>ROMs not cached in this browser.<br>Load them once on the live demo page.</p>
-            <div class="rom-loader-actions">
-              <a href="../index.html#demo" class="btn btn-primary" style="font-size:0.85rem">
-                Load ROMs on demo page →
-              </a>
-            </div>
+            <p id="rom-loader-msg">Loading demo…</p>
           </div>
         </div>
         <div class="crt-brand">f6502 · COMMODORE 64</div>
@@ -652,53 +647,45 @@ Prism.highlightAll();
 
 /* ── Nyan Cat emulator ───────────────────────────────────────────────────── */
 (function () {
-  const ROM_KEYS  = ['kernal', 'basic', 'chargen'];
-  const LS_PREFIX = 'f6502_rom_';
-
-  function romFromStorage(name) {
-    try {
-      const b64 = localStorage.getItem(LS_PREFIX + name);
-      if (!b64) return null;
-      const bin = atob(b64);
-      const arr = new Uint8Array(bin.length);
-      for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
-      return arr.buffer;
-    } catch (_) { return null; }
-  }
-
   const canvas     = document.getElementById('emu-canvas');
   const romLoader  = document.getElementById('rom-loader');
+  const loaderMsg  = document.getElementById('rom-loader-msg');
   const powerLed   = document.getElementById('power-led');
   const restartBtn = document.getElementById('restart-btn');
   if (!canvas) return;
 
-  const roms = {};
-  for (const k of ROM_KEYS) { const ab = romFromStorage(k); if (ab) roms[k] = ab; }
-  if (!ROM_KEYS.every(k => roms[k])) {
-    if (romLoader) romLoader.style.display = 'flex';
-    return;
-  }
-
-  if (romLoader)  romLoader.style.display  = 'none';
-  if (powerLed)   powerLed.style.display   = 'block';
-  if (restartBtn) restartBtn.style.display = 'inline-flex';
+  if (romLoader) romLoader.style.display = 'flex';
 
   let player = null;
+
+  async function fetchBin(name) {
+    const resp = await fetch(name);
+    if (!resp.ok) throw new Error(`Could not fetch ${name} (${resp.status})`);
+    return resp.arrayBuffer();
+  }
 
   async function start() {
     if (!window.F6502) { setTimeout(start, 200); return; }
     try {
-      const resp = await fetch('nyancat.prg');
-      if (!resp.ok) throw new Error('Could not fetch nyancat.prg');
-      const prg = new File([await resp.arrayBuffer()], 'nyancat.prg');
+      const [kernal, basic, chargen, prgBuf] = await Promise.all([
+        fetchBin('kernal.bin'),
+        fetchBin('basic.bin'),
+        fetchBin('chargen.bin'),
+        fetchBin('nyancat.prg'),
+      ]);
+      const roms = { kernal, basic, chargen };
+      const prg  = new File([prgBuf], 'nyancat.prg');
+
+      if (romLoader)  romLoader.style.display  = 'none';
+      if (powerLed)   powerLed.style.display   = 'block';
+      if (restartBtn) restartBtn.style.display = 'inline-flex';
+
       player = await F6502.start({ canvas, roms, scale: 'fit', audio: false });
       await player.load(prg);
     } catch (err) {
       console.error('[nyancat]', err);
-      if (romLoader) {
-        romLoader.querySelector('p').textContent = 'Error: ' + err.message;
-        romLoader.style.display = 'flex';
-      }
+      if (loaderMsg) loaderMsg.textContent = 'Error: ' + err.message;
+      if (romLoader) romLoader.style.display = 'flex';
     }
   }
 
