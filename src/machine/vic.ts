@@ -1,5 +1,7 @@
 import type { IoChip } from './io';
 import { PALETTE } from './palette';
+import { renderGraphics } from './vic-graphics';
+import { Sprites } from './vic-sprites';
 
 export const FRAME_WIDTH = 384;
 export const FRAME_HEIGHT = 272;
@@ -37,11 +39,19 @@ export class VicII implements IoChip {
   private vmli = 0;
   private readonly chars = new Uint8Array(40);
   private readonly colors = new Uint8Array(40);
-  private readonly prev = new Uint8Array(8);
-  private readonly cur = new Uint8Array(8);
-  private readonly shifted = new Uint8Array(8);
+  private readonly bgColors = new Uint8Array(4);
+  private readonly gColor = new Uint8Array(8);
+  private readonly gFg = new Uint8Array(8);
+  private readonly prevColor = new Uint8Array(8);
+  private readonly prevFg = new Uint8Array(8);
+  private readonly shiftedColor = new Uint8Array(8);
+  private readonly shiftedFg = new Uint8Array(8);
+  private readonly sprites: Sprites;
+  private spriteSpriteHits = 0;
+  private spriteBgHits = 0;
 
   constructor(private readonly mem: VicMemory) {
+    this.sprites = new Sprites(this.regs, mem);
     this.reset();
   }
 
@@ -50,7 +60,17 @@ export class VicII implements IoChip {
   }
 
   get debug() {
-    return { vcBase: this.vcBase, vc: this.vc, rc: this.rc, displayState: this.displayState };
+    return {
+      vcBase: this.vcBase,
+      vc: this.vc,
+      rc: this.rc,
+      displayState: this.displayState,
+      sprites: {
+        dma: Array.from(this.sprites.dma),
+        display: Array.from(this.sprites.display),
+        mcBase: Array.from(this.sprites.mcBase),
+      },
+    };
   }
 
   reset(): void {
@@ -64,7 +84,11 @@ export class VicII implements IoChip {
     this.vcBase = this.vc = this.rc = this.vmli = 0;
     this.raster = 0;
     this.cycle = 1;
-    this.prev.fill(0);
+    this.prevColor.fill(0);
+    this.prevFg.fill(0);
+    this.spriteSpriteHits = 0;
+    this.spriteBgHits = 0;
+    this.sprites.reset();
     // Raster 0 matches compare 0 at power-on; that is the initial state, not an edge.
     this.matched = true;
   }
@@ -72,6 +96,17 @@ export class VicII implements IoChip {
   // ---- registers --------------------------------------------------------
 
   read(reg: number): number {
+    reg &= 0x3f;
+    if (reg === 0x1e) {
+      const v = this.spriteSpriteHits;
+      this.spriteSpriteHits = 0;
+      return v;
+    }
+    if (reg === 0x1f) {
+      const v = this.spriteBgHits;
+      this.spriteBgHits = 0;
+      return v;
+    }
     return this.peek(reg);
   }
 
@@ -91,8 +126,9 @@ export class VicII implements IoChip {
       case 0x1a:
         return this.enable | 0xf0;
       case 0x1e:
+        return this.spriteSpriteHits;
       case 0x1f:
-        return 0;
+        return this.spriteBgHits;
       default:
         if (reg >= 0x20 && reg <= 0x2e) return this.regs[reg]! | 0xf0;
         if (reg >= 0x2f) return 0xff;
@@ -110,6 +146,9 @@ export class VicII implements IoChip {
       case 0x1a:
         this.enable = value & 0x0f;
         return;
+      case 0x1e:
+      case 0x1f:
+        return; // collision registers are read-only
       case 0x11:
       case 0x12:
         this.regs[reg] = value;
@@ -125,7 +164,9 @@ export class VicII implements IoChip {
   tick(): void {
     const c = this.cycle;
     if (c === 14) this.beginDisplayLine();
-    if (c >= FIRST_VISIBLE_CYCLE && c <= LAST_VISIBLE_CYCLE) this.outputCycle(c);
+    this.sprites.cycle(c, this.raster);
+    const visible = c >= FIRST_VISIBLE_CYCLE && c <= LAST_VISIBLE_CYCLE;
+    if (visible || this.sprites.active !== 0) this.outputCycle(c, visible);
     if (c === 58) this.endDisplayLine();
     if (c === CYCLES_PER_LINE) {
       this.cycle = 1;
@@ -146,6 +187,7 @@ export class VicII implements IoChip {
   }
 
   private startLine(): void {
+    this.sprites.newLine();
     if (this.raster === 0x30) this.denLatch = (this.regs[0x11]! & 0x10) !== 0;
     this.checkRasterCompare();
   }
@@ -177,39 +219,60 @@ export class VicII implements IoChip {
     if (this.displayState) this.rc = (this.rc + 1) & 7;
   }
 
-  private outputCycle(c: number): void {
+  private outputCycle(c: number, visible: boolean): void {
     const regs = this.regs;
-    const bg = regs[0x21]! & 0x0f;
-    let glyph = 0;
-    let fg = 0;
+    const ecm = (regs[0x11]! & 0x40) !== 0;
+    const mode = (ecm ? 4 : 0) | (regs[0x11]! & 0x20 ? 2 : 0) | (regs[0x16]! & 0x10 ? 1 : 0);
+    const bg = this.bgColors;
+    bg[0] = regs[0x21]! & 0x0f;
+    bg[1] = regs[0x22]! & 0x0f;
+    bg[2] = regs[0x23]! & 0x0f;
+    bg[3] = regs[0x24]! & 0x0f;
 
     if (c >= FIRST_G_CYCLE && c <= LAST_G_CYCLE) {
+      let glyph: number;
+      let code = 0;
+      let nibble = 0;
       if (this.displayState) {
         const vm = ((regs[0x18]! >> 4) & 0x0f) << 10;
-        const cb = ((regs[0x18]! >> 1) & 0x07) << 11;
         if (this.badline) {
           this.chars[this.vmli] = this.mem.readMem(vm + this.vc);
           this.colors[this.vmli] = this.mem.readColor(this.vc & 0x3ff) & 0x0f;
         }
-        const code = this.chars[this.vmli]!;
-        fg = this.colors[this.vmli]!;
-        glyph = this.mem.readMem(cb + code * 8 + this.rc);
+        code = this.chars[this.vmli]!;
+        nibble = this.colors[this.vmli]!;
+        let addr: number;
+        if (mode & 2) {
+          addr = ((regs[0x18]! & 0x08) << 10) | (this.vc << 3) | this.rc;
+        } else {
+          const cb = ((regs[0x18]! >> 1) & 0x07) << 11;
+          addr = cb + ((ecm ? code & 0x3f : code) << 3) + this.rc;
+        }
+        glyph = this.mem.readMem(addr);
         this.vc = (this.vc + 1) & 0x3ff;
         this.vmli = (this.vmli + 1) % 40;
       } else {
-        glyph = this.mem.readMem(0x3fff);
+        glyph = this.mem.readMem(ecm ? 0x39ff : 0x3fff);
       }
+      renderGraphics(this.gColor, this.gFg, mode, glyph, code, nibble, bg);
+    } else {
+      this.gColor.fill(bg[0]!);
+      this.gFg.fill(0);
     }
-
-    for (let i = 0; i < 8; i++) this.cur[i] = (glyph >> (7 - i)) & 1 ? fg : bg;
 
     const xs = regs[0x16]! & 7;
     for (let i = 0; i < 8; i++) {
-      this.shifted[i] = i >= xs ? this.cur[i - xs]! : this.prev[8 + i - xs]!;
+      if (i >= xs) {
+        this.shiftedColor[i] = this.gColor[i - xs]!;
+        this.shiftedFg[i] = this.gFg[i - xs]!;
+      } else {
+        this.shiftedColor[i] = this.prevColor[8 + i - xs]!;
+        this.shiftedFg[i] = this.prevFg[8 + i - xs]!;
+      }
     }
-    this.prev.set(this.cur);
+    this.prevColor.set(this.gColor);
+    this.prevFg.set(this.gFg);
 
-    if (this.raster < FIRST_VISIBLE_RASTER || this.raster > LAST_VISIBLE_RASTER) return;
     const csel = (regs[0x16]! & 0x08) !== 0;
     const rsel = (regs[0x11]! & 0x08) !== 0;
     const den = (regs[0x11]! & 0x10) !== 0;
@@ -219,12 +282,41 @@ export class VicII implements IoChip {
     const bottom = rsel ? 251 : 247;
     const verticalOpen = den && this.raster >= top && this.raster < bottom;
     const border = regs[0x20]! & 0x0f;
+    const writeFrame =
+      visible && this.raster >= FIRST_VISIBLE_RASTER && this.raster <= LAST_VISIBLE_RASTER;
     const rowBase = (this.raster - FIRST_VISIBLE_RASTER) * FRAME_WIDTH;
     const fx0 = (c - FIRST_VISIBLE_CYCLE) * 8;
+    const x0 = ((((c - FIRST_VISIBLE_CYCLE) * 8 + 496) % 504) + 504) % 504;
+    const spritesOn = this.sprites.active !== 0;
+
     for (let i = 0; i < 8; i++) {
       const fx = fx0 + i;
-      const colour = verticalOpen && fx >= left && fx < right ? this.shifted[i]! : border;
-      this.frame[rowBase + fx] = PALETTE[colour]!;
+      const inWindow = visible && verticalOpen && fx >= left && fx < right;
+      let colour = this.shiftedColor[i]!;
+      const fg = inWindow ? this.shiftedFg[i]! : 0;
+      if (spritesOn) {
+        this.sprites.sample((x0 + i) % 504);
+        const mask = this.sprites.mask;
+        if (mask !== 0) {
+          if ((mask & (mask - 1)) !== 0) this.hitSprites(mask);
+          if (fg) this.hitBackground(mask);
+          const n = 31 - Math.clz32(mask & -mask); // lowest-numbered sprite wins
+          if (!((regs[0x1b]! >> n) & 1 && fg)) colour = this.sprites.colors[n]!;
+        }
+      }
+      if (writeFrame) this.frame[rowBase + fx] = PALETTE[inWindow ? colour : border]!;
     }
+  }
+
+  private hitSprites(bits: number): void {
+    const before = this.spriteSpriteHits;
+    this.spriteSpriteHits |= bits;
+    if (before === 0) this.status |= 0x04;
+  }
+
+  private hitBackground(bits: number): void {
+    const before = this.spriteBgHits;
+    this.spriteBgHits |= bits;
+    if (before === 0) this.status |= 0x02;
   }
 }
