@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { start } from '../../src/browser/player';
+import { D64 } from '../../src/machine/d64';
 import { filled } from '../machine/helpers';
 
 class FakeTarget {
@@ -88,5 +89,34 @@ describe('start()', () => {
     expect(documentTarget.has('keydown') && documentTarget.has('keyup')).toBe(true);
     expect(windowTarget.has('blur')).toBe(true);
     expect(canvas.has('keydown')).toBe(false);
+  });
+
+  it('mounts a disk and inserts a tape before the first frame', async () => {
+    stubDom();
+    const canvas = fakeCanvas();
+    const tap = new Uint8Array(24);
+    tap.set(new TextEncoder().encode('C64-TAPE-RAW'), 0);
+    tap[16] = 4;
+    tap.set([0x30, 0x30, 0x30, 0x30], 20);
+    const player = await start({
+      canvas: canvas as unknown as HTMLCanvasElement,
+      roms: roms(),
+      disk: D64.format('X', '01').export(),
+      tape: tap,
+    });
+    expect(player.c64.drive(8).present).toBe(true);
+    expect(player.tape.length).toBe(4);
+  });
+
+  it('rejects a junk disk before starting', async () => {
+    stubDom();
+    const canvas = fakeCanvas();
+    await expect(
+      start({
+        canvas: canvas as unknown as HTMLCanvasElement,
+        roms: roms(),
+        disk: { source: new Uint8Array(10), kind: 'd64' },
+      }),
+    ).rejects.toThrow();
   });
 });

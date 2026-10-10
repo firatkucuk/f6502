@@ -1,4 +1,5 @@
 import { C64, type LoadPrgOptions } from '../machine/c64';
+import { openSource } from '../machine/container';
 import { createWorkletSink, AudioPump, type AudioSink } from './audio';
 import { FrameClock } from './clock';
 import { KeyMapper, type KeyEventLike } from './keymap';
@@ -40,6 +41,9 @@ export interface PlayerOptions {
   audio?: PlayerAudio;
 }
 
+/** Frames emulated per animation tick while the tape motor runs. */
+const WARP_FRAMES = 10;
+
 export class Player {
   running = false;
   private rafId = 0;
@@ -49,6 +53,7 @@ export class Player {
   private readonly unlisten: Array<() => void> = [];
   private readonly readyFrames: number;
   private readonly audio: PlayerAudio | undefined;
+  private warping = false;
 
   constructor(
     readonly c64: C64,
@@ -80,7 +85,7 @@ export class Player {
   resume(): void {
     if (this.running) return;
     this.running = true;
-    this.audio?.setMuted(false);
+    this.audio?.setMuted(this.warping);
     this.clock.reset();
     this.schedule();
   }
@@ -115,6 +120,33 @@ export class Player {
     if (!ready) throw new ReadyTimeoutError(this.readyFrames);
   }
 
+  /** Mounts a disk image or program on drive 8; junk is rejected here, never at LOAD time. */
+  async mountDisk(
+    source: Source,
+    kind?: 'd64' | 't64' | 'prg' | 'p00',
+    name?: string,
+  ): Promise<void> {
+    const bytes = await toBytes(source);
+    this.c64.drive(8).mount(openSource(bytes, kind, name));
+  }
+
+  unmountDisk(): void {
+    this.c64.drive(8).unmount();
+  }
+
+  /** The (possibly modified) D64 in drive 8 as a fresh copy. */
+  exportDisk(): Uint8Array {
+    return this.c64.drive(8).exportD64();
+  }
+
+  async insertTape(source: Source): Promise<void> {
+    this.c64.tape.insert(await toBytes(source));
+  }
+
+  get tape() {
+    return this.c64.tape;
+  }
+
   destroy(): void {
     this.pause();
     this.mapper.releaseAll();
@@ -128,7 +160,14 @@ export class Player {
   private schedule(): void {
     this.rafId = this.env.requestFrame((now) => {
       if (!this.running) return;
-      const frames = this.clock.advance(now);
+      const elapsed = this.clock.advance(now);
+      // While the tape motor runs the machine is fast-forwarded (bounded per animation tick).
+      const warp = this.c64.warp;
+      const frames = warp ? WARP_FRAMES : elapsed;
+      if (warp !== this.warping) {
+        this.warping = warp;
+        this.audio?.setMuted(warp);
+      }
       for (let i = 0; i < frames; i++) {
         this.keys.pump();
         this.c64.runFrame();
@@ -146,6 +185,12 @@ export interface StartOptions {
   program?: Source | { source: Source; address?: number; start?: number };
   scale?: number | 'fit';
   keyboardTarget?: 'canvas' | 'document';
+  /** A disk image or program for drive 8 (D64, T64, P00 or PRG; detected by content). */
+  disk?: Source | { source: Source; kind?: 'd64' | 't64' | 'prg' | 'p00'; name?: string };
+  /** A TAP file for the datasette. */
+  tape?: Source;
+  /** Start the disk (`LOAD"*",8,1` + `RUN`) or the tape (PLAY + `LOAD` + `RUN`) after boot. */
+  autostart?: boolean;
   /**
    * Play the SID through Web Audio. Starts after the first user gesture (autoplay policy); falls
    * back to silence with a console notice when AudioWorklet is unavailable.
@@ -245,7 +290,31 @@ export async function start(options: StartOptions): Promise<Player> {
       baseDispose?.();
     };
   }
+  if (options.disk !== undefined) {
+    const d = options.disk;
+    if (
+      typeof d === 'object' &&
+      !(d instanceof Uint8Array) &&
+      !(d instanceof ArrayBuffer) &&
+      !(d instanceof Blob) &&
+      'source' in d
+    ) {
+      await player.mountDisk(d.source, d.kind, d.name);
+    } else {
+      await player.mountDisk(d as Source);
+    }
+  }
+  if (options.tape !== undefined) await player.insertTape(options.tape);
   player.resume();
+  if (options.autostart) {
+    c64.runUntilReady(600);
+    if (options.disk !== undefined) {
+      player.type('LOAD"*",8,1\rRUN\r');
+    } else if (options.tape !== undefined) {
+      player.tape.play();
+      player.type('LOAD"",1\rRUN\r');
+    }
+  }
   if (options.program !== undefined) {
     if (isProgramObject(options.program)) {
       const { source, address, start: startAddress } = options.program;

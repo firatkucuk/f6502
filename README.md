@@ -3,14 +3,17 @@
 A browser-based 6502 / Commodore 64 emulator in TypeScript. No backend, no runtime dependencies.
 
 Status: the cycle-accurate 6502 core, the C64 machine (memory map, CIAs, keyboard), a PAL VIC-II
-with all graphics modes, sprites, collisions, badline and sprite-DMA CPU stalls, border opening and
-sprite crunch, a clean-room SID (6581 and 8580 models, three voices, ADSR with the delay bug, noise,
-sync, ring mod, filter) with `AudioWorklet` playback via `start({ audio: true })`, and the browser
-layer are implemented. The VIC-II is checked against VICE reference screenshots (14 of 137 match
-pixel for pixel, the rest are tracked in #43) and the SID against the VICE SID test programs (17
-self-checking programs pass; the rest are tracked in #52). Combined waveforms
-and the 6581 filter curve are documented approximations. Disk/tape media and the demo site are
-planned (see `docs/superpowers/specs/`).
+(all graphics modes, sprites, badline and sprite-DMA CPU stalls, border opening, sprite crunch), a
+clean-room SID (6581 and 8580 models) with `AudioWorklet` playback via `start({ audio: true })`,
+disk and tape media, and the browser layer are implemented. Disks are D64 (read and write, with
+export), T64, P00 and PRG, served by a KERNAL-level trap on device 8 (`LOAD`, `SAVE`, directory
+listing, sequential files, the DOS command channel); fast loaders and copy protection that bypass
+the KERNAL do not work, and there is no REL support. Tapes are TAP files played pulse by pulse into
+CIA1 (standard and turbo loaders), with warp while the motor runs; there is no tape recording.
+The VIC-II is checked against VICE reference screenshots (14 of 137 match pixel for pixel, the rest
+are tracked in #43) and the SID against the VICE SID test programs (17 self-checking programs pass;
+the rest are tracked in #52). Combined waveforms and the 6581 filter curve are documented
+approximations. The demo site is planned (see `docs/superpowers/specs/`).
 
 ## Browser usage
 
