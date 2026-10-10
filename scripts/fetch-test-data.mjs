@@ -2,9 +2,10 @@
 //   node scripts/fetch-test-data.mjs          verify against the pinned manifest
 //   node scripts/fetch-test-data.mjs --pin    resolve HEAD SHAs, download, write the manifest
 //   node scripts/fetch-test-data.mjs --pin <source>...  pin only the named sources (klaus,
-//       singlestep, openroms); other manifest entries are kept. A bare --pin re-pins ALL sources
+//       singlestep, openroms, vicetests); other manifest entries are kept. A bare --pin re-pins ALL sources
 //       and re-downloads everything (singlestep is about 1.1 GB).
 //   node scripts/fetch-test-data.mjs <source>...        verify/download only the named sources
+import { execSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
@@ -15,6 +16,49 @@ const MANIFEST = join(ROOT, 'scripts', 'test-data.json');
 const OUT = join(ROOT, '.testdata');
 
 const hex = (n) => n.toString(16).padStart(2, '0');
+
+function githubToken() {
+  if (process.env.GITHUB_TOKEN) return process.env.GITHUB_TOKEN;
+  try {
+    return execSync('gh auth token', {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    }).trim();
+  } catch {
+    return '';
+  }
+}
+
+async function apiJson(url) {
+  const token = githubToken();
+  const res = await fetch(url, {
+    headers: {
+      'User-Agent': 'f6502-fetch-test-data',
+      Accept: 'application/vnd.github+json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+  });
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error(`${res.status} ${res.statusText} for ${url}`);
+  return res.json();
+}
+
+/** PAL VIC-II tests that ship a reference screenshot: <dir>/<name>.prg + <dir>/references/<name>.prg.png */
+async function listViceTests(repo, sha) {
+  const base = `https://api.github.com/repos/${repo}/contents`;
+  const dirs = (await apiJson(`${base}/VICII?ref=${sha}`)) ?? [];
+  const files = [];
+  for (const dir of dirs.filter((d) => d.type === 'dir')) {
+    const refs = await apiJson(`${base}/VICII/${dir.name}/references?ref=${sha}`);
+    if (!refs) continue;
+    for (const ref of refs) {
+      if (!ref.name.endsWith('.prg.png') || /ntsc/i.test(ref.name)) continue;
+      files.push(`VICII/${dir.name}/references/${ref.name}`);
+      files.push(`VICII/${dir.name}/${ref.name.slice(0, -'.png'.length)}`);
+    }
+  }
+  return files.sort();
+}
 
 const SOURCES = {
   klaus: {
@@ -47,6 +91,7 @@ const SOURCES = {
       'COPYING',
     ],
   },
+  vicetests: { repo: 'libsidplayfp/VICE-testprogs', dest: 'vicetests', list: listViceTests },
 };
 
 const sha256 = (buf) => createHash('sha256').update(buf).digest('hex');
@@ -100,7 +145,12 @@ async function cached(dest, expectedSum) {
 
 async function fetchSource(source, sha, expected) {
   const sums = {};
-  await pool(source.files, 4, async (file) => {
+  const files = expected
+    ? Object.keys(expected)
+    : source.list
+      ? await source.list(source.repo, sha)
+      : source.files;
+  await pool(files, 4, async (file) => {
     const dest = join(OUT, source.dest, file);
     if (expected) {
       const hit = await cached(dest, expected[file]);
