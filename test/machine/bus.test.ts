@@ -8,11 +8,12 @@ function makeBus() {
   const vic = stubChip(0x77);
   const cia1 = stubChip(0x11);
   const cia2 = stubChip(0x22);
+  const sid = stubChip(0x33);
   const ref: { bus?: C64Bus } = {};
   const port = new CpuPort(() => ref.bus?.rebuild());
-  const bus = new C64Bus(markerRoms(), { vic, cia1, cia2 }, port);
+  const bus = new C64Bus(markerRoms(), { vic, cia1, cia2, sid }, port);
   ref.bus = bus;
-  return { bus, port, vic, cia1, cia2 };
+  return { bus, port, vic, cia1, cia2, sid };
 }
 
 function setBanking(bus: C64Bus, bits: number) {
@@ -119,9 +120,11 @@ describe('I/O window', () => {
     expect(cia2.writes.at(-1)).toEqual([0x02, 0x03]);
   });
 
-  it('SID is a stub (reads $FF), colour RAM upper nibble reads 1s, expansion reads $FF', () => {
-    const { bus } = makeBus();
-    expect(bus.read(0xd418)).toBe(0xff);
+  it('routes $D400-$D7FF to the SID (32 registers mirrored), colour RAM upper nibble reads 1s, expansion reads $FF', () => {
+    const { bus, sid } = makeBus();
+    expect(bus.read(0xd418)).toBe(0x33);
+    bus.write(0xd7e5, 0x99);
+    expect(sid.writes).toContainEqual([0x05, 0x99]);
     bus.write(0xd800, 0x05);
     expect(bus.read(0xd800)).toBe(0xf5);
     expect(bus.read(0xde00)).toBe(0xff);

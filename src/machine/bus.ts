@@ -13,6 +13,7 @@ export interface BusChips {
   vic: IoChip;
   cia1: IoChip;
   cia2: IoChip;
+  sid: IoChip;
 }
 
 export class C64Bus implements Bus {
@@ -101,7 +102,10 @@ export class C64Bus implements Bus {
       const reg = addr & 0x3f;
       return peek ? this.chips.vic.peek(reg) : this.chips.vic.read(reg);
     }
-    if (page < 0xd8) return 0xff; // SID stub
+    if (page < 0xd8) {
+      const reg = addr & 0x1f;
+      return peek ? this.chips.sid.peek(reg) : this.chips.sid.read(reg);
+    }
     if (page < 0xdc) return this.colorRam[addr & 0x3ff]! | 0xf0;
     if (page === 0xdc) {
       const reg = addr & 0x0f;
@@ -117,8 +121,7 @@ export class C64Bus implements Bus {
   private writeIo(addr: number, value: number): void {
     const page = addr >> 8;
     if (page < 0xd4) this.chips.vic.write(addr & 0x3f, value);
-    else if (page < 0xd8)
-      return; // SID stub
+    else if (page < 0xd8) this.chips.sid.write(addr & 0x1f, value);
     else if (page < 0xdc) this.colorRam[addr & 0x3ff] = value & 0x0f;
     else if (page === 0xdc) this.chips.cia1.write(addr & 0x0f, value);
     else if (page === 0xdd) this.chips.cia2.write(addr & 0x0f, value);

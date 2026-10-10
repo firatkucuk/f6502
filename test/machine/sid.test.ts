@@ -1,0 +1,92 @@
+import { describe, expect, it } from 'vitest';
+import { C64 } from '../../src/machine/c64';
+import { Sid } from '../../src/machine/sid';
+import { SampleRing } from '../../src/machine/sid-output';
+import { markerRoms } from './helpers';
+
+function ticks(sid: Sid, n: number): void {
+  for (let i = 0; i < n; i++) sid.tick();
+}
+
+describe('SampleRing', () => {
+  it('drains what fits and keeps the rest', () => {
+    const r = new SampleRing(8);
+    for (let i = 0; i < 5; i++) r.push(i);
+    const out = new Float32Array(3);
+    expect(r.drain(out)).toBe(3);
+    expect([...out]).toEqual([0, 1, 2]);
+    expect(r.length).toBe(2);
+  });
+
+  it('drops the oldest samples on overflow instead of growing', () => {
+    const r = new SampleRing(4);
+    for (let i = 0; i < 10; i++) r.push(i);
+    const out = new Float32Array(10);
+    expect(r.drain(out)).toBe(4);
+    expect([...out.subarray(0, 4)]).toEqual([6, 7, 8, 9]);
+  });
+});
+
+describe('Sid registers', () => {
+  it('mirrors the 32 registers and reads $FF from the paddle registers', () => {
+    const s = new Sid();
+    expect(s.read(0x19)).toBe(0xff);
+    expect(s.read(0x3a)).toBe(0xff); // $D41A mirrored at $D43A
+  });
+
+  it('write-only registers read the last bus value, which decays to zero', () => {
+    const s = new Sid();
+    s.write(0x00, 0xab);
+    expect(s.read(0x01)).toBe(0xab);
+    ticks(s, 9000);
+    expect(s.read(0x01)).toBe(0);
+  });
+
+  it('OSC3 and ENV3 read the live digital values of voice 3', () => {
+    const s = new Sid();
+    s.write(0x0f, 0x10); // voice 3 FREQ hi
+    s.write(0x12, 0x20); // saw
+    ticks(s, 100);
+    const a = s.read(0x1b);
+    ticks(s, 2000);
+    expect(s.read(0x1b)).not.toBe(a);
+    s.write(0x13, 0x00);
+    s.write(0x14, 0xf0);
+    s.write(0x12, 0x21); // gate
+    ticks(s, 9 * 20);
+    expect(s.read(0x1c)).toBe(20);
+  });
+
+  it('control writes reach the voice on the next cycle', () => {
+    const s = new Sid();
+    s.write(0x0e, 0x00);
+    s.write(0x0f, 0x00);
+    s.write(0x12, 0x08); // test bit holds the accumulator at 0
+    ticks(s, 2);
+    s.write(0x12, 0x20); // saw, test off
+    s.write(0x0f, 0x80);
+    ticks(s, 2);
+    expect(s.peek(0x1b)).toBeGreaterThan(0);
+  });
+});
+
+describe('C64 wiring', () => {
+  it('routes $D400-$D7FF to the SID and ticks it every cycle', () => {
+    const c64 = new C64(markerRoms());
+    expect(c64.sid.model).toBe('6581');
+    c64.busWrite(0x01, 0x07); // I/O visible
+    c64.busWrite(0xd40f, 0x10);
+    c64.busWrite(0xd412, 0x20);
+    c64.runCycles(500);
+    const first = c64.sid.peek(0x1b);
+    c64.runCycles(3000);
+    expect(c64.sid.peek(0x1b)).not.toBe(first);
+    expect(c64.busRead(0xd419)).toBe(0xff);
+  });
+
+  it('can be created with the 8580 model and a sample rate', () => {
+    const c64 = new C64(markerRoms(), { sid: { model: '8580', sampleRate: 44100 } });
+    expect(c64.sid.model).toBe('8580');
+    expect(c64.sid.sampleRate).toBe(44100);
+  });
+});
