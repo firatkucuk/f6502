@@ -221,7 +221,7 @@ Expected: PASS; the existing core and conformance suites are untouched and green
 
 ```bash
 git add -A
-git commit -m "feat(core): optional rdy hook holds the CPU on read cycles (BA stalls)" -m "Refs #<issue for task 1>" -m "Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>" -m "Claude-Session: https://claude.ai/code/session_01QAsVffzaJc51Ncx7uyv5AK"
+git commit -m "feat(core): optional rdy hook holds the CPU on read cycles (BA stalls)" -m "Refs #36" -m "Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>" -m "Claude-Session: https://claude.ai/code/session_01QAsVffzaJc51Ncx7uyv5AK"
 ```
 
 ---
@@ -596,7 +596,7 @@ Expected: new tests PASS. The earlier VIC/sprite/machine tests must still pass; 
 
 ```bash
 git add -A
-git commit -m "feat(machine): cycle-exact VIC access schedule, BA stalls and per-cycle badline condition" -m "Refs #<issue for task 2>" -m "Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>" -m "Claude-Session: https://claude.ai/code/session_01QAsVffzaJc51Ncx7uyv5AK"
+git commit -m "feat(machine): cycle-exact VIC access schedule, BA stalls and per-cycle badline condition" -m "Refs #37" -m "Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>" -m "Claude-Session: https://claude.ai/code/session_01QAsVffzaJc51Ncx7uyv5AK"
 ```
 
 ---
@@ -800,7 +800,7 @@ Expected: PASS, with the earlier window, sprite and conformance tests unchanged.
 
 ```bash
 git add -A
-git commit -m "feat(machine): VIC-II border flip-flops enable border opening; foreground independent of the border" -m "Refs #<issue for task 3>" -m "Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>" -m "Claude-Session: https://claude.ai/code/session_01QAsVffzaJc51Ncx7uyv5AK"
+git commit -m "feat(machine): VIC-II border flip-flops enable border opening; foreground independent of the border" -m "Refs #38" -m "Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>" -m "Claude-Session: https://claude.ai/code/session_01QAsVffzaJc51Ncx7uyv5AK"
 ```
 
 ---
@@ -1069,7 +1069,7 @@ Expected: PASS. The OpenROMs graphics conformance test must still pass: the firs
 
 ```bash
 git add -A
-git commit -m "feat(machine): sprite crunch, 6-bit MCBASE with power-on anomaly, persistent shifters, ECM bitmap mask" -m "Refs #<issue for task 4>" -m "Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>" -m "Claude-Session: https://claude.ai/code/session_01QAsVffzaJc51Ncx7uyv5AK"
+git commit -m "feat(machine): sprite crunch, 6-bit MCBASE with power-on anomaly, persistent shifters, ECM bitmap mask" -m "Refs #39" -m "Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>" -m "Claude-Session: https://claude.ai/code/session_01QAsVffzaJc51Ncx7uyv5AK"
 ```
 
 ---
@@ -1440,7 +1440,7 @@ Expected: PASS (empty manifest: only the "has a manifest" test runs).
 
 ```bash
 git add -A
-git commit -m "test(conformance): PNG decoder, pinned VICE VIC-II tests and the reference comparison harness" -m "Refs #<issue for task 5>" -m "Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>" -m "Claude-Session: https://claude.ai/code/session_01QAsVffzaJc51Ncx7uyv5AK"
+git commit -m "test(conformance): PNG decoder, pinned VICE VIC-II tests and the reference comparison harness" -m "Refs #40" -m "Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>" -m "Claude-Session: https://claude.ai/code/session_01QAsVffzaJc51Ncx7uyv5AK"
 ```
 
 ---
@@ -1516,7 +1516,7 @@ Expected: PASS (known-fails are expected to differ and are asserted to differ).
 
 ```bash
 git add -A
-git commit -m "test(conformance): curated VICE VIC-II reference set and the timing fixes it revealed" -m "Refs #<issue for task 6>" -m "Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>" -m "Claude-Session: https://claude.ai/code/session_01QAsVffzaJc51Ncx7uyv5AK"
+git commit -m "test(conformance): curated VICE VIC-II reference set and the timing fixes it revealed" -m "Refs #41" -m "Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>" -m "Claude-Session: https://claude.ai/code/session_01QAsVffzaJc51Ncx7uyv5AK"
 ```
 
 ---
@@ -1573,7 +1573,7 @@ Expected: every command exits 0.
 
 ```bash
 git add -A
-git commit -m "feat: cycle-exact VIC-II verified against VICE references and in the browser" -m "Refs #<issue for task 7>. Gates: lint, typecheck, unit, conformance (incl. VICE references), build; throughput measured; real-browser screenshot committed." -m "Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>" -m "Claude-Session: https://claude.ai/code/session_01QAsVffzaJc51Ncx7uyv5AK"
+git commit -m "feat: cycle-exact VIC-II verified against VICE references and in the browser" -m "Refs #42. Gates: lint, typecheck, unit, conformance (incl. VICE references), build; throughput measured; real-browser screenshot committed." -m "Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>" -m "Claude-Session: https://claude.ai/code/session_01QAsVffzaJc51Ncx7uyv5AK"
 ```
 
 ---
