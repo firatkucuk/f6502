@@ -18,7 +18,7 @@ describe('FrameClock', () => {
   it('clamps a huge gap (hidden tab) to at most 5 frames', () => {
     const clock = new FrameClock();
     clock.advance(0);
-    expect(clock.advance(60_000)).toBeLessThanOrEqual(5);
+    expect(clock.advance(60_000)).toBe(5);
   });
 
   it('negative or zero elapsed time yields 0 frames', () => {

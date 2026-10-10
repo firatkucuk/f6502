@@ -140,6 +140,15 @@ describe('multiple keys and blur', () => {
     expect(down.size).toBe(0);
   });
 
+  it('keys with an empty code (soft keyboards) are tracked by their key value', () => {
+    const { mapper, down } = rig();
+    mapper.down(ev('a', ''));
+    mapper.down(ev('s', ''));
+    expect(down).toEqual(new Set(['A', 'S']));
+    mapper.up(ev('a', ''));
+    expect(down).toEqual(new Set(['S']));
+  });
+
   it('a keyup arriving without a keydown is ignored', () => {
     const { mapper, down } = rig();
     expect(mapper.up(ev('a', 'KeyA'))).toBe(false);

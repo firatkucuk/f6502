@@ -82,6 +82,11 @@ function resolve(e: KeyEventLike): Resolved | null {
   return null;
 }
 
+/** Physical key identity; soft keyboards report an empty `code`, so fall back to `key`. */
+function identity(e: KeyEventLike): string {
+  return e.code || e.key;
+}
+
 export class KeyMapper {
   private readonly held = new Map<string, Resolved>();
   private physicalShift = false;
@@ -101,7 +106,7 @@ export class KeyMapper {
     }
     const resolved = resolve(e);
     if (!resolved) return false;
-    this.held.set(e.code, resolved);
+    this.held.set(identity(e), resolved);
     this.sync();
     return true;
   }
@@ -113,7 +118,7 @@ export class KeyMapper {
       return true;
     }
     if (e.key === 'PageUp') return true;
-    if (!this.held.delete(e.code)) return false;
+    if (!this.held.delete(identity(e))) return false;
     this.sync();
     return true;
   }

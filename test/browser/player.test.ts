@@ -1,10 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  Player,
-  ReadyTimeoutError,
-  type PlayerEnv,
-  type PlayerKeyEvent,
-} from '../../src/browser/player';
+import { Player, type PlayerEnv, type PlayerKeyEvent } from '../../src/browser/player';
 import { C64 } from '../../src/machine/c64';
 import { filled } from '../machine/helpers';
 
@@ -42,6 +37,33 @@ function fakeEnv() {
   return { env, presented, listeners, fire, pending: () => callbacks.size };
 }
 
+describe('Player pause and destroy', () => {
+  it('ignores key events while paused and drops a queued backlog on pause', () => {
+    const f = fakeEnv();
+    const player = new Player(new C64(loopRoms()), f.env);
+    player.resume();
+    const down = (key: string, code: string) =>
+      f.listeners.get('keydown')!({ key, code, shiftKey: false });
+    player.c64.busWrite(0xdc02, 0xff);
+    player.c64.busWrite(0xdc00, 0b1111_1101);
+    down('a', 'KeyA'); // queued, not yet applied
+    player.pause();
+    down('s', 'KeyS'); // ignored while paused
+    player.resume();
+    f.fire(0);
+    f.fire(100);
+    expect(player.c64.peek(0xdc01)).toBe(0xff); // neither key reached the matrix
+  });
+
+  it('calls the env dispose hook on destroy', () => {
+    const f = fakeEnv();
+    let disposed = 0;
+    const player = new Player(new C64(loopRoms()), { ...f.env, dispose: () => void disposed++ });
+    player.destroy();
+    expect(disposed).toBe(1);
+  });
+});
+
 describe('Player', () => {
   it('runs frames and presents them from the animation callback', () => {
     const f = fakeEnv();
@@ -69,6 +91,7 @@ describe('Player', () => {
   it('routes key events to the C64 and prevents default on handled keys', () => {
     const f = fakeEnv();
     const player = new Player(new C64(loopRoms()), f.env);
+    player.resume();
     let prevented = 0;
     f.listeners.get('keydown')!({
       key: 'a',
@@ -77,10 +100,9 @@ describe('Player', () => {
       preventDefault: () => void prevented++,
     });
     expect(prevented).toBe(1);
-    player.c64.writeIo(0xdc02, 0xff);
-    player.c64.writeIo(0xdc00, 0b1111_1101);
+    player.c64.busWrite(0xdc02, 0xff);
+    player.c64.busWrite(0xdc00, 0b1111_1101);
     expect(player.c64.peek(0xdc01)).toBe(0xff); // queued: not applied until a frame runs
-    player.resume();
     f.fire(0);
     f.fire(40); // runs frames, pumping the key queue first
     expect(player.c64.peek(0xdc01)).toBe(0b1111_1011);
@@ -91,9 +113,10 @@ describe('Player', () => {
   it('load rejects with ReadyTimeoutError when READY. never appears, but still copies the program', async () => {
     const f = fakeEnv();
     const player = new Player(new C64(loopRoms()), f.env, { readyFrames: 2 });
-    await expect(player.load(Uint8Array.from([0x00, 0xc0, 0x60]))).rejects.toBeInstanceOf(
-      ReadyTimeoutError,
-    );
+    await expect(player.load(Uint8Array.from([0x00, 0xc0, 0x60]))).rejects.toMatchObject({
+      name: 'ReadyTimeoutError',
+      frames: 2,
+    });
     expect(player.c64.peek(0xc000)).toBe(0x60);
   });
 
@@ -103,7 +126,7 @@ describe('Player', () => {
     c64.runFrame();
     [0x12, 0x05, 0x01, 0x04, 0x19, 0x2e].forEach((c, i) => c64.pokeRam(0x0400 + i, c));
     // the loop-only KERNAL never sets $D018, so point the VIC at the $0400 screen ourselves
-    c64.writeIo(0xd018, 0x14);
+    c64.busWrite(0xd018, 0x14);
     const player = new Player(c64, f.env);
     await player.load(Uint8Array.from([0x01, 0x08, 0x05]), { run: 'none' });
     expect(c64.peek(0x0801)).toBe(0x05);

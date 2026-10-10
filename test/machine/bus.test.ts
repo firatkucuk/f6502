@@ -25,6 +25,11 @@ describe('ROM validation', () => {
     const roms = markerRoms();
     expect(() => validateRoms({ ...roms, basic: filled(100, 0) })).toThrow(RomError);
     expect(() => validateRoms({ ...roms, basic: filled(100, 0) })).toThrow(/basic.*8192.*100/);
+    try {
+      validateRoms({ ...roms, basic: filled(100, 0) });
+    } catch (error) {
+      expect(error).toMatchObject({ image: 'basic', expected: 8192, actual: 100 });
+    }
   });
 });
 
