@@ -479,11 +479,117 @@ export class MOS6502 {
   }
 
   private execBranch(m: string): void {
-    throw this.unimplemented(m);
+    const r = this.regs;
+    const offset = this.fetch(); // cycle 2
+    let taken: boolean;
+    switch (m) {
+      case 'BPL':
+        taken = (r.p & N) === 0;
+        break;
+      case 'BMI':
+        taken = (r.p & N) !== 0;
+        break;
+      case 'BVC':
+        taken = (r.p & V) === 0;
+        break;
+      case 'BVS':
+        taken = (r.p & V) !== 0;
+        break;
+      case 'BCC':
+        taken = (r.p & C) === 0;
+        break;
+      case 'BCS':
+        taken = (r.p & C) !== 0;
+        break;
+      case 'BNE':
+        taken = (r.p & Z) === 0;
+        break;
+      case 'BEQ':
+        taken = (r.p & Z) !== 0;
+        break;
+      default:
+        throw this.unimplemented(m);
+    }
+    if (!taken) return;
+    this.read(r.pc); // cycle 3: dummy read
+    const target = (r.pc + ((offset << 24) >> 24)) & 0xffff;
+    if ((target & 0xff00) !== (r.pc & 0xff00)) {
+      this.read((r.pc & 0xff00) | (target & 0xff)); // cycle 4: page-fixup dummy read
+    } else {
+      this.skipPoll = true; // a taken, non-crossing branch delays interrupt servicing
+    }
+    r.pc = target;
   }
 
-  private execFlow(m: string, _mode: Mode): void {
-    throw this.unimplemented(m);
+  private execFlow(m: string, mode: Mode): void {
+    const r = this.regs;
+    switch (m) {
+      case 'JMP': {
+        if (mode === 'abs') {
+          const lo = this.fetch();
+          r.pc = lo | (this.fetch() << 8);
+        } else {
+          const pl = this.fetch();
+          const ptr = pl | (this.fetch() << 8);
+          const lo = this.read(ptr);
+          const hi = this.read((ptr & 0xff00) | ((ptr + 1) & 0xff));
+          r.pc = lo | (hi << 8);
+        }
+        break;
+      }
+      case 'JSR': {
+        const lo = this.fetch(); // cycle 2
+        this.read(0x100 | r.sp); // cycle 3: internal operation
+        this.push(r.pc >> 8); // cycle 4
+        this.push(r.pc & 0xff); // cycle 5
+        const hi = this.fetch(); // cycle 6
+        r.pc = lo | (hi << 8);
+        break;
+      }
+      case 'RTS': {
+        this.read(r.pc); // cycle 2
+        this.read(0x100 | r.sp); // cycle 3
+        const lo = this.pull(); // cycle 4
+        const hi = this.pull(); // cycle 5
+        r.pc = lo | (hi << 8);
+        this.read(r.pc); // cycle 6
+        r.pc = (r.pc + 1) & 0xffff;
+        break;
+      }
+      case 'RTI': {
+        this.read(r.pc); // cycle 2
+        this.read(0x100 | r.sp); // cycle 3
+        r.p = (this.pull() | U) & ~B; // cycle 4
+        const lo = this.pull(); // cycle 5
+        const hi = this.pull(); // cycle 6
+        r.pc = lo | (hi << 8);
+        break;
+      }
+      case 'BRK':
+        this.fetch(); // cycle 2: padding byte
+        this.pushVector(true);
+        break;
+      case 'PHA':
+        this.read(r.pc);
+        this.push(r.a);
+        break;
+      case 'PHP':
+        this.read(r.pc);
+        this.push(r.p | B | U);
+        break;
+      case 'PLA':
+        this.read(r.pc);
+        this.read(0x100 | r.sp);
+        r.a = this.nz(this.pull());
+        break;
+      case 'PLP':
+        this.read(r.pc);
+        this.read(0x100 | r.sp);
+        r.p = (this.pull() | U) & ~B;
+        break;
+      default:
+        throw this.unimplemented(m);
+    }
   }
 
   /** Cycles 3-7 of BRK / IRQ / NMI. Cycles 1-2 are done by the caller. */
