@@ -58,3 +58,19 @@ multicolour and sprite colours), sets the cursor colour and colour RAM to light 
 the in-memory KERNAL copy at `$EA53` with the stock 29-cycle IRQ entry (OpenROMs' takes 36 cycles
 to reach the `$0314` handler, which shifts every cycle-exact IRQ-driven program by 7 cycles).
 References start at raster line 16, ours at 15, so row y+1 of ours is compared with row y.
+
+## VICE SID test programs (libsidplayfp/VICE-testprogs, `SID/`)
+
+- Source of `test/conformance/sid.test.ts`. Pinned in `scripts/test-data.json` as `sidtests`; the
+  whole `SID/` tree is fetched (about 3.7 MB: PRGs, sources, readmes, data), never vendored.
+  Licence: distributed with VICE, GPL-2.0-or-later.
+- Most programs follow the VICE testbench convention: the border turns green (5) and the program
+  writes `$00` to `$D7FF` on success, red (2) and `$FF` on failure. The harness checks the border.
+  The expected values are the programs' own assertions of documented hardware behaviour.
+- Not machine-checkable and therefore left out: `zerolevel` (analogue measurements for a human to
+  read), `resid-test` (data dumps to compare with another emulator), `paddles`, `paddlescope`,
+  `stereo`, `csid-light-tests`, `sidcheck` (detection or interactive tools).
+- Only a sample of `wb_testsuite` (a family of about 130 near-identical write-back combinations)
+  is in the manifest; `noisewriteback` is included in full.
+- The OpenROMs boot is used as for the VICE harness; no start-up state is restored because these
+  programs set up their own VIC and SID state.

@@ -2,7 +2,7 @@
 //   node scripts/fetch-test-data.mjs          verify against the pinned manifest
 //   node scripts/fetch-test-data.mjs --pin    resolve HEAD SHAs, download, write the manifest
 //   node scripts/fetch-test-data.mjs --pin <source>...  pin only the named sources (klaus,
-//       singlestep, openroms, vicetests); other manifest entries are kept. A bare --pin re-pins ALL sources
+//       singlestep, openroms, vicetests, sidtests); other manifest entries are kept. A bare --pin re-pins ALL sources
 //       and re-downloads everything (singlestep is about 1.1 GB).
 //   node scripts/fetch-test-data.mjs <source>...        verify/download only the named sources
 import { execSync } from 'node:child_process';
@@ -60,6 +60,21 @@ async function listViceTests(repo, sha) {
   return files.sort();
 }
 
+/** Every file below <dir> (recursive), for sources that are fetched whole. */
+async function listTree(repo, sha, dir) {
+  const base = `https://api.github.com/repos/${repo}/contents`;
+  const out = [];
+  const walk = async (path) => {
+    const entries = (await apiJson(`${base}/${path}?ref=${sha}`)) ?? [];
+    for (const e of entries) {
+      if (e.type === 'dir') await walk(e.path);
+      else if (e.type === 'file') out.push(e.path);
+    }
+  };
+  await walk(dir);
+  return out.sort();
+}
+
 const SOURCES = {
   klaus: {
     repo: 'Klaus2m5/6502_65C02_functional_tests',
@@ -92,6 +107,11 @@ const SOURCES = {
     ],
   },
   vicetests: { repo: 'libsidplayfp/VICE-testprogs', dest: 'vicetests', list: listViceTests },
+  sidtests: {
+    repo: 'libsidplayfp/VICE-testprogs',
+    dest: 'sidtests',
+    list: (repo, sha) => listTree(repo, sha, 'SID'),
+  },
 };
 
 const sha256 = (buf) => createHash('sha256').update(buf).digest('hex');
