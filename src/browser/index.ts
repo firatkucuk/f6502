@@ -10,3 +10,4 @@ export { LoadError, toBytes, type Source } from './loader';
 export { KeyMapper, type KeyEventLike, type KeySink } from './keymap';
 export { KeyQueue } from './keyqueue';
 export { FrameClock } from './clock';
+export { AudioPump, createWorkletSink, type AudioSink } from './audio';

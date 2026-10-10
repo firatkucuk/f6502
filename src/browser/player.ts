@@ -1,4 +1,5 @@
 import { C64, type LoadPrgOptions } from '../machine/c64';
+import { createWorkletSink, AudioPump, type AudioSink } from './audio';
 import { FrameClock } from './clock';
 import { KeyMapper, type KeyEventLike } from './keymap';
 import { KeyQueue } from './keyqueue';
@@ -26,9 +27,17 @@ export interface PlayerEnv {
 
 export type LoadOptions = LoadPrgOptions;
 
+/** What the player needs from an audio path (an `AudioPump` fits). */
+export interface PlayerAudio {
+  pump(): number;
+  setMuted(muted: boolean): void;
+  close(): void;
+}
+
 export interface PlayerOptions {
   /** Frames to wait for READY. before loading a program (default 600 = 12 s emulated). */
   readyFrames?: number;
+  audio?: PlayerAudio;
 }
 
 export class Player {
@@ -39,6 +48,7 @@ export class Player {
   private readonly keys: KeyQueue;
   private readonly unlisten: Array<() => void> = [];
   private readonly readyFrames: number;
+  private readonly audio: PlayerAudio | undefined;
 
   constructor(
     readonly c64: C64,
@@ -46,6 +56,7 @@ export class Player {
     options: PlayerOptions = {},
   ) {
     this.readyFrames = options.readyFrames ?? 600;
+    this.audio = options.audio;
     this.keys = new KeyQueue({
       press: (k) => c64.keyDown(k),
       release: (k) => c64.keyUp(k),
@@ -69,12 +80,14 @@ export class Player {
   resume(): void {
     if (this.running) return;
     this.running = true;
+    this.audio?.setMuted(false);
     this.clock.reset();
     this.schedule();
   }
 
   pause(): void {
     this.running = false;
+    this.audio?.setMuted(true);
     if (this.rafId !== 0) this.env.cancelFrame(this.rafId);
     this.rafId = 0;
     // Drop any backlog and release held keys so nothing replays (or sticks) after resume().
@@ -108,6 +121,7 @@ export class Player {
     this.keys.flush();
     for (const off of this.unlisten) off();
     this.unlisten.length = 0;
+    this.audio?.close();
     this.env.dispose?.();
   }
 
@@ -118,6 +132,7 @@ export class Player {
       for (let i = 0; i < frames; i++) {
         this.keys.pump();
         this.c64.runFrame();
+        this.audio?.pump();
       }
       if (frames > 0) this.env.present(this.c64.frame.pixels);
       this.schedule();
@@ -131,6 +146,11 @@ export interface StartOptions {
   program?: Source | { source: Source; address?: number; start?: number };
   scale?: number | 'fit';
   keyboardTarget?: 'canvas' | 'document';
+  /**
+   * Play the SID through Web Audio. Starts after the first user gesture (autoplay policy); falls
+   * back to silence with a console notice when AudioWorklet is unavailable.
+   */
+  audio?: boolean | { sampleRate?: number; model?: '6581' | '8580' };
 }
 
 function isProgramObject(
@@ -157,7 +177,13 @@ export async function start(options: StartOptions): Promise<Player> {
     toBytes(options.roms.basic),
     toBytes(options.roms.chargen),
   ]);
-  const c64 = new C64({ kernal, basic, chargen });
+  const audioOptions =
+    options.audio === undefined || options.audio === false
+      ? null
+      : options.audio === true
+        ? {}
+        : options.audio;
+  const c64 = new C64({ kernal, basic, chargen }, audioOptions ? { sid: { ...audioOptions } } : {});
 
   canvas.width = 384;
   canvas.height = 272;
@@ -191,7 +217,34 @@ export async function start(options: StartOptions): Promise<Player> {
     dispose: () => canvas.removeEventListener('click', focusOnClick),
   };
 
-  const player = new Player(c64, env);
+  let sink: (AudioSink & { resume(): void }) | null = null;
+  const stopGesture: Array<() => void> = [];
+  if (audioOptions) {
+    sink = await createWorkletSink({ sampleRate: c64.sid.sampleRate });
+    if (sink) {
+      const resumeAudio = () => {
+        sink?.resume();
+        for (const off of stopGesture) off();
+        stopGesture.length = 0;
+      };
+      for (const type of ['pointerdown', 'keydown'] as const) {
+        document.addEventListener(type, resumeAudio);
+        stopGesture.push(() => document.removeEventListener(type, resumeAudio));
+      }
+    }
+  }
+  const pump = sink ? new AudioPump(c64.sid, sink) : undefined;
+  const player = new Player(c64, env, pump ? { audio: pump } : {});
+  if (pump) {
+    const onVisibility = () => pump.setMuted(document.hidden);
+    document.addEventListener('visibilitychange', onVisibility);
+    const baseDispose = env.dispose;
+    env.dispose = () => {
+      document.removeEventListener('visibilitychange', onVisibility);
+      for (const off of stopGesture) off();
+      baseDispose?.();
+    };
+  }
   player.resume();
   if (options.program !== undefined) {
     if (isProgramObject(options.program)) {
