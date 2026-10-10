@@ -37,3 +37,24 @@ the manifest.
   commit). The binaries are still **not vendored** in this repository; the demo-site phase must
   include the notice and a link to the pinned source when it hosts them.
 - Use the generic KERNAL with the generic BASIC; the CHARGEN image is interchangeable.
+
+## VICE test programs (libsidplayfp/VICE-testprogs)
+
+- Source of the VIC-II reference-screenshot tests used by `test/conformance/vice.test.ts`.
+- Pinned in `scripts/test-data.json`. The file list (PAL `VICII/<dir>/<name>.prg` and the matching
+  `VICII/<dir>/references/<name>.prg.png`, NTSC variants excluded) is resolved at pin time through
+  the GitHub contents API (token from `GITHUB_TOKEN` or `gh auth token`) and stored in the manifest,
+  so verification needs no listing. About 137 reference images, 1.7 MB in total.
+- References are 384x272 RGB(A) in the Pepto palette, which our framebuffer uses, so frames compare
+  exactly. Selection and expectations live in `test/conformance/vice-tests.json`.
+- Licence: the programs are distributed with VICE (GPL-2.0-or-later). They are **not vendored**;
+  only fetched into the git-ignored `.testdata/`.
+
+### Start-up state the VICE harness restores
+
+The VICE programs assume the stock KERNAL. `test/conformance/vice.test.ts` therefore, after the
+OpenROMs boot: writes the stock VIC-II init values (border 14, background 6, `$D018 = $14`,
+multicolour and sprite colours), sets the cursor colour and colour RAM to light blue, and patches
+the in-memory KERNAL copy at `$EA53` with the stock 29-cycle IRQ entry (OpenROMs' takes 36 cycles
+to reach the `$0314` handler, which shifts every cycle-exact IRQ-driven program by 7 cycles).
+References start at raster line 16, ours at 15, so row y+1 of ours is compared with row y.

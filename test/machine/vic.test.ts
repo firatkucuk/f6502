@@ -68,8 +68,11 @@ describe('registers', () => {
 describe('raster', () => {
   it('a frame is 312 lines of 63 cycles = 19,656 cycles', () => {
     const { vic } = world();
+    // The counter wraps in cycle 2 of line 0, so measure from one wrap to the next.
+    let f = vic.frameCount;
+    while (vic.frameCount === f) vic.tick();
+    f = vic.frameCount;
     let cycles = 0;
-    const f = vic.frameCount;
     while (vic.frameCount === f) {
       vic.tick();
       cycles++;

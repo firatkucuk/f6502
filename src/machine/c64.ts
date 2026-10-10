@@ -56,7 +56,10 @@ export class C64 {
       readColor: (i) => this.bus.colorRam[i & 0x3ff]!,
     });
     this.bus = new C64Bus(roms, { vic: this.vic, cia1: this.cia1, cia2: this.cia2 }, this.port);
-    this.cpu = new MOS6502(this.bus, { onCycle: () => this.tickChips() });
+    this.cpu = new MOS6502(this.bus, {
+      onCycle: () => this.tickChips(),
+      rdy: () => !this.vic.baLow,
+    });
     this.bus.powerOn();
     this.reset();
   }
@@ -70,6 +73,7 @@ export class C64 {
     this.cia1.reset();
     this.cia2.reset();
     this.vic.reset();
+    this.vic.tick(); // process the first cycle before the CPU's first access
     this.keyboard.releaseAll();
     this.typeQueue.length = 0;
     this.pendingLoad = null;
