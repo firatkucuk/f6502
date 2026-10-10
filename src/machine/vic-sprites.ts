@@ -1,11 +1,11 @@
+import { SPRITE_P_CYCLE } from './vic-schedule';
+
 export interface SpriteMemory {
   readMem(addr14: number): number;
 }
 
-/** PAL pointer/data fetch cycle of each sprite. */
-const FETCH_CYCLE = [58, 60, 62, 1, 3, 5, 7, 9];
 const FETCH_AT = new Int8Array(64).fill(-1);
-FETCH_CYCLE.forEach((cycle, n) => {
+SPRITE_P_CYCLE.forEach((cycle, n) => {
   FETCH_AT[cycle] = n;
 });
 
@@ -18,9 +18,18 @@ export class Sprites {
   private readonly expandFF = new Uint8Array(8).fill(1);
   private readonly data = new Int32Array(8);
   private readonly shiftData = new Int32Array(8);
+  /** Source pixel (0..23) each running shifter outputs next, or -1 when idle. */
   private readonly pos = new Int16Array(8).fill(-1);
+  /** X-expansion flip-flop: set while a shifter holds its source pixel for a second pixel. */
+  private readonly hold = new Uint8Array(8);
   /** Bitmask of sprites whose display flag is on. */
   active = 0;
+  private running = 0;
+
+  /** True while any sprite is displayed or still shifting out a started row. */
+  get busy(): boolean {
+    return (this.active | this.running) !== 0;
+  }
   /** Output of the last `sample()`: bit n set = sprite n has an opaque pixel here. */
   mask = 0;
   readonly colors = new Uint8Array(8);
@@ -34,18 +43,30 @@ export class Sprites {
     this.dma.fill(0);
     this.display.fill(0);
     this.mcBase.fill(0);
+    this.running = 0;
     this.mc.fill(0);
     this.expandFF.fill(1);
     this.data.fill(0);
     this.shiftData.fill(0);
     this.pos.fill(-1);
+    this.hold.fill(0);
     this.active = 0;
     this.mask = 0;
   }
 
-  /** Shifters do not run across lines. */
-  newLine(): void {
-    this.pos.fill(-1);
+  /**
+   * The expansion flip-flop is held set while Y-expand is clear, evaluated every cycle in the
+   * hardware; applying it when $D017 is written is equivalent and costs nothing per cycle.
+   */
+  yExpandWritten(value: number): void {
+    for (let n = 0; n < 8; n++) if (((value >> n) & 1) === 0) this.expandFF[n] = 1;
+  }
+
+  /** Bit n set = sprite n's DMA is on. */
+  dmaMask(): number {
+    let m = 0;
+    for (let n = 0; n < 8; n++) if (this.dma[n]) m |= 1 << n;
+    return m;
   }
 
   /** DMA bookkeeping and fetch events for cycle `c` of line `raster`. */
@@ -53,18 +74,18 @@ export class Sprites {
     const regs = this.regs;
     switch (c) {
       case 15:
-        for (let n = 0; n < 8; n++) if (this.dma[n] && this.expandFF[n]) this.mcBase[n]! += 2;
+        for (let n = 0; n < 8; n++)
+          if (this.dma[n] && this.expandFF[n]) this.mcBase[n] = (this.mcBase[n]! + 2) & 0x3f;
         break;
       case 16:
         for (let n = 0; n < 8; n++) {
-          if (this.dma[n] && this.expandFF[n]) this.mcBase[n]! += 1;
+          if (this.dma[n] && this.expandFF[n]) this.mcBase[n] = (this.mcBase[n]! + 1) & 0x3f;
           if (this.mcBase[n] === 63) this.dma[n] = 0;
         }
         break;
       case 55:
         for (let n = 0; n < 8; n++) {
           if ((regs[0x17]! >> n) & 1) this.expandFF[n]! ^= 1;
-          else this.expandFF[n] = 1;
         }
         this.dmaCheck(raster);
         break;
@@ -89,16 +110,16 @@ export class Sprites {
     const regs = this.regs;
     let mask = 0;
     for (let n = 0; n < 8; n++) {
-      if (((this.active >> n) & 1) === 0) continue;
-      let p = this.pos[n]!;
-      if (p < 0) {
+      const displayed = ((this.active >> n) & 1) !== 0;
+      let src = this.pos[n]!;
+      if (src < 0) {
+        if (!displayed) continue;
         const sx = regs[2 * n]! | (((regs[0x10]! >> n) & 1) << 8);
         if (x !== sx) continue;
-        p = 0;
+        src = 0;
+        this.hold[n] = 0;
         this.shiftData[n] = this.data[n]!;
       }
-      const xexp = (regs[0x1d]! >> n) & 1;
-      const src = xexp ? p >> 1 : p;
       const word = this.shiftData[n]!;
       let colour = -1;
       if ((regs[0x1c]! >> n) & 1) {
@@ -113,9 +134,18 @@ export class Sprites {
         mask |= 1 << n;
         this.colors[n] = colour;
       }
-      p++;
-      this.pos[n] = p >= 24 << xexp ? -1 : p;
+      // The shifter advances every pixel; with X-expand set every second pixel (flip-flop).
+      if ((regs[0x1d]! >> n) & 1 && !this.hold[n]) {
+        this.hold[n] = 1;
+      } else {
+        this.hold[n] = 0;
+        src++;
+      }
+      this.pos[n] = src >= 24 ? -1 : src;
     }
+    let running = 0;
+    for (let n = 0; n < 8; n++) if (this.pos[n]! >= 0) running |= 1 << n;
+    this.running = running;
     this.mask = mask;
   }
 

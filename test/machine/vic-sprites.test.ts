@@ -5,6 +5,7 @@ function rig() {
   const regs = new Uint8Array(0x40);
   const ram = new Uint8Array(0x4000);
   const sprites = new Sprites(regs, { readMem: (a) => ram[a & 0x3fff]! });
+  sprites.mcBase.fill(0);
   regs[0x18] = 0x10; // video matrix at $0400 -> sprite pointers at $07F8
   return { regs, ram, sprites };
 }
@@ -20,7 +21,6 @@ function runLine(sprites: Sprites, raster: number): LineResult {
   const masks = new Array<number>(504).fill(0);
   const colors = new Array<number[]>(504).fill([]);
   let activeAt30 = 0;
-  sprites.newLine();
   for (let c = 1; c <= 63; c++) {
     sprites.cycle(c, raster);
     if (c === 30) activeAt30 = sprites.active;
