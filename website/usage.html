@@ -1,0 +1,649 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Usage — f6502</title>
+  <meta name="description" content="How to use f6502: browser integration, Node.js API, ROM loading, C64Script, and all available scripts.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Space+Grotesk:wght@300;400;500;600;700&family=Fira+Code:wght@400;500&family=VT323&display=swap">
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .toc {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 3rem;
+      display: inline-block;
+      min-width: 220px;
+    }
+    .toc-title {
+      font-family: var(--font-pixel);
+      font-size: 8px;
+      letter-spacing: 0.12em;
+      color: var(--accent);
+      margin-bottom: 0.75rem;
+    }
+    .toc ol { padding-left: 1.25rem; }
+    .toc li { margin-bottom: 0.35rem; }
+    .toc a { font-size: 0.875rem; color: var(--text-muted); text-decoration: none; }
+    .toc a:hover { color: var(--primary); }
+
+    .api-sig {
+      font-family: var(--font-mono);
+      font-size: 0.9rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 0.5rem 1rem;
+      margin: 0.75rem 0 0.35rem;
+      color: var(--accent);
+      overflow-x: auto;
+      display: block;
+    }
+    .api-desc {
+      font-size: 0.875rem;
+      color: var(--text-muted);
+      margin: 0 0 1.25rem 0;
+      padding-left: 0.25rem;
+      max-width: 55ch;
+    }
+  </style>
+</head>
+<body>
+
+<nav class="nav" role="navigation" aria-label="Main">
+  <a class="nav-logo" href="index.html">f6502<span>.</span></a>
+  <ul class="nav-links">
+    <li><a href="index.html">Home</a></li>
+    <li><a href="architecture.html">Architecture</a></li>
+    <li><a href="usage.html" aria-current="page">Usage</a></li>
+    <li><a href="c64script.html">C64Script</a></li>
+    <li><a href="showcases.html">Showcases</a></li>
+  </ul>
+  <a class="nav-gh" href="https://github.com/firatkucuk/f6502" target="_blank" rel="noopener">
+    <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+    GitHub
+  </a>
+  <button class="nav-burger" aria-label="Menu" aria-expanded="false">☰</button>
+</nav>
+
+<div class="page">
+
+  <!-- ── Hero ──────────────────────────────────────────────────── -->
+  <div class="page-hero">
+    <p class="hero-eyebrow">Documentation</p>
+    <h1 class="hero-title" style="font-family:var(--font-pixel);font-size:clamp(18px,3vw,32px);line-height:1.5">
+      Using f6502
+    </h1>
+    <p class="hero-lead">
+      Everything you need to embed the Commodore 64 in a web page, drive it
+      from TypeScript, or compile C64Script programs — all without a backend
+      or native dependencies.
+    </p>
+  </div>
+
+  <!-- ── Article ───────────────────────────────────────────────── -->
+  <div class="article">
+
+    <!-- Table of contents -->
+    <nav class="toc" aria-label="On this page">
+      <p class="toc-title">On this page</p>
+      <ol>
+        <li><a href="#install">Install &amp; build</a></li>
+        <li><a href="#browser">Browser usage</a></li>
+        <li><a href="#player-api">Player API</a></li>
+        <li><a href="#roms">Loading ROMs</a></li>
+        <li><a href="#core">Bare 6502 CPU</a></li>
+        <li><a href="#c64-machine">Full C64 machine</a></li>
+        <li><a href="#c64script">C64Script</a></li>
+        <li><a href="#scripts">npm scripts</a></li>
+      </ol>
+    </nav>
+
+    <!-- ── Install ─────────────────────────────────────────────── -->
+    <h2 id="install">Install &amp; build</h2>
+
+    <p>Install from npm — the package ships pre-built ESM and an IIFE bundle:</p>
+
+    <div class="terminal reveal">
+      <div class="terminal-bar">
+        <span class="terminal-dot red"></span>
+        <span class="terminal-dot yellow"></span>
+        <span class="terminal-dot green"></span>
+        <span class="terminal-title">shell</span>
+      </div>
+      <div class="terminal-body">
+        <pre>npm install f6502</pre>
+      </div>
+    </div>
+
+    <p>Then import the parts you need:</p>
+
+    <div class="terminal reveal">
+      <div class="terminal-bar">
+        <span class="terminal-dot red"></span>
+        <span class="terminal-dot yellow"></span>
+        <span class="terminal-dot green"></span>
+        <span class="terminal-title">TypeScript / ESM</span>
+      </div>
+      <div class="terminal-body">
+        <pre><span class="token-cmt">// High-level browser player</span>
+<span class="token-kw">import</span> { <span class="token-fn">start</span>, <span class="token-type">Player</span> } <span class="token-kw">from</span> <span class="token-str">'f6502'</span>;
+
+<span class="token-cmt">// Bare 6502 CPU core</span>
+<span class="token-kw">import</span> { <span class="token-type">MOS6502</span>, <span class="token-kw">type</span> <span class="token-type">Bus</span> } <span class="token-kw">from</span> <span class="token-str">'f6502'</span>;
+
+<span class="token-cmt">// Full C64 machine</span>
+<span class="token-kw">import</span> { <span class="token-type">C64</span> } <span class="token-kw">from</span> <span class="token-str">'f6502'</span>;
+
+<span class="token-cmt">// C64Script compiler</span>
+<span class="token-kw">import</span> { <span class="token-fn">compile</span> } <span class="token-kw">from</span> <span class="token-str">'f6502/c64script'</span>;</pre>
+      </div>
+    </div>
+
+    <p>Or load the pre-built IIFE bundle from a CDN — no build step required:</p>
+
+    <div class="terminal reveal">
+      <div class="terminal-bar">
+        <span class="terminal-dot red"></span>
+        <span class="terminal-dot yellow"></span>
+        <span class="terminal-dot green"></span>
+        <span class="terminal-title">CDN (unpkg / jsdelivr)</span>
+      </div>
+      <div class="terminal-body">
+        <pre><span class="token-cmt">&lt;!-- unpkg --&gt;</span>
+<span class="token-kw">&lt;script</span> <span class="token-type">src</span>=<span class="token-str">"https://unpkg.com/f6502/dist/f6502.min.js"</span><span class="token-kw">&gt;&lt;/script&gt;</span>
+
+<span class="token-cmt">&lt;!-- jsdelivr --&gt;</span>
+<span class="token-kw">&lt;script</span> <span class="token-type">src</span>=<span class="token-str">"https://cdn.jsdelivr.net/npm/f6502/dist/f6502.min.js"</span><span class="token-kw">&gt;&lt;/script&gt;</span>
+
+<span class="token-cmt">&lt;!-- the bundle exposes a global F6502 object --&gt;</span>
+<span class="token-kw">&lt;script&gt;</span>
+  <span class="token-fn">F6502.start</span>({ canvas: <span class="token-str">'#screen'</span>, roms: { <span class="token-cmt">/* ... */</span> } });
+<span class="token-kw">&lt;/script&gt;</span></pre>
+      </div>
+    </div>
+
+    <p>To build from source:</p>
+
+    <div class="terminal reveal">
+      <div class="terminal-bar">
+        <span class="terminal-dot red"></span>
+        <span class="terminal-dot yellow"></span>
+        <span class="terminal-dot green"></span>
+        <span class="terminal-title">shell</span>
+      </div>
+      <div class="terminal-body">
+        <pre>git clone https://github.com/firatkucuk/f6502
+cd f6502
+npm install
+npm run build     <span class="token-cmt"># → dist/index.js (ESM) + dist/f6502.min.js (IIFE)</span></pre>
+      </div>
+    </div>
+
+    <!-- ── Browser usage ───────────────────────────────────────── -->
+    <h2 id="browser">Browser usage</h2>
+
+    <p>
+      The quickest path to a running C64 in the browser is <code>F6502.start()</code>.
+      It creates the machine, wires up canvas rendering, keyboard input, and optionally
+      Web Audio, then returns a <code>Player</code> you can control.
+    </p>
+
+    <div class="terminal reveal">
+      <div class="terminal-bar">
+        <span class="terminal-dot red"></span>
+        <span class="terminal-dot yellow"></span>
+        <span class="terminal-dot green"></span>
+        <span class="terminal-title">index.html — minimal</span>
+      </div>
+      <div class="terminal-body">
+        <pre><span class="token-kw">&lt;canvas</span> <span class="token-type">id</span>=<span class="token-str">"screen"</span><span class="token-kw">&gt;&lt;/canvas&gt;</span>
+<span class="token-kw">&lt;script</span> <span class="token-type">src</span>=<span class="token-str">"f6502.min.js"</span><span class="token-kw">&gt;&lt;/script&gt;</span>
+<span class="token-kw">&lt;script&gt;</span>
+  <span class="token-fn">F6502.start</span>({
+    canvas: <span class="token-str">'#screen'</span>,
+    roms: {
+      kernal:  <span class="token-str">'roms/kernal.rom'</span>,
+      basic:   <span class="token-str">'roms/basic.rom'</span>,
+      chargen: <span class="token-str">'roms/chargen.rom'</span>,
+    },
+  });
+<span class="token-kw">&lt;/script&gt;</span></pre>
+      </div>
+    </div>
+
+    <div class="terminal reveal">
+      <div class="terminal-bar">
+        <span class="terminal-dot red"></span>
+        <span class="terminal-dot yellow"></span>
+        <span class="terminal-dot green"></span>
+        <span class="terminal-title">index.html — all options</span>
+      </div>
+      <div class="terminal-body">
+        <pre><span class="token-kw">const</span> player = <span class="token-kw">await</span> <span class="token-fn">F6502.start</span>({
+  <span class="token-cmt">/* required */</span>
+  canvas: <span class="token-str">'#screen'</span>,               <span class="token-cmt">// CSS selector or HTMLCanvasElement</span>
+  roms: {
+    kernal:  <span class="token-str">'roms/kernal.rom'</span>,    <span class="token-cmt">// URL, Uint8Array or ArrayBuffer</span>
+    basic:   <span class="token-str">'roms/basic.rom'</span>,
+    chargen: <span class="token-str">'roms/chargen.rom'</span>,
+  },
+
+  <span class="token-cmt">/* optional */</span>
+  program: <span class="token-str">'games/invaders.prg'</span>,   <span class="token-cmt">// auto-load after READY. prompt</span>
+  scale: <span class="token-num">2</span>,                        <span class="token-cmt">// integer | 'fit' (CSS scales canvas)</span>
+  audio: <span class="token-kw">true</span>,                      <span class="token-cmt">// true | { sampleRate?, model? }</span>
+  keyboardTarget: <span class="token-str">'document'</span>,      <span class="token-cmt">// 'canvas' (default) | 'document'</span>
+});</pre>
+      </div>
+    </div>
+
+    <h3>Option details</h3>
+
+    <code class="api-sig">scale: number | 'fit'</code>
+    <p class="api-desc">
+      A plain number (e.g. <code>2</code>) sets the canvas CSS size to
+      <code>384 × scale</code> by <code>272 × scale</code> pixels.
+      <code>'fit'</code> leaves sizing to your CSS — the canvas renders at its
+      natural 384 × 272 resolution, perfectly pixelated.
+    </p>
+
+    <code class="api-sig">audio: boolean | { sampleRate?: number; model?: '6581' | '8580' }</code>
+    <p class="api-desc">
+      Set <code>true</code> to enable SID audio through an
+      <code>AudioWorklet</code>. Audio starts after the first user gesture
+      (browser autoplay policy). <code>model</code> selects between the original
+      6581 (warmer, with the classic filter) and the revised 8580.
+      Falls back to silence with a console notice if the browser lacks
+      <code>AudioWorklet</code>.
+    </p>
+
+    <code class="api-sig">keyboardTarget: 'canvas' | 'document'</code>
+    <p class="api-desc">
+      <code>'canvas'</code> (default) — keyboard events only reach the emulator
+      when the canvas has focus. Click the canvas to focus it.
+      <code>'document'</code> — keyboard events are captured globally, useful
+      when you don't want the canvas to be focused.
+    </p>
+
+    <!-- ── Player API ──────────────────────────────────────────── -->
+    <h2 id="player-api">Player API</h2>
+
+    <p>
+      <code>start()</code> returns a <code>Player</code> instance that lets you
+      control the running machine:
+    </p>
+
+    <code class="api-sig">player.running: boolean</code>
+    <p class="api-desc">Read-only. <code>true</code> while the emulation loop is active.</p>
+
+    <code class="api-sig">player.pause(): void</code>
+    <p class="api-desc">Stops the emulation loop and mutes audio. Held keys are released.</p>
+
+    <code class="api-sig">player.resume(): void</code>
+    <p class="api-desc">Restarts the emulation loop after a <code>pause()</code>.</p>
+
+    <code class="api-sig">player.reset(): void</code>
+    <p class="api-desc">Triggers a C64 hardware reset (equivalent to pressing the reset button).</p>
+
+    <code class="api-sig">player.load(source: Source, options?): Promise&lt;void&gt;</code>
+    <p class="api-desc">
+      Loads a PRG file. Waits (up to 12 emulated seconds) for the BASIC
+      <code>READY.</code> prompt, then loads and runs the program. <code>Source</code>
+      accepts a URL string, <code>URL</code> object, <code>File</code>, <code>Blob</code>,
+      <code>Uint8Array</code>, or <code>ArrayBuffer</code>.
+    </p>
+
+    <code class="api-sig">player.type(text: string): void</code>
+    <p class="api-desc">
+      Injects a string into the keyboard queue, as if the user typed it.
+      Great for automating BASIC commands — e.g.
+      <code>player.type('LIST\n')</code>.
+    </p>
+
+    <code class="api-sig">player.destroy(): void</code>
+    <p class="api-desc">
+      Stops the emulation loop, removes event listeners, and closes the audio
+      context. Call this when removing the emulator from the page to prevent
+      memory leaks.
+    </p>
+
+    <!-- ── ROMs ────────────────────────────────────────────────── -->
+    <h2 id="roms">Loading ROMs</h2>
+
+    <div class="infobox yellow">
+      <strong>ROMs are never bundled.</strong> C64 firmware is copyrighted by
+      Commodore / Cloanto and cannot be redistributed. You must supply your own,
+      or use the free <strong>OpenROMs</strong> project.
+    </div>
+
+    <p>
+      <a href="https://github.com/MEGA65/open-roms/releases" target="_blank" rel="noopener">OpenROMs</a>
+      is an Apache-2.0 licensed clean-room reimplementation of the C64 ROMs maintained
+      by the MEGA65 team. They are fully compatible with f6502.
+    </p>
+
+    <h3>Downloading OpenROMs for local development</h3>
+
+    <div class="terminal reveal">
+      <div class="terminal-bar">
+        <span class="terminal-dot red"></span>
+        <span class="terminal-dot yellow"></span>
+        <span class="terminal-dot green"></span>
+        <span class="terminal-title">shell</span>
+      </div>
+      <div class="terminal-body">
+        <pre>npm run fetch-test-data
+<span class="token-cmt"># Downloads to .testdata/openroms/bin/</span>
+<span class="token-cmt">#   kernal_generic.rom</span>
+<span class="token-cmt">#   basic_generic.rom</span>
+<span class="token-cmt">#   chargen_openroms.rom</span></pre>
+      </div>
+    </div>
+
+    <h3>Fetching ROMs at runtime in the browser</h3>
+
+    <div class="terminal reveal">
+      <div class="terminal-bar">
+        <span class="terminal-dot red"></span>
+        <span class="terminal-dot yellow"></span>
+        <span class="terminal-dot green"></span>
+        <span class="terminal-title">TypeScript</span>
+      </div>
+      <div class="terminal-body">
+        <pre><span class="token-cmt">// Pass URL strings — start() fetches them automatically</span>
+<span class="token-kw">await</span> <span class="token-fn">start</span>({
+  canvas: <span class="token-str">'#screen'</span>,
+  roms: {
+    kernal:  <span class="token-str">'/roms/kernal.rom'</span>,  <span class="token-cmt">// cross-origin needs CORS headers</span>
+    basic:   <span class="token-str">'/roms/basic.rom'</span>,
+    chargen: <span class="token-str">'/roms/chargen.rom'</span>,
+  },
+});
+
+<span class="token-cmt">// Or fetch yourself and pass ArrayBuffers</span>
+<span class="token-kw">const</span> [kernal, basic, chargen] = <span class="token-kw">await</span> <span class="token-type">Promise</span>.<span class="token-fn">all</span>([
+  <span class="token-fn">fetch</span>(<span class="token-str">'/roms/kernal.rom'</span>).<span class="token-fn">then</span>(r => r.<span class="token-fn">arrayBuffer</span>()),
+  <span class="token-fn">fetch</span>(<span class="token-str">'/roms/basic.rom'</span>).<span class="token-fn">then</span>(r => r.<span class="token-fn">arrayBuffer</span>()),
+  <span class="token-fn">fetch</span>(<span class="token-str">'/roms/chargen.rom'</span>).<span class="token-fn">then</span>(r => r.<span class="token-fn">arrayBuffer</span>()),
+]);
+<span class="token-kw">await</span> <span class="token-fn">start</span>({ canvas: <span class="token-str">'#screen'</span>, roms: { kernal, basic, chargen } });</pre>
+      </div>
+    </div>
+
+    <p>The <code>Source</code> type accepted everywhere ROMs or programs are loaded:</p>
+
+    <div class="terminal reveal">
+      <div class="terminal-bar">
+        <span class="terminal-dot red"></span>
+        <span class="terminal-dot yellow"></span>
+        <span class="terminal-dot green"></span>
+        <span class="terminal-title">TypeScript</span>
+      </div>
+      <div class="terminal-body">
+        <pre><span class="token-kw">type</span> <span class="token-type">Source</span> =
+  | <span class="token-type">string</span>        <span class="token-cmt">// URL string — fetched automatically</span>
+  | <span class="token-type">URL</span>           <span class="token-cmt">// URL object</span>
+  | <span class="token-type">Uint8Array</span>    <span class="token-cmt">// raw bytes</span>
+  | <span class="token-type">ArrayBuffer</span>   <span class="token-cmt">// raw buffer</span>
+  | <span class="token-type">Blob</span>          <span class="token-cmt">// browser Blob</span>
+  | <span class="token-type">File</span>;         <span class="token-cmt">// &lt;input type="file"&gt; result</span></pre>
+      </div>
+    </div>
+
+    <!-- ── Bare CPU ─────────────────────────────────────────────── -->
+    <h2 id="core">Bare 6502 CPU</h2>
+
+    <p>
+      You can use <code>MOS6502</code> on its own — no C64 machine, just the raw
+      processor wired to any memory you provide. Every <code>bus.read</code> /
+      <code>bus.write</code> call is exactly one CPU cycle.
+    </p>
+
+    <div class="terminal reveal">
+      <div class="terminal-bar">
+        <span class="terminal-dot red"></span>
+        <span class="terminal-dot yellow"></span>
+        <span class="terminal-dot green"></span>
+        <span class="terminal-title">TypeScript</span>
+      </div>
+      <div class="terminal-body">
+        <pre><span class="token-kw">import</span> { <span class="token-type">MOS6502</span>, <span class="token-kw">type</span> <span class="token-type">Bus</span> } <span class="token-kw">from</span> <span class="token-str">'f6502'</span>;
+
+<span class="token-kw">const</span> mem = <span class="token-kw">new</span> <span class="token-type">Uint8Array</span>(<span class="token-num">0x10000</span>);
+
+<span class="token-kw">const</span> bus: <span class="token-type">Bus</span> = {
+  read:  (addr) => mem[addr]!,
+  write: (addr, val) => { mem[addr] = val; },
+};
+
+<span class="token-cmt">// Place reset vector at $FFFC/$FFFD → $0200</span>
+mem[<span class="token-num">0xfffc</span>] = <span class="token-num">0x00</span>;
+mem[<span class="token-num">0xfffd</span>] = <span class="token-num">0x02</span>;
+
+<span class="token-cmt">// LDA #$42  →  STA $0300</span>
+mem.<span class="token-fn">set</span>([<span class="token-num">0xa9</span>, <span class="token-num">0x42</span>, <span class="token-num">0x8d</span>, <span class="token-num">0x00</span>, <span class="token-num">0x03</span>], <span class="token-num">0x0200</span>);
+
+<span class="token-kw">const</span> cpu = <span class="token-kw">new</span> <span class="token-type">MOS6502</span>(bus);
+cpu.<span class="token-fn">reset</span>();   <span class="token-cmt">// reads reset vector, sets PC = $0200</span>
+cpu.<span class="token-fn">step</span>();    <span class="token-cmt">// executes LDA #$42 (2 cycles)</span>
+cpu.<span class="token-fn">step</span>();    <span class="token-cmt">// executes STA $0300 (4 cycles)</span>
+
+console.<span class="token-fn">log</span>(mem[<span class="token-num">0x0300</span>]!.<span class="token-fn">toString</span>(<span class="token-num">16</span>));  <span class="token-cmt">// → "42"</span></pre>
+      </div>
+    </div>
+
+    <p>
+      You can also hook into every cycle via the <code>onCycle</code> callback —
+      useful for driving other chips in lockstep:
+    </p>
+
+    <div class="terminal reveal">
+      <div class="terminal-bar">
+        <span class="terminal-dot red"></span>
+        <span class="terminal-dot yellow"></span>
+        <span class="terminal-dot green"></span>
+        <span class="terminal-title">TypeScript — onCycle hook</span>
+      </div>
+      <div class="terminal-body">
+        <pre><span class="token-kw">const</span> cpu = <span class="token-kw">new</span> <span class="token-type">MOS6502</span>(bus, {
+  onCycle: () => {
+    vic.<span class="token-fn">tick</span>();
+    sid.<span class="token-fn">tick</span>();
+    cia.<span class="token-fn">tick</span>();
+  },
+});</pre>
+      </div>
+    </div>
+
+    <!-- ── Full C64 ─────────────────────────────────────────────── -->
+    <h2 id="c64-machine">Full C64 machine</h2>
+
+    <p>
+      <code>C64</code> assembles the entire machine — CPU, VIC-II, SID, CIAs,
+      memory map — and provides a frame-level API.
+    </p>
+
+    <div class="terminal reveal">
+      <div class="terminal-bar">
+        <span class="terminal-dot red"></span>
+        <span class="terminal-dot yellow"></span>
+        <span class="terminal-dot green"></span>
+        <span class="terminal-title">TypeScript</span>
+      </div>
+      <div class="terminal-body">
+        <pre><span class="token-kw">import</span> { <span class="token-type">C64</span> } <span class="token-kw">from</span> <span class="token-str">'f6502'</span>;
+<span class="token-kw">import</span> { <span class="token-fn">readFileSync</span> } <span class="token-kw">from</span> <span class="token-str">'node:fs'</span>;
+
+<span class="token-kw">const</span> kernal  = <span class="token-fn">readFileSync</span>(<span class="token-str">'.testdata/openroms/bin/kernal_generic.rom'</span>);
+<span class="token-kw">const</span> basic   = <span class="token-fn">readFileSync</span>(<span class="token-str">'.testdata/openroms/bin/basic_generic.rom'</span>);
+<span class="token-kw">const</span> chargen = <span class="token-fn">readFileSync</span>(<span class="token-str">'.testdata/openroms/bin/chargen_openroms.rom'</span>);
+
+<span class="token-kw">const</span> c64 = <span class="token-kw">new</span> <span class="token-type">C64</span>(
+  { kernal, basic, chargen },
+  { sid: { model: <span class="token-str">'6581'</span> } },   <span class="token-cmt">// optional SID config</span>
+);
+
+<span class="token-cmt">// Run 50 PAL frames (50 × 19,656 cycles ≈ 1 second of C64 time)</span>
+<span class="token-kw">for</span> (<span class="token-kw">let</span> i = <span class="token-num">0</span>; i &lt; <span class="token-num">50</span>; i++) c64.<span class="token-fn">runFrame</span>();
+
+<span class="token-cmt">// Render the latest frame</span>
+<span class="token-cmt">// c64.frame.pixels is a Uint32Array, 384 × 272 RGBA little-endian values</span>
+ctx.<span class="token-fn">putImageData</span>(
+  <span class="token-kw">new</span> <span class="token-type">ImageData</span>(<span class="token-kw">new</span> <span class="token-type">Uint8ClampedArray</span>(c64.frame.pixels.buffer), <span class="token-num">384</span>, <span class="token-num">272</span>),
+  <span class="token-num">0</span>, <span class="token-num">0</span>
+);</pre>
+      </div>
+    </div>
+
+    <h3>C64 machine API</h3>
+
+    <code class="api-sig">c64.runFrame(): void</code>
+    <p class="api-desc">Advances the machine by exactly one PAL frame (19,656 CPU cycles).</p>
+
+    <code class="api-sig">c64.frame.pixels: Uint32Array</code>
+    <p class="api-desc">The rendered frame: 384 × 272 RGBA pixels, updated after each <code>runFrame()</code>.</p>
+
+    <code class="api-sig">c64.pokeRam(addr: number, value: number): void</code>
+    <p class="api-desc">Write directly to RAM, bypassing the memory map and bank switching.</p>
+
+    <code class="api-sig">c64.peekRam(addr: number): number</code>
+    <p class="api-desc">Read directly from RAM.</p>
+
+    <code class="api-sig">c64.reset(): void</code>
+    <p class="api-desc">Hardware reset — equivalent to pressing the C64's reset button.</p>
+
+    <code class="api-sig">c64.keyDown(key: C64Key): void</code>
+    <p class="api-desc">Press a key on the C64 keyboard matrix.</p>
+
+    <code class="api-sig">c64.keyUp(key: C64Key): void</code>
+    <p class="api-desc">Release a key on the C64 keyboard matrix.</p>
+
+    <code class="api-sig">c64.type(text: string): void</code>
+    <p class="api-desc">Queue a string of characters to be "typed" into the keyboard buffer.</p>
+
+    <!-- ── C64Script ────────────────────────────────────────────── -->
+    <h2 id="c64script">C64Script integration</h2>
+
+    <p>
+      The C64Script compiler is bundled with f6502. It turns TypeScript-flavoured
+      source into a raw PRG binary you can load straight into the emulator.
+    </p>
+
+    <div class="terminal reveal">
+      <div class="terminal-bar">
+        <span class="terminal-dot red"></span>
+        <span class="terminal-dot yellow"></span>
+        <span class="terminal-dot green"></span>
+        <span class="terminal-title">TypeScript</span>
+      </div>
+      <div class="terminal-body">
+        <pre><span class="token-kw">import</span> { <span class="token-fn">compile</span> } <span class="token-kw">from</span> <span class="token-str">'f6502/c64script'</span>;
+
+<span class="token-kw">const</span> prg: <span class="token-type">Uint8Array</span> = <span class="token-fn">compile</span>(<span class="token-str">`
+  program(0x0810) {
+    var color: byte @zp = 0;
+    loop {
+      c64.border = color;
+      color = color + 1;
+      if (color == 16) { color = 0; }
+    }
+  }
+`</span>);
+
+<span class="token-cmt">// Load into a running Player</span>
+<span class="token-kw">await</span> player.<span class="token-fn">load</span>(prg);
+
+<span class="token-cmt">// Or save to disk in Node</span>
+<span class="token-kw">import</span> { <span class="token-fn">writeFileSync</span> } <span class="token-kw">from</span> <span class="token-str">'node:fs'</span>;
+<span class="token-fn">writeFileSync</span>(<span class="token-str">'rainbow.prg'</span>, prg);</pre>
+      </div>
+    </div>
+
+    <div class="infobox accent">
+      <strong>compile() is synchronous</strong> — it throws a typed error
+      (<code>LexError</code>, <code>ParseError</code>, <code>TypeError</code>, or
+      <code>CodeGenError</code>) on failure, all importable from
+      <code>f6502/c64script</code>.
+    </div>
+
+    <p>
+      See the <a href="c64script.html">C64Script language reference</a> for the
+      full syntax, built-in hardware registers, and more examples.
+    </p>
+
+    <!-- ── Scripts ─────────────────────────────────────────────── -->
+    <h2 id="scripts">npm scripts</h2>
+
+    <div class="table-wrap reveal">
+      <table>
+        <thead>
+          <tr>
+            <th>Script</th>
+            <th>What it does</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>npm test</td>
+            <td>Unit and machine tests (Vitest). Runs <code>test/core</code>, <code>test/machine</code>, and <code>test/browser</code>.</td>
+          </tr>
+          <tr>
+            <td>npm run build</td>
+            <td>Compiles TypeScript → <code>dist/index.js</code> (ESM) and <code>dist/f6502.min.js</code> (IIFE global). Also emits <code>.d.ts</code> declarations.</td>
+          </tr>
+          <tr>
+            <td>npm run lint</td>
+            <td>ESLint (including the <code>core/</code> boundary rule) and Prettier format check.</td>
+          </tr>
+          <tr>
+            <td>npm run typecheck</td>
+            <td><code>tsc --noEmit</code> against both the main and browser tsconfigs.</td>
+          </tr>
+          <tr>
+            <td>npm run fetch-test-data</td>
+            <td>Downloads pinned OpenROMs, Klaus Dormann functional test, and VICE reference data to <code>.testdata/</code>.</td>
+          </tr>
+          <tr>
+            <td>npm run test:conformance</td>
+            <td>Klaus Dormann 6502 functional test, SingleStepTests, and VICE screenshot / SID program comparisons. Requires <code>npm run fetch-test-data</code> first.</td>
+          </tr>
+          <tr>
+            <td>npm run example</td>
+            <td>Serves the repo root at <code>http://127.0.0.1:8080</code> so <code>examples/basic.html</code> can load the local ROMs. Run <code>npm run build</code> first.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="hero-actions" style="margin-top:3rem">
+      <a class="btn btn-outline" href="c64script.html">C64Script language →</a>
+      <a class="btn btn-outline" href="architecture.html">How it's built →</a>
+    </div>
+
+  </div><!-- /.article -->
+
+  <!-- ── Footer ────────────────────────────────────────────────── -->
+  <footer>
+    <div>
+      <div class="footer-brand">f6502</div>
+      <p class="footer-desc">A cycle-accurate Commodore 64 emulator in TypeScript. Apache-2.0.</p>
+    </div>
+    <nav class="footer-links" aria-label="Footer">
+      <a href="architecture.html">Architecture</a>
+      <a href="usage.html">Usage</a>
+      <a href="c64script.html">C64Script</a>
+      <a href="showcases.html">Showcases</a>
+      <a href="https://github.com/firatkucuk/f6502" target="_blank" rel="noopener">GitHub</a>
+    </nav>
+  </footer>
+
+</div><!-- /.page -->
+
+<script src="js/app.js"></script>
+</body>
+</html>

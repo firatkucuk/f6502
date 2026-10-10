@@ -1,0 +1,594 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>C64Script — f6502</title>
+  <meta name="description" content="C64Script: a TypeScript-inspired language that compiles directly to 6502 machine code for the Commodore 64. No assembly required.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Space+Grotesk:wght@300;400;500;600;700&family=Fira+Code:wght@400;500&family=VT323&display=swap">
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      background: rgba(106, 191, 198, 0.12);
+      border: 1px solid rgba(106, 191, 198, 0.3);
+      border-radius: 20px;
+      font-family: var(--font-pixel);
+      font-size: 8px;
+      color: var(--accent);
+      letter-spacing: 0.1em;
+      margin-bottom: 1.5rem;
+    }
+    .kw   { color: var(--primary); }
+    .ty   { color: var(--accent); }
+    .an   { color: var(--orange, #c9934a); }
+    .nu   { color: var(--yellow); }
+    .cm   { color: var(--text-dim); font-style: italic; }
+    .fn   { color: #a090e8; }
+    .str  { color: var(--green); }
+
+    .op-table td:nth-child(2) { font-family: var(--font-mono); color: var(--yellow); }
+    .op-table td:nth-child(3) { color: var(--text-muted); font-size: 0.85rem; }
+
+    .api-addr { font-family: var(--font-mono); font-size: 0.85rem; color: var(--accent); }
+
+    /* Vertical connector for pipeline on mobile */
+    @media (max-width: 680px) {
+      .pipe-step { flex: 0 0 calc(50% - 4px) !important; }
+      .pipe-step:not(:first-child)::before { display: none !important; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Navigation ──────────────────────────────────────────────── -->
+<nav class="nav" role="navigation" aria-label="Main">
+  <a class="nav-logo" href="index.html">f6502<span>.</span></a>
+  <ul class="nav-links">
+    <li><a href="index.html">Home</a></li>
+    <li><a href="architecture.html">Architecture</a></li>
+    <li><a href="usage.html">Usage</a></li>
+    <li><a href="c64script.html" aria-current="page">C64Script</a></li>
+    <li><a href="showcases.html">Showcases</a></li>
+  </ul>
+  <a class="nav-gh" href="https://github.com/firatkucuk/f6502" target="_blank" rel="noopener">
+    <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+    GitHub
+  </a>
+  <button class="nav-burger" aria-label="Menu" aria-expanded="false">☰</button>
+</nav>
+
+<div class="page">
+
+  <!-- ── Hero ──────────────────────────────────────────────────── -->
+  <section class="hero">
+    <div class="hero-badge">TypeScript for the 6502</div>
+    <h1 class="hero-title">
+      <span class="hi">C64</span><span class="hi2">Script</span>
+    </h1>
+    <p class="hero-lead">
+      Write Commodore 64 programs in a language that feels familiar.
+      C64Script compiles directly to 6502 machine code —
+      no assembly, no linker scripts, no makefile.
+      Just TypeScript-like syntax that becomes bytes your C64 can run.
+    </p>
+    <div class="hero-actions">
+      <a class="btn btn-primary" href="index.html#demo">▶ Try in the Demo</a>
+      <a class="btn btn-outline" href="https://github.com/firatkucuk/f6502/tree/main/src/c64script" target="_blank" rel="noopener">View compiler source</a>
+    </div>
+  </section>
+
+  <!-- ── Features ──────────────────────────────────────────────── -->
+  <section class="section" style="padding-top:0">
+    <p class="section-label">Language features</p>
+    <h2 class="section-title">Everything you need, nothing you don't</h2>
+    <p class="section-lead">
+      C64Script targets the 6502's constraints directly. Every feature maps
+      cleanly to machine instructions — there is no runtime, no garbage
+      collector, no hidden overhead.
+    </p>
+
+    <div class="lang-feature reveal">
+      <span class="lang-feature-icon">🔤</span>
+      <div class="lang-feature-body">
+        <h4>Familiar TypeScript-like syntax</h4>
+        <p>Variable declarations, typed parameters, if/else, loops, functions — the structure you already know, targeting 8-bit hardware from 1982.</p>
+      </div>
+    </div>
+
+    <div class="lang-feature reveal">
+      <span class="lang-feature-icon">⚡</span>
+      <div class="lang-feature-body">
+        <h4>Zero-page annotation <code>@zp</code></h4>
+        <p>Mark variables <code>@zp</code> to place them in zero page ($00–$FF). The 6502 can address these with a single byte instead of two, making every access faster and smaller. You get up to 256 bytes of zero-page space.</p>
+      </div>
+    </div>
+
+    <div class="lang-feature reveal">
+      <span class="lang-feature-icon">🔌</span>
+      <div class="lang-feature-body">
+        <h4>Hardware register access <code>@addr</code></h4>
+        <p>Pin any variable to a specific memory address. The C64's built-in <code>c64.*</code> fields use this — they are just variables bound to VIC-II and SID registers, not magic.</p>
+      </div>
+    </div>
+
+    <div class="lang-feature reveal">
+      <span class="lang-feature-icon">🎨</span>
+      <div class="lang-feature-body">
+        <h4>Color constants</h4>
+        <p>All 16 C64 colors are built-in constants: <code>BLACK</code>, <code>WHITE</code>, <code>RED</code>, <code>CYAN</code>, <code>PURPLE</code>, <code>GREEN</code>, <code>BLUE</code>, <code>YELLOW</code>, <code>ORANGE</code>, <code>BROWN</code>, <code>LIGHT_RED</code>, <code>DARK_GRAY</code>, <code>GRAY</code>, <code>LIGHT_GREEN</code>, <code>LIGHT_BLUE</code>, <code>LIGHT_GRAY</code>. They fold to immediate values at compile time — no runtime cost.</p>
+      </div>
+    </div>
+
+    <div class="lang-feature reveal">
+      <span class="lang-feature-icon">🔁</span>
+      <div class="lang-feature-body">
+        <h4>Loops and conditionals</h4>
+        <p><code>while</code>, <code>for</code>, <code>loop</code> (infinite), <code>break</code>, <code>continue</code>. <code>if</code> / <code>elif</code> / <code>else</code> chains with full JMP-patching so every branch lands correctly.</p>
+      </div>
+    </div>
+
+    <div class="lang-feature reveal">
+      <span class="lang-feature-icon">🧩</span>
+      <div class="lang-feature-body">
+        <h4>Functions</h4>
+        <p>Define reusable <code>fn</code> blocks with typed parameters and return values. The compiler inlines JSR/RTS calls — no dynamic dispatch overhead.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Quick examples ────────────────────────────────────────── -->
+  <section class="section" style="padding-top:0">
+    <p class="section-label">Examples</p>
+    <h2 class="section-title">See it in action</h2>
+
+    <div class="terminal reveal">
+      <div class="terminal-bar">
+        <span class="terminal-dot red"></span>
+        <span class="terminal-dot yellow"></span>
+        <span class="terminal-dot green"></span>
+        <span class="terminal-title">rainbow-border.c64s</span>
+      </div>
+      <div class="terminal-body">
+        <pre><span class="cm">// Flash the border through all 16 C64 colours</span>
+<span class="kw">program</span>(<span class="nu">0x0810</span>) {
+  <span class="kw">var</span> <span class="ty">color</span>: <span class="ty">byte</span> <span class="an">@zp</span> = <span class="nu">0</span>;
+  <span class="kw">var</span> <span class="ty">delay</span>: <span class="ty">byte</span> <span class="an">@zp</span> = <span class="nu">0</span>;
+
+  <span class="kw">loop</span> {
+    <span class="kw">c64</span>.border = color;
+    color = color + <span class="nu">1</span>;
+    <span class="kw">if</span> (color == <span class="nu">16</span>) { color = <span class="nu">0</span>; }
+
+    <span class="cm">// inner delay loop — burn ~50,000 cycles per colour</span>
+    delay = <span class="nu">0</span>;
+    <span class="kw">while</span> (delay &lt; <span class="nu">200</span>) {
+      delay = delay + <span class="nu">1</span>;
+    }
+  }
+}</pre>
+      </div>
+    </div>
+
+    <p style="margin:1.5rem 0 1rem;color:var(--text-muted);font-size:0.9rem">
+      Use a function to keep the main loop clean:
+    </p>
+
+    <div class="terminal reveal">
+      <div class="terminal-bar">
+        <span class="terminal-dot red"></span>
+        <span class="terminal-dot yellow"></span>
+        <span class="terminal-dot green"></span>
+        <span class="terminal-title">clamp-demo.c64s</span>
+      </div>
+      <div class="terminal-body">
+        <pre><span class="cm">// Function with typed parameters and return value</span>
+<span class="kw">fn</span> <span class="fn">clamp</span>(val: <span class="ty">byte</span>, max: <span class="ty">byte</span>): <span class="ty">byte</span> {
+  <span class="kw">if</span> (val &gt; max) { <span class="kw">return</span> max; }
+  <span class="kw">return</span> val;
+}
+
+<span class="kw">program</span>(<span class="nu">0x0810</span>) {
+  <span class="kw">var</span> x: <span class="ty">byte</span> <span class="an">@zp</span> = <span class="nu">0</span>;
+
+  <span class="kw">loop</span> {
+    <span class="kw">c64</span>.border     = <span class="fn">clamp</span>(x, <span class="nu">15</span>);
+    <span class="kw">c64</span>.background = <span class="fn">clamp</span>(x &amp; <span class="nu">7</span>, <span class="nu">7</span>);
+    x = x + <span class="nu">1</span>;
+  }
+}</pre>
+      </div>
+    </div>
+
+    <div class="infobox accent" style="margin-top:2rem">
+      <strong>Pro tip — use @zp for loop counters.</strong>
+      Zero-page variables are accessed with a 2-byte instruction instead of 3,
+      and every branch/compare inside a tight loop hits them dozens of times.
+      The speed difference is measurable on real hardware.
+    </div>
+
+    <p style="margin:1.5rem 0 1rem;color:var(--text-muted);font-size:0.9rem">
+      Use color constants directly — they compile to zero-cost immediates:
+    </p>
+
+    <div class="terminal reveal">
+      <div class="terminal-bar">
+        <span class="terminal-dot red"></span>
+        <span class="terminal-dot yellow"></span>
+        <span class="terminal-dot green"></span>
+        <span class="terminal-title">colors.c64s</span>
+      </div>
+      <div class="terminal-body">
+        <pre><span class="kw">program</span>(<span class="nu">0x0810</span>) {
+  <span class="kw">c64</span>.border     = BLUE;        <span class="cm">// → LDA #6 ; STA $D020</span>
+  <span class="kw">c64</span>.background = LIGHT_BLUE;  <span class="cm">// → LDA #14; STA $D021</span>
+
+  <span class="kw">loop</span> {}  <span class="cm">// run forever</span>
+}</pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Type system ────────────────────────────────────────────── -->
+  <section class="section" style="padding-top:0">
+    <p class="section-label">Type system</p>
+    <h2 class="section-title">Types and annotations</h2>
+
+    <div class="table-wrap reveal">
+      <table>
+        <thead>
+          <tr><th>Type</th><th>Width</th><th>Range</th><th>Notes</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>byte</code></td>
+            <td>8-bit</td>
+            <td>0 – 255</td>
+            <td style="color:var(--text-muted)">Maps to the 6502 accumulator. All arithmetic is modulo 256.</td>
+          </tr>
+          <tr>
+            <td><code>word</code></td>
+            <td>16-bit</td>
+            <td>0 – 65535</td>
+            <td style="color:var(--text-muted)">Partial support — use for addresses and loop counters.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 style="margin-top:2.5rem">Annotations</h3>
+    <div class="table-wrap reveal">
+      <table>
+        <thead>
+          <tr><th>Annotation</th><th>Effect</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>@zp</code></td>
+            <td style="color:var(--text-muted)">Place variable in zero page ($00–$FF). Generates shorter, faster opcodes. Max 256 bytes total across all <code>@zp</code> vars.</td>
+          </tr>
+          <tr>
+            <td><code>@addr(0xD020)</code></td>
+            <td style="color:var(--text-muted)">Bind variable to a fixed memory address. Used internally for all <code>c64.*</code> hardware fields.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ── Operators ─────────────────────────────────────────────── -->
+  <section class="section" style="padding-top:0">
+    <p class="section-label">Reference</p>
+    <h2 class="section-title">Operators</h2>
+
+    <div class="table-wrap reveal op-table">
+      <table>
+        <thead>
+          <tr><th>Category</th><th>Operator</th><th>Notes</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Arithmetic</td><td>+</td><td>ADC (add with carry); result mod 256</td></tr>
+          <tr><td>Arithmetic</td><td>-</td><td>SBC (subtract with borrow); result mod 256</td></tr>
+          <tr><td>Bitwise</td><td>&amp;</td><td>AND</td></tr>
+          <tr><td>Bitwise</td><td>|</td><td>OR</td></tr>
+          <tr><td>Bitwise</td><td>^</td><td>EOR (exclusive-or)</td></tr>
+          <tr><td>Comparison</td><td>==  !=</td><td>Equality / inequality</td></tr>
+          <tr><td>Comparison</td><td>&lt;  &lt;=</td><td>Unsigned less-than / less-than-or-equal</td></tr>
+          <tr><td>Comparison</td><td>&gt;  &gt;=</td><td>Unsigned greater-than / greater-than-or-equal. Note: &gt; and &lt;= require two branch instructions on 6502.</td></tr>
+          <tr><td>Increment</td><td>++  --</td><td>On variables: INC/DEC zp. On hardware fields: LDA/CLC/ADC#1/STA (NMOS can't INC hardware registers safely).</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="infobox yellow" style="margin-top:1.5rem">
+      <strong>6502 comparisons are unsigned.</strong>
+      There are no signed integers in C64Script. <code>255 &lt; 0</code> is false;
+      <code>200 &gt; 100</code> is true. Keep this in mind when writing loop
+      conditions near the 0 / 255 boundary.
+    </div>
+  </section>
+
+  <!-- ── Built-in C64 API ───────────────────────────────────────── -->
+  <section class="section" style="padding-top:0">
+    <p class="section-label">Hardware</p>
+    <h2 class="section-title">Built-in C64 API</h2>
+    <p class="section-lead">
+      The <code>c64</code> object provides direct access to VIC-II hardware
+      registers. All fields are write-only unless noted.
+    </p>
+
+    <div class="table-wrap reveal">
+      <table>
+        <thead>
+          <tr><th>Field</th><th>Address</th><th>Access</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>c64.border</code></td>
+            <td class="api-addr">$D020</td>
+            <td><span class="tag tag-accent">write</span></td>
+            <td style="color:var(--text-muted)">Border colour (0–15)</td>
+          </tr>
+          <tr>
+            <td><code>c64.background</code></td>
+            <td class="api-addr">$D021</td>
+            <td><span class="tag tag-accent">write</span></td>
+            <td style="color:var(--text-muted)">Background colour (0–15)</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 style="margin-top:2rem">Color constants</h3>
+    <p style="color:var(--text-muted);font-size:0.9rem;margin-bottom:1rem">
+      All 16 C64 colors are pre-defined. They are plain <code>byte</code>
+      constants that fold away at compile time — using <code>CYAN</code>
+      generates exactly the same code as writing <code>3</code>.
+    </p>
+
+    <div class="table-wrap reveal">
+      <table>
+        <thead>
+          <tr><th>Constant</th><th>Value</th><th>Constant</th><th>Value</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>BLACK</code></td><td style="color:var(--text-muted)">0</td><td><code>ORANGE</code></td><td style="color:var(--text-muted)">8</td></tr>
+          <tr><td><code>WHITE</code></td><td style="color:var(--text-muted)">1</td><td><code>BROWN</code></td><td style="color:var(--text-muted)">9</td></tr>
+          <tr><td><code>RED</code></td><td style="color:var(--text-muted)">2</td><td><code>LIGHT_RED</code></td><td style="color:var(--text-muted)">10</td></tr>
+          <tr><td><code>CYAN</code></td><td style="color:var(--text-muted)">3</td><td><code>DARK_GRAY</code></td><td style="color:var(--text-muted)">11</td></tr>
+          <tr><td><code>PURPLE</code></td><td style="color:var(--text-muted)">4</td><td><code>GRAY</code></td><td style="color:var(--text-muted)">12</td></tr>
+          <tr><td><code>GREEN</code></td><td style="color:var(--text-muted)">5</td><td><code>LIGHT_GREEN</code></td><td style="color:var(--text-muted)">13</td></tr>
+          <tr><td><code>BLUE</code></td><td style="color:var(--text-muted)">6</td><td><code>LIGHT_BLUE</code></td><td style="color:var(--text-muted)">14</td></tr>
+          <tr><td><code>YELLOW</code></td><td style="color:var(--text-muted)">7</td><td><code>LIGHT_GRAY</code></td><td style="color:var(--text-muted)">15</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ── Compiler pipeline ──────────────────────────────────────── -->
+  <section class="section" style="padding-top:0">
+    <p class="section-label">Internals</p>
+    <h2 class="section-title">Compiler pipeline</h2>
+    <p class="section-lead">
+      The compiler is a clean six-stage pipeline, each stage
+      transforming one data structure into the next.
+      The whole thing is &lt;1,500 lines of TypeScript.
+    </p>
+
+    <div class="pipeline reveal">
+      <div class="pipe-step">
+        <span class="pipe-step-icon">📖</span>
+        <span class="pipe-step-name">Lexer</span>
+        <span class="pipe-step-desc">source → tokens</span>
+      </div>
+      <div class="pipe-step">
+        <span class="pipe-step-icon">🌳</span>
+        <span class="pipe-step-name">Parser</span>
+        <span class="pipe-step-desc">tokens → AST</span>
+      </div>
+      <div class="pipe-step">
+        <span class="pipe-step-icon">🔍</span>
+        <span class="pipe-step-name">Checker</span>
+        <span class="pipe-step-desc">validates &amp; folds</span>
+      </div>
+      <div class="pipe-step">
+        <span class="pipe-step-icon">⚙️</span>
+        <span class="pipe-step-name">CodeGen</span>
+        <span class="pipe-step-desc">emits opcodes</span>
+      </div>
+      <div class="pipe-step">
+        <span class="pipe-step-icon">🔗</span>
+        <span class="pipe-step-name">Linker</span>
+        <span class="pipe-step-desc">resolves fixups</span>
+      </div>
+      <div class="pipe-step">
+        <span class="pipe-step-icon">💾</span>
+        <span class="pipe-step-name">PRG Writer</span>
+        <span class="pipe-step-desc">→ Uint8Array</span>
+      </div>
+    </div>
+
+    <div class="article" style="padding:0;max-width:100%">
+      <h3>Stage 1 — Lexer</h3>
+      <p>
+        Scans the source character-by-character and produces a flat list of
+        typed tokens: keywords, identifiers, integer literals, operators, and
+        punctuation. Throws <code>LexError</code> on unexpected characters.
+      </p>
+
+      <h3>Stage 2 — Parser</h3>
+      <p>
+        Consumes the token stream and builds an AST (Abstract Syntax Tree).
+        The grammar is hand-written recursive descent — no parser generator.
+        Throws <code>ParseError</code> on unexpected tokens or structural errors.
+      </p>
+
+      <h3>Stage 3 — Type Checker</h3>
+      <p>
+        Two-pass analysis. Pass 1 collects all function signatures and
+        variable declarations. Pass 2 validates types, resolves
+        <code>@zp</code> / <code>@addr</code> annotations, and <strong>folds
+        constant variables</strong> — variables declared without an annotation
+        whose initialiser is a literal get a <code>constValue</code> field,
+        so the code generator emits an immediate mode opcode rather than a
+        memory access. All 16 color constants are folded this way.
+        Throws <code>TypeError</code>.
+      </p>
+
+      <h3>Stage 4 — Code Generator</h3>
+      <p>
+        Walks the checked AST and emits 6502 opcodes into a
+        <code>CodeBuffer</code>. Labels and forward-jump targets are recorded
+        as <em>fixups</em> — placeholder bytes that the linker patches.
+        Zero-page allocation is tracked to avoid collisions. Throws
+        <code>CodeGenError</code> for things like calling an undefined function.
+      </p>
+
+      <h3>Stage 5 — Linker</h3>
+      <p>
+        Iterates through all fixups and patches the placeholder bytes with
+        the resolved addresses. Branch fixups use signed 8-bit offsets
+        (<code>branch8</code>); absolute jumps use 16-bit little-endian values
+        (<code>abs16</code>). Zero-page fixups use single-byte addresses.
+      </p>
+
+      <h3>Stage 6 — PRG Writer</h3>
+      <p>
+        Prepends the 2-byte little-endian load address (e.g. <code>$08 $10</code>
+        for address <code>$1008</code>) to the byte buffer. The result is a
+        valid Commodore PRG file that <code>F6502.player.load()</code> or
+        any real C64 can load directly.
+      </p>
+    </div>
+  </section>
+
+  <!-- ── JavaScript API ────────────────────────────────────────── -->
+  <section class="section" style="padding-top:0">
+    <p class="section-label">API</p>
+    <h2 class="section-title">Using the compiler from JavaScript</h2>
+
+    <div class="terminal reveal">
+      <div class="terminal-bar">
+        <span class="terminal-dot red"></span>
+        <span class="terminal-dot yellow"></span>
+        <span class="terminal-dot green"></span>
+        <span class="terminal-title">compile-and-run.ts</span>
+      </div>
+      <div class="terminal-body">
+        <pre><span class="kw">import</span> { compile, LexError, ParseError, TypeError, CodeGenError } <span class="kw">from</span> <span class="str">'f6502'</span>;
+
+<span class="kw">const</span> source = <span class="str">`
+  program(0x0810) {
+    loop { c64.border = c64.border + 1; }
+  }
+`</span>;
+
+<span class="kw">try</span> {
+  <span class="kw">const</span> prg: Uint8Array = compile(source);
+  <span class="cm">// prg is a valid .prg file (load address + machine code)</span>
+  <span class="kw">await</span> player.<span class="fn">load</span>(prg);
+} <span class="kw">catch</span> (err) {
+  <span class="kw">if</span> (err <span class="kw">instanceof</span> LexError)     console.error(<span class="str">'Lex error:'</span>,     err.message);
+  <span class="kw">if</span> (err <span class="kw">instanceof</span> ParseError)   console.error(<span class="str">'Parse error:'</span>,   err.message);
+  <span class="kw">if</span> (err <span class="kw">instanceof</span> TypeError)    console.error(<span class="str">'Type error:'</span>,    err.message);
+  <span class="kw">if</span> (err <span class="kw">instanceof</span> CodeGenError) console.error(<span class="str">'CodeGen error:'</span>, err.message);
+}</pre>
+      </div>
+    </div>
+
+    <h3 style="margin-top:2rem">Error types</h3>
+    <div class="table-wrap reveal">
+      <table>
+        <thead>
+          <tr><th>Class</th><th>When thrown</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>LexError</code></td>
+            <td style="color:var(--text-muted)">Unexpected character, invalid number literal, unterminated comment</td>
+          </tr>
+          <tr>
+            <td><code>ParseError</code></td>
+            <td style="color:var(--text-muted)">Unexpected token, missing semicolon, malformed expression</td>
+          </tr>
+          <tr>
+            <td><code>TypeError</code></td>
+            <td style="color:var(--text-muted)">Undefined variable or function, type mismatch, write to read-only field, missing <code>program</code> block</td>
+          </tr>
+          <tr>
+            <td><code>CodeGenError</code></td>
+            <td style="color:var(--text-muted)">Call to undefined function, zero-page overflow</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ── Limitations ───────────────────────────────────────────── -->
+  <section class="section" style="padding-top:0">
+    <p class="section-label">Roadmap</p>
+    <h2 class="section-title">Current limitations</h2>
+    <p class="section-lead">
+      C64Script is young. Here's what's not there yet — and why.
+    </p>
+
+    <div class="chip-grid reveal">
+      <div class="chip-card">
+        <div class="chip-card-num">NO MUL / DIV</div>
+        <h3>No multiplication or division</h3>
+        <p class="chip-label">Missing native 6502 instruction</p>
+        <p>The 6502 has no multiply or divide opcode. Workarounds exist (repeated addition, shift-and-add), but C64Script doesn't generate them yet. Use bit-shifts <code>&amp;</code> / <code>|</code> for power-of-two multiples.</p>
+      </div>
+      <div class="chip-card">
+        <div class="chip-card-num">NO ARRAYS</div>
+        <h3>No arrays or pointers</h3>
+        <p class="chip-label">Design in progress</p>
+        <p>Indexed addressing (e.g. <code>LDA $C000,X</code>) is powerful on 6502, but mapping it to a safe language construct is non-trivial. Planned for a future version.</p>
+      </div>
+      <div class="chip-card">
+        <div class="chip-card-num">NO STRINGS</div>
+        <h3>No string literals</h3>
+        <p class="chip-label">Screen-code encoding complexity</p>
+        <p>The C64 uses PETSCII and screen codes, not ASCII. Proper string support requires a plan for encoding and screen memory layout.</p>
+      </div>
+      <div class="chip-card">
+        <div class="chip-card-num">PARTIAL</div>
+        <h3>word type is partial</h3>
+        <p class="chip-label">16-bit operations need more work</p>
+        <p>You can declare <code>word</code> variables, but arithmetic on them is incomplete. Stick to <code>byte</code> for anything that needs to work reliably today.</p>
+      </div>
+    </div>
+
+    <div class="infobox" style="margin-top:2rem">
+      <strong>Contributions welcome.</strong>
+      The compiler is &lt;1,500 lines of TypeScript with a comprehensive test suite.
+      If you want to add arrays, multiplication, or more hardware registers,
+      <a href="https://github.com/firatkucuk/f6502" target="_blank" rel="noopener">the source is on GitHub</a>.
+    </div>
+  </section>
+
+  <!-- ── Footer ────────────────────────────────────────────────── -->
+  <footer>
+    <div>
+      <div class="footer-brand">f6502</div>
+      <p class="footer-desc">A cycle-accurate Commodore 64 emulator in TypeScript. Apache-2.0.</p>
+    </div>
+    <nav class="footer-links" aria-label="Footer">
+      <a href="index.html">Home</a>
+      <a href="architecture.html">Architecture</a>
+      <a href="usage.html">Usage</a>
+      <a href="showcases.html">Showcases</a>
+      <a href="https://github.com/firatkucuk/f6502" target="_blank" rel="noopener">GitHub</a>
+    </nav>
+  </footer>
+
+</div><!-- /.page -->
+
+<script src="js/app.js"></script>
+</body>
+</html>
