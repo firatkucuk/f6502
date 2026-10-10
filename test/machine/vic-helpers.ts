@@ -8,6 +8,7 @@ export function vicWorld() {
     readMem: (a) => ram[a & 0x3fff]!,
     readColor: (i) => color[i & 0x3ff]!,
   });
+  vic.clearSpriteMcBase();
   return { vic, ram, color };
 }
 

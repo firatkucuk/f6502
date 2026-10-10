@@ -13,7 +13,7 @@ SPRITE_P_CYCLE.forEach((cycle, n) => {
 export class Sprites {
   readonly dma = new Uint8Array(8);
   readonly display = new Uint8Array(8);
-  readonly mcBase = new Uint8Array(8);
+  readonly mcBase = new Uint8Array(8).fill(0x3f);
   readonly mc = new Uint8Array(8);
   private readonly expandFF = new Uint8Array(8).fill(1);
   private readonly data = new Int32Array(8);
@@ -21,6 +21,12 @@ export class Sprites {
   private readonly pos = new Int16Array(8).fill(-1);
   /** Bitmask of sprites whose display flag is on. */
   active = 0;
+  private running = 0;
+
+  /** True while any sprite is displayed or still shifting out a started row. */
+  get busy(): boolean {
+    return (this.active | this.running) !== 0;
+  }
   /** Output of the last `sample()`: bit n set = sprite n has an opaque pixel here. */
   mask = 0;
   readonly colors = new Uint8Array(8);
@@ -33,7 +39,8 @@ export class Sprites {
   reset(): void {
     this.dma.fill(0);
     this.display.fill(0);
-    this.mcBase.fill(0);
+    this.mcBase.fill(0x3f);
+    this.running = 0;
     this.mc.fill(0);
     this.expandFF.fill(1);
     this.data.fill(0);
@@ -50,28 +57,24 @@ export class Sprites {
     return m;
   }
 
-  /** Shifters do not run across lines. */
-  newLine(): void {
-    this.pos.fill(-1);
-  }
-
   /** DMA bookkeeping and fetch events for cycle `c` of line `raster`. */
   cycle(c: number, raster: number): void {
     const regs = this.regs;
+    for (let n = 0; n < 8; n++) if (((regs[0x17]! >> n) & 1) === 0) this.expandFF[n] = 1;
     switch (c) {
       case 15:
-        for (let n = 0; n < 8; n++) if (this.dma[n] && this.expandFF[n]) this.mcBase[n]! += 2;
+        for (let n = 0; n < 8; n++)
+          if (this.dma[n] && this.expandFF[n]) this.mcBase[n] = (this.mcBase[n]! + 2) & 0x3f;
         break;
       case 16:
         for (let n = 0; n < 8; n++) {
-          if (this.dma[n] && this.expandFF[n]) this.mcBase[n]! += 1;
+          if (this.dma[n] && this.expandFF[n]) this.mcBase[n] = (this.mcBase[n]! + 1) & 0x3f;
           if (this.mcBase[n] === 63) this.dma[n] = 0;
         }
         break;
       case 55:
         for (let n = 0; n < 8; n++) {
           if ((regs[0x17]! >> n) & 1) this.expandFF[n]! ^= 1;
-          else this.expandFF[n] = 1;
         }
         this.dmaCheck(raster);
         break;
@@ -81,8 +84,10 @@ export class Sprites {
       case 58:
         for (let n = 0; n < 8; n++) {
           this.mc[n] = this.mcBase[n]!;
-          if (!this.dma[n]) this.display[n] = 0;
-          else if (regs[1 + 2 * n] === (raster & 0xff)) this.display[n] = 1;
+          if (!this.dma[n]) {
+            if (this.display[n]) this.mcBase[n] = 0; // display ends: MCBASE is cleared now
+            this.display[n] = 0;
+          } else if (regs[1 + 2 * n] === (raster & 0xff)) this.display[n] = 1;
         }
         this.updateActive();
         break;
@@ -96,9 +101,10 @@ export class Sprites {
     const regs = this.regs;
     let mask = 0;
     for (let n = 0; n < 8; n++) {
-      if (((this.active >> n) & 1) === 0) continue;
+      const displayed = ((this.active >> n) & 1) !== 0;
       let p = this.pos[n]!;
       if (p < 0) {
+        if (!displayed) continue;
         const sx = regs[2 * n]! | (((regs[0x10]! >> n) & 1) << 8);
         if (x !== sx) continue;
         p = 0;
@@ -123,6 +129,9 @@ export class Sprites {
       p++;
       this.pos[n] = p >= 24 << xexp ? -1 : p;
     }
+    let running = 0;
+    for (let n = 0; n < 8; n++) if (this.pos[n]! >= 0) running |= 1 << n;
+    this.running = running;
     this.mask = mask;
   }
 
@@ -135,7 +144,6 @@ export class Sprites {
         regs[1 + 2 * n] === (raster & 0xff)
       ) {
         this.dma[n] = 1;
-        this.mcBase[n] = 0;
         if ((regs[0x17]! >> n) & 1) this.expandFF[n] = 0;
       }
     }

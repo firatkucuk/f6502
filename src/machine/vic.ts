@@ -85,6 +85,11 @@ export class VicII implements IoChip {
     };
   }
 
+  /** @internal Test helper: the post-power-on state in which no sprite anomaly is pending. */
+  clearSpriteMcBase(): void {
+    this.sprites.mcBase.fill(0);
+  }
+
   reset(): void {
     this.regs.fill(0);
     this.status = 0;
@@ -220,7 +225,7 @@ export class VicII implements IoChip {
     this.sprites.cycle(c, this.raster);
     this.graphics(c);
     const visible = c >= FIRST_VISIBLE_CYCLE && c <= LAST_VISIBLE_CYCLE;
-    if (visible || this.sprites.active !== 0) this.outputCycle(c, visible);
+    if (visible || this.sprites.busy) this.outputCycle(c, visible);
 
     if (c === 58) {
       if (this.rc === 7) {
@@ -272,6 +277,7 @@ export class VicII implements IoChip {
         let addr: number;
         if (mode & 2) {
           addr = ((regs[0x18]! & 0x08) << 10) | (this.vc << 3) | this.rc;
+          if (ecm) addr &= ~0x600; // ECM forces address bits 9 and 10 low (like the idle access)
         } else {
           const cb = ((regs[0x18]! >> 1) & 0x07) << 11;
           addr = cb + ((ecm ? code & 0x3f : code) << 3) + this.rc;
@@ -331,7 +337,7 @@ export class VicII implements IoChip {
     const rowBase = (this.raster - FIRST_VISIBLE_RASTER) * FRAME_WIDTH;
     const fx0 = (c - FIRST_VISIBLE_CYCLE) * 8;
     const x0 = ((((c - FIRST_VISIBLE_CYCLE) * 8 + 496) % 504) + 504) % 504;
-    const spritesOn = this.sprites.active !== 0;
+    const spritesOn = this.sprites.busy;
 
     for (let i = 0; i < 8; i++) {
       const x = (x0 + i) % 504;
