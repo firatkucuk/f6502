@@ -34,6 +34,9 @@ jobs:
       - name: Build emulator
         run: npm run build
 
+      - name: Build stub ROMs
+        run: node scripts/make-stub-roms.mjs
+
       - name: Build demo PRGs
         run: node scripts/build-nyancat-prg.mjs
 
