@@ -1,0 +1,29 @@
+import js from '@eslint/js';
+import tseslint from 'typescript-eslint';
+
+export default tseslint.config(
+  { ignores: ['dist', '.testdata', 'node_modules', 'scripts', '.superpowers'] },
+  js.configs.recommended,
+  ...tseslint.configs.recommended,
+  {
+    rules: {
+      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+    },
+  },
+  {
+    files: ['src/core/**/*.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['**/machine', '**/machine/*', '**/browser', '**/browser/*'],
+              message: 'core/ must not import from machine/ or browser/',
+            },
+          ],
+        },
+      ],
+    },
+  },
+);

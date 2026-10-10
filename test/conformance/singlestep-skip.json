@@ -1,0 +1,14 @@
+{
+  "12": "JAM: the suite records a fixed 11-cycle sample of an infinite bus hang; f6502 halts instead (covered by test/core/illegal.test.ts)",
+  "22": "JAM: the suite records a fixed 11-cycle sample of an infinite bus hang; f6502 halts instead (covered by test/core/illegal.test.ts)",
+  "32": "JAM: the suite records a fixed 11-cycle sample of an infinite bus hang; f6502 halts instead (covered by test/core/illegal.test.ts)",
+  "42": "JAM: the suite records a fixed 11-cycle sample of an infinite bus hang; f6502 halts instead (covered by test/core/illegal.test.ts)",
+  "52": "JAM: the suite records a fixed 11-cycle sample of an infinite bus hang; f6502 halts instead (covered by test/core/illegal.test.ts)",
+  "62": "JAM: the suite records a fixed 11-cycle sample of an infinite bus hang; f6502 halts instead (covered by test/core/illegal.test.ts)",
+  "72": "JAM: the suite records a fixed 11-cycle sample of an infinite bus hang; f6502 halts instead (covered by test/core/illegal.test.ts)",
+  "92": "JAM: the suite records a fixed 11-cycle sample of an infinite bus hang; f6502 halts instead (covered by test/core/illegal.test.ts)",
+  "02": "JAM: the suite records a fixed 11-cycle sample of an infinite bus hang; f6502 halts instead (covered by test/core/illegal.test.ts)",
+  "b2": "JAM: the suite records a fixed 11-cycle sample of an infinite bus hang; f6502 halts instead (covered by test/core/illegal.test.ts)",
+  "d2": "JAM: the suite records a fixed 11-cycle sample of an infinite bus hang; f6502 halts instead (covered by test/core/illegal.test.ts)",
+  "f2": "JAM: the suite records a fixed 11-cycle sample of an infinite bus hang; f6502 halts instead (covered by test/core/illegal.test.ts)"
+}
