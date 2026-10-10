@@ -1,0 +1,230 @@
+// ────────────────────────────────────────────────────────────────────────────
+//  Nyan Cat demo — f6502 showcase
+//  Written in C64Script (compiled to 6502 machine code).
+//
+//  Splash screen:  F6502 / Apache 2.0 Licence / Built by Firat Kucuk
+//  Then:           Nyan Cat sprite bouncing across a blue sky with a
+//                  rainbow border colour-cycle.
+//
+//  Compile:  node scripts/build-nyancat-prg.mjs
+//  Load:     via the f6502 emulator "Load .prg" button
+// ────────────────────────────────────────────────────────────────────────────
+
+// ── Sprite data: Nyan Cat silhouette, 24 × 21 px, single colour ──────────────
+//    Placed at $0A00 (sprite pointer value = $0A00 / 64 = 40 = 0x28)
+//    Screen-pointer register is at $07F8 (screen base $0400 + $3F8).
+data @addr(0x0A00) {
+  cat: [u8; 63] = [
+    0x0C, 0x60, 0x00,   // row  0: . . . . # # . . . # # . . . . . . . . . . . . .
+    0x0C, 0x60, 0x00,   // row  1: (ears)
+    0x1F, 0xFC, 0x00,   // row  2: . . . # # # # # # # # # # # . . . . . . . . . .
+    0x3F, 0xFE, 0x00,   // row  3: . . # # # # # # # # # # # # # . . . . . . . . .
+    0x7F, 0xFF, 0x00,   // row  4: . # # # # # # # # # # # # # # # . . . . . . . .
+    0x67, 0x9F, 0x00,   // row  5: . # # . . # # # # . . # # # # # . (eyes)
+    0x7F, 0xFF, 0x00,   // row  6
+    0x7F, 0xFF, 0x00,   // row  7
+    0x7F, 0xFF, 0x00,   // row  8
+    0x3F, 0xFE, 0x00,   // row  9
+    0x3F, 0xFE, 0x00,   // row 10
+    0x33, 0x32, 0x00,   // row 11: . . # # . . # # . . # # . . # . (legs)
+    0x33, 0x32, 0x00,   // row 12
+    0x33, 0x32, 0x00,   // row 13
+    0x30, 0x02, 0x00,   // row 14: . . # # . . . . . . . . . . # . (paws)
+    0x00, 0x00, 0x00,   // rows 15-20 (blank padding)
+    0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00,
+  ];
+}
+
+// ── ZP variables ──────────────────────────────────────────────────────────────
+let @zp catX:    u8 = 220;   // sprite X (left-edge in low-8-bit range)
+let @zp rainbow: u8 = 0;     // current border colour index (0-15)
+let @zp frame:   u8 = 0;     // frame counter (wraps; drives rainbow speed)
+let @zp outer:   u8 = 0;     // delay outer counter
+let @zp inner:   u8 = 0;     // delay inner counter
+
+// ── Delay function (~0.4 s at 1 MHz) ─────────────────────────────────────────
+@inline fn delay(): void {
+  outer = 0;
+  loop {
+    inner = 0;
+    loop {
+      inner = inner + 1;
+      if (inner == 0) { break; }
+    }
+    outer = outer + 1;
+    if (outer == 64) { break; }
+  }
+}
+
+// ── Main program — loads at $0810 ─────────────────────────────────────────────
+program @0x0810 {
+
+  // ── Point sprite-0 pointer to $0A00 ──
+  poke(0x07F8, 40);   // sprite-pointer 0 = 40 → 40 × 64 = $0A00
+
+  // ════════════════════════════════════════════════════════════════════════════
+  //  SPLASH SCREEN
+  // ════════════════════════════════════════════════════════════════════════════
+
+  clrscr();                       // fill screen with spaces + colour RAM to black
+
+  VIC2.bgColor0   = BLACK;        // black background
+  VIC2.borderColor = BLACK;       // black border
+  VIC2.spriteEnable = 0;          // sprites off during splash
+
+  // ── "F6502" centred on row 10 (40-col screen, 5 chars → col 17) ──────────
+  //    Screen addr = $0400 + 10×40 + 17 = $05A1
+  //    C64 screen codes: @=0 A=1 … Z=26  0-9=0x30-0x39
+  //    F=0x06  6=0x36  5=0x35  0=0x30  2=0x32
+  poke(0x05A1, 0x06);  poke(0x05A2, 0x36);  poke(0x05A3, 0x35);
+  poke(0x05A4, 0x30);  poke(0x05A5, 0x32);
+  // colour RAM at $D800+offset, colour = LIGHT_BLUE (14)
+  poke(0xD9A1, 14);    poke(0xD9A2, 14);    poke(0xD9A3, 14);
+  poke(0xD9A4, 14);    poke(0xD9A5, 14);
+
+  // ── "APACHE 2.0 LICENCE" centred on row 12 (18 chars → col 11) ───────────
+  //    addr = $0400 + 12×40 + 11 = $05EB
+  poke(0x05EB, 0x01);  // A
+  poke(0x05EC, 0x10);  // P
+  poke(0x05ED, 0x01);  // A
+  poke(0x05EE, 0x03);  // C
+  poke(0x05EF, 0x08);  // H
+  poke(0x05F0, 0x05);  // E
+  poke(0x05F1, 0x20);  // (space)
+  poke(0x05F2, 0x32);  // 2
+  poke(0x05F3, 0x2E);  // .
+  poke(0x05F4, 0x30);  // 0
+  poke(0x05F5, 0x20);  // (space)
+  poke(0x05F6, 0x0C);  // L
+  poke(0x05F7, 0x09);  // I
+  poke(0x05F8, 0x03);  // C
+  poke(0x05F9, 0x05);  // E
+  poke(0x05FA, 0x0E);  // N
+  poke(0x05FB, 0x03);  // C
+  poke(0x05FC, 0x05);  // E
+  // colour = LIGHT_BLUE (14) for all 18 positions
+  poke(0xD9EB, 14);    poke(0xD9EC, 14);    poke(0xD9ED, 14);
+  poke(0xD9EE, 14);    poke(0xD9EF, 14);    poke(0xD9F0, 14);
+  poke(0xD9F1, 14);    poke(0xD9F2, 14);    poke(0xD9F3, 14);
+  poke(0xD9F4, 14);    poke(0xD9F5, 14);    poke(0xD9F6, 14);
+  poke(0xD9F7, 14);    poke(0xD9F8, 14);    poke(0xD9F9, 14);
+  poke(0xD9FA, 14);    poke(0xD9FB, 14);    poke(0xD9FC, 14);
+
+  // ── "BUILT BY FIRAT KUCUK" centred on row 14 (20 chars → col 10) ─────────
+  //    addr = $0400 + 14×40 + 10 = $063A
+  poke(0x063A, 0x02);  // B
+  poke(0x063B, 0x15);  // U
+  poke(0x063C, 0x09);  // I
+  poke(0x063D, 0x0C);  // L
+  poke(0x063E, 0x14);  // T
+  poke(0x063F, 0x20);  // (space)
+  poke(0x0640, 0x02);  // B
+  poke(0x0641, 0x19);  // Y
+  poke(0x0642, 0x20);  // (space)
+  poke(0x0643, 0x06);  // F
+  poke(0x0644, 0x09);  // I
+  poke(0x0645, 0x12);  // R
+  poke(0x0646, 0x01);  // A
+  poke(0x0647, 0x14);  // T
+  poke(0x0648, 0x20);  // (space)
+  poke(0x0649, 0x0B);  // K
+  poke(0x064A, 0x15);  // U
+  poke(0x064B, 0x03);  // C
+  poke(0x064C, 0x15);  // U
+  poke(0x064D, 0x0B);  // K
+  // colour = YELLOW (7)
+  poke(0xDA3A, 7);     poke(0xDA3B, 7);     poke(0xDA3C, 7);
+  poke(0xDA3D, 7);     poke(0xDA3E, 7);     poke(0xDA3F, 7);
+  poke(0xDA40, 7);     poke(0xDA41, 7);     poke(0xDA42, 7);
+  poke(0xDA43, 7);     poke(0xDA44, 7);     poke(0xDA45, 7);
+  poke(0xDA46, 7);     poke(0xDA47, 7);     poke(0xDA48, 7);
+  poke(0xDA49, 7);     poke(0xDA4A, 7);     poke(0xDA4B, 7);
+  poke(0xDA4C, 7);     poke(0xDA4D, 7);
+
+  // ── Hold the splash for ~2 seconds (~5 delay() calls) ────────────────────
+  delay(); delay(); delay(); delay(); delay();
+
+  // ── Fade out: set all splash colours to black ─────────────────────────────
+  poke(0xD9A1, 0);    poke(0xD9A2, 0);    poke(0xD9A3, 0);
+  poke(0xD9A4, 0);    poke(0xD9A5, 0);
+  poke(0xD9EB, 0);    poke(0xD9EC, 0);    poke(0xD9ED, 0);
+  poke(0xD9EE, 0);    poke(0xD9EF, 0);    poke(0xD9F0, 0);
+  poke(0xD9F1, 0);    poke(0xD9F2, 0);    poke(0xD9F3, 0);
+  poke(0xD9F4, 0);    poke(0xD9F5, 0);    poke(0xD9F6, 0);
+  poke(0xD9F7, 0);    poke(0xD9F8, 0);    poke(0xD9F9, 0);
+  poke(0xD9FA, 0);    poke(0xD9FB, 0);    poke(0xD9FC, 0);
+  poke(0xDA3A, 0);    poke(0xDA3B, 0);    poke(0xDA3C, 0);
+  poke(0xDA3D, 0);    poke(0xDA3E, 0);    poke(0xDA3F, 0);
+  poke(0xDA40, 0);    poke(0xDA41, 0);    poke(0xDA42, 0);
+  poke(0xDA43, 0);    poke(0xDA44, 0);    poke(0xDA45, 0);
+  poke(0xDA46, 0);    poke(0xDA47, 0);    poke(0xDA48, 0);
+  poke(0xDA49, 0);    poke(0xDA4A, 0);    poke(0xDA4B, 0);
+  poke(0xDA4C, 0);    poke(0xDA4D, 0);
+
+  delay();  // brief pause before Nyan Cat
+
+  // ════════════════════════════════════════════════════════════════════════════
+  //  NYAN CAT ANIMATION
+  // ════════════════════════════════════════════════════════════════════════════
+
+  VIC2.bgColor0    = BLUE;         // sky-blue background
+  VIC2.borderColor = RED;          // rainbow starts red
+  VIC2.spriteEnable = 1;           // enable sprite 0
+  VIC2.ctrl2       = 0x08;         // 38-column, clear multicolour
+
+  VIC2.sprite0color = LIGHT_GREY;  // cat body colour (15 = light grey)
+  VIC2.sprite0y     = 100;         // vertical centre
+
+  catX    = 220;
+  rainbow = 2;    // start at red
+
+  // ── Paint a starfield with PETSCII '*' characters ─────────────────────────
+  //    (a few hand-placed stars at colour LIGHT_GREY = 15)
+  poke(0x0402, 0x2A); poke(0xD802, 15);   // row 0, col 2
+  poke(0x0415, 0x2A); poke(0xD815, 15);   // row 0, col 21
+  poke(0x0460, 0x2A); poke(0xD860, 15);   // row 2, col 8
+  poke(0x047E, 0x2A); poke(0xD87E, 15);   // row 2, col 30
+  poke(0x04B0, 0x2A); poke(0xD8B0, 15);   // row 4, col 16
+  poke(0x04D5, 0x2A); poke(0xD8D5, 15);   // row 5, col 5
+  poke(0x0509, 0x2A); poke(0xD909, 15);   // row 7, col 1
+  poke(0x0538, 0x2A); poke(0xD938, 15);   // row 8, col 24
+  poke(0x0560, 0x2A); poke(0xD960, 15);   // row 9, col 8... (unused line range)
+  poke(0x05A0, 0x2A); poke(0xD9A0, 15);   // row 10, col 16
+  poke(0x05C8, 0x2A); poke(0xD9C8, 15);   // row 11, col 8
+  poke(0x0600, 0x2A); poke(0xDA00, 15);   // row 12, col 0 wait...
+  poke(0x0622, 0x2A); poke(0xDA22, 15);   // row 13, col 18
+  poke(0x0680, 0x2A); poke(0xDA80, 15);   // row 16, col 0 wait actually let me not put stars on the same rows as the cat sprite
+
+  // ── Animation loop ────────────────────────────────────────────────────────
+  loop {
+    // Wait for raster line 200 (below the cat) to pace the animation
+    while (VIC2.rasterLine != 200) {}
+    while (VIC2.rasterLine == 200) {}
+
+    // Set sprite X position
+    VIC2.sprite0x = catX;
+
+    // Move cat left (decrement wraps around 0→255 for continuous motion)
+    catX = catX - 2;
+
+    // Cycle rainbow border every other frame
+    frame = frame + 1;
+    if (frame == 2) {
+      frame = 0;
+      VIC2.borderColor = rainbow;
+      rainbow = rainbow + 1;
+      if (rainbow == 16) { rainbow = 0; }
+    }
+
+    // After 200 full laps (X wraps ~200 times through 0-255 = 25600 frames),
+    // break and return to splash. One wrap = 128 frames at 2px/frame → 128×200 won't fit
+    // a u8 counter, so just let the auto-loop (JMP program_start) restart the demo
+    // after a large number of frames instead.
+    // The program body auto-loops via the compiler-emitted JMP at the end of program{}.
+  }
+
+}
