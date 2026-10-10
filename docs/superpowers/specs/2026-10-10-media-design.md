@@ -87,17 +87,18 @@ tape recording, cartridges, CI and the Pages site.
 - The 6510 port sense bit (bit 4) reads 0 while PLAY is pressed; the motor bit (bit 5, 0 = on)
   gates the playback clock; the write line is ignored.
 - `play()`, `stop()`, `rewind()`, position and length for a counter; `warp` is true while the motor
-  runs and PLAY is down. When the tape ends, the motor-gated clock simply stops.
+  runs and PLAY is down. When the tape ends, the PLAY key pops up (as in VICE): the sense line goes
+  high and `warp` ends.
 
 ## 7. Public API
 
 ```ts
-c64.drive(8).mount(bytes: Uint8Array, opts: { kind: 'd64' | 't64' | 'prg' | 'p00' }): void
+c64.drive(8).mount(source: FileSource): void // via openSource(bytes, kind?) / Player.mountDisk
 c64.drive(8).unmount(): void
 c64.drive(8).exportD64(): Uint8Array
 c64.tape.insert(bytes: Uint8Array): void
 c64.tape.play() / stop() / rewind(): void
-c64.tape.position / length / motor: number | boolean
+c64.tape.position / length / playing / running: number | boolean
 c64.warp: boolean
 // browser
 start({ ..., disk?: Source, tape?: Source, autostart?: boolean })

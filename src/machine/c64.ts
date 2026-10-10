@@ -83,6 +83,7 @@ export class C64 {
       cpu: this.cpu,
       ram: this.bus.ram,
       peek: (a) => this.bus.peek(a),
+      poke: (a, v) => this.bus.write(a, v),
       drive: (n) => {
         const d = this.drives.get(n);
         return d?.present ? d : null;

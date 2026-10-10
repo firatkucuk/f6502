@@ -117,3 +117,38 @@ describe('ImageDrive channels', () => {
     expect('data' in again.loadFile(text('A'))).toBe(true);
   });
 });
+
+describe('review fixes', () => {
+  it('a command written to channel 15 executes at the carriage return, without closing', () => {
+    const d = drive();
+    d.saveFile(text('A1'), prg(1));
+    d.open(15, new Uint8Array(0));
+    for (const c of text('S:A1\r')) d.write(15, c);
+    expect(d.statusText()).toMatch(/^01, FILES SCRATCHED,01,00/);
+    expect(d.loadFile(text('A1'))).toEqual({ error: 62 });
+  });
+
+  it('a failed @: replace keeps the original file', () => {
+    const d = drive();
+    d.saveFile(text('KEEP'), prg(1, 2, 3));
+    expect(d.saveFile(text('@0:KEEP'), new Uint8Array(254 * 700))).toBe(72);
+    const r = d.loadFile(text('KEEP'));
+    expect('data' in r && [...r.data]).toEqual([1, 8, 1, 2, 3]);
+  });
+
+  it('append mode adds to an existing file and reports file not found for a missing one', () => {
+    const d = drive();
+    d.open(2, text('LOG,S,W'));
+    for (const c of text('AB')) d.write(2, c);
+    d.close(2);
+    d.open(3, text('LOG,S,A'));
+    for (const c of text('CD')) d.write(3, c);
+    d.close(3);
+    d.open(4, text('LOG,S,R'));
+    const got = [0, 0, 0, 0].map(() => d.read(4).byte);
+    expect(String.fromCharCode(...got)).toBe('ABCD');
+    d.open(5, text('NEW,S,A'));
+    d.open(15, new Uint8Array(0));
+    expect(d.statusText()).toMatch(/^62,FILE NOT FOUND/);
+  });
+});

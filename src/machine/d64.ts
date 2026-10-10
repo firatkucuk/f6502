@@ -81,6 +81,7 @@ export class D64 {
   format(name: string, id?: string): void {
     const keepId = id === undefined ? this.diskId().slice() : petscii(id);
     this.data.fill(0);
+    this.errors?.fill(0);
     const bam = this.sector(DIR_TRACK, 0);
     bam[0] = DIR_TRACK;
     bam[1] = 1;
@@ -318,7 +319,8 @@ export class D64 {
     if (this.find(trimmed)) throw new DiskError(63, 'file exists');
     const need = Math.max(1, Math.ceil(data.length / 254));
     if (need > this.freeBlocks()) throw new DiskError(72, 'disk full');
-    // dry run of the directory slot so a failure cannot leave blocks allocated
+    // The slot may grow the directory by one (empty, linked) sector even if the data then does
+    // not fit; the data blocks themselves are rolled back on failure.
     const slotInfo = this.freeSlot();
     const chain: Array<{ t: number; s: number }> = [];
     let prev: { t: number; s: number } | null = null;

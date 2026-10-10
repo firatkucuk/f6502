@@ -118,5 +118,6 @@ describe('start()', () => {
         disk: { source: new Uint8Array(10), kind: 'd64' },
       }),
     ).rejects.toThrow();
+    expect(canvas.has('keydown')).toBe(false); // the half-started player was torn down
   });
 });

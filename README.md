@@ -9,7 +9,8 @@ disk and tape media, and the browser layer are implemented. Disks are D64 (read 
 export), T64, P00 and PRG, served by a KERNAL-level trap on device 8 (`LOAD`, `SAVE`, directory
 listing, sequential files, the DOS command channel); fast loaders and copy protection that bypass
 the KERNAL do not work, and there is no REL support. Tapes are TAP files played pulse by pulse into
-CIA1 (standard and turbo loaders), with warp while the motor runs; there is no tape recording.
+CIA1 (the standard KERNAL loader is verified end to end; turbo loaders are untested), with warp while
+the motor runs; there is no tape recording.
 The VIC-II is checked against VICE reference screenshots (14 of 137 match pixel for pixel, the rest
 are tracked in #43) and the SID against the VICE SID test programs (17 self-checking programs pass;
 the rest are tracked in #52). Combined waveforms and the 6581 filter curve are documented

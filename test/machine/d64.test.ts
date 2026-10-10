@@ -124,4 +124,17 @@ describe('D64 format and directory', () => {
     expect(a).not.toEqual(d.export());
     expect(a.length).toBe(174848);
   });
+
+  it('format clears the error-info bytes of an image that carries them', () => {
+    const img = new Uint8Array(175531).fill(0);
+    img.fill(5, 174848); // every sector flagged with an error
+    const d = new D64(img);
+    d.format('X', '01');
+    expect(
+      d
+        .export()
+        .slice(174848)
+        .every((b) => b === 0),
+    ).toBe(true);
+  });
 });

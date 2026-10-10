@@ -155,6 +155,9 @@ export class ImageDrive implements DiskDrive {
       .find((e) => matchName(p.name, e.name) && p.name.length === e.name.length);
     if (existing) {
       if (!p.replace) return 63;
+      // Do not delete the original unless the replacement is going to fit.
+      const need = Math.max(1, Math.ceil(data.length / 254));
+      if (need > image.freeBlocks() + existing.blocks) return 72;
       image.scratch(existing);
     }
     try {
@@ -198,9 +201,27 @@ export class ImageDrive implements DiskDrive {
       const exists = this.source.image
         .entries()
         .some((e) => e.name.length === p.name.length && e.name.every((c, i) => c === p.name[i]));
-      if (exists && !p.replace) {
+      if (exists && !p.replace && p.mode !== 'a') {
         this.setStatus(63);
         this.channels.set(channel, { kind: 'error' });
+        return;
+      }
+      if (p.mode === 'a') {
+        const entry = this.source.image
+          .entries()
+          .find((e) => e.name.length === p.name.length && e.name.every((c, i) => c === p.name[i]));
+        if (!entry) {
+          this.setStatus(62);
+          this.channels.set(channel, { kind: 'error' });
+          return;
+        }
+        this.channels.set(channel, {
+          kind: 'write',
+          name: p.name,
+          type: p.type ?? entry.type,
+          replace: true,
+          bytes: Array.from(this.source.image.readFile(entry)),
+        });
         return;
       }
       this.channels.set(channel, {
@@ -254,8 +275,18 @@ export class ImageDrive implements DiskDrive {
       this.setStatus(61);
       return;
     }
-    if (ch.kind === 'write') ch.bytes.push(byte & 0xff);
-    else if (ch.kind === 'command') this.pendingCommand.push(byte & 0xff);
+    if (ch.kind === 'write') {
+      ch.bytes.push(byte & 0xff);
+    } else if (ch.kind === 'command') {
+      // CBM DOS executes the command when the line is terminated (UNLISTEN / carriage return).
+      if ((byte & 0xff) === 0x0d) {
+        const cmd = Uint8Array.from(this.pendingCommand);
+        this.pendingCommand = [];
+        if (cmd.length > 0) this.command(cmd);
+      } else {
+        this.pendingCommand.push(byte & 0xff);
+      }
+    }
   }
 
   private pendingCommand: number[] = [];

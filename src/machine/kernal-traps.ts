@@ -6,6 +6,8 @@ export interface TrapHost {
   ram: Uint8Array;
   /** CPU-visible byte (banking applied, no side effects). */
   peek(addr: number): number;
+  /** A CPU-style store: goes through the bus (colour RAM, I/O registers) like the real LOAD. */
+  poke(addr: number, value: number): void;
   drive(device: number): DiskDrive | null;
 }
 
@@ -57,6 +59,8 @@ export class KernalTraps {
   private currentIn = -1;
   private currentOut = -1;
   private pending: (() => void) | null = null;
+  /** Cassette-buffer bytes overwritten by the message stub, restored when it finishes. */
+  private saved: Uint8Array | null = null;
   private readonly active: number[] = [];
 
   constructor(private readonly host: TrapHost) {}
@@ -105,7 +109,8 @@ export class KernalTraps {
       case Kind.Resume: {
         const p = this.pending;
         this.pending = null;
-        if (p) p();
+        if (p) p(); // may start another message (keeps the saved bytes) or finish
+        if (this.pending === null) this.restoreBuffer();
         return true;
       }
       default:
@@ -165,6 +170,7 @@ export class KernalTraps {
       RESUME & 0xff,
       RESUME >> 8, // JMP RESUME
     ];
+    if (this.saved === null) this.saved = ram.slice(STUB, RESUME + 1);
     stub.forEach((b, i) => (ram[STUB + i] = b));
     const bytes = [...text].map((c) => c.charCodeAt(0) & 0xff).slice(0, 60);
     bytes.forEach((b, i) => (ram[MSG + i] = b));
@@ -206,7 +212,7 @@ export class KernalTraps {
         if (verify) {
           if (this.host.peek(addr) !== data[i]) status |= 0x10;
         } else {
-          ram[addr] = data[i]!;
+          this.host.poke(addr, data[i]!);
         }
       }
       ram[0x90] = status;
@@ -327,10 +333,18 @@ export class KernalTraps {
     return this.ret(false);
   }
 
+  private restoreBuffer(): void {
+    if (this.saved !== null) {
+      this.ram().set(this.saved, STUB);
+      this.saved = null;
+    }
+  }
+
   /** Forget open files (machine reset). */
   reset(): void {
     this.files.clear();
     this.currentIn = this.currentOut = -1;
     this.pending = null;
+    this.saved = null;
   }
 }

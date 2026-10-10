@@ -167,6 +167,27 @@ describe('KERNAL traps', () => {
     expect(r.x | (r.y << 8)).toBe(0x2004);
   });
 
+  it('restores the cassette buffer after printing the direct-mode messages', () => {
+    const c64 = machine();
+    [0xa6, 0xfe, 0x9d, 0x00, 0x06, 0xe6, 0xfe, 0x60].forEach((b, i) => c64.pokeRam(0xc200 + i, b));
+    c64.pokeRam(0x0326, 0x00);
+    c64.pokeRam(0x0327, 0xc2);
+    for (let i = 0x0340; i < 0x03a0; i++) c64.pokeRam(i, (i * 7) & 0xff); // a loader parked here
+    setName(c64, 'HELLO', 8, 0);
+    c64.pokeRam(0x9d, 0x80);
+    call(c64, 0xffd5, { a: 0, x: 0x00, y: 0x20 }, 4000);
+    for (let i = 0x0340; i < 0x03a0; i++)
+      expect(c64.peek(i), `$${i.toString(16)}`).toBe((i * 7) & 0xff);
+  });
+
+  it('LOAD stores through the bus, so colour RAM and I/O registers are reached', () => {
+    const c64 = machine();
+    c64.busWrite(0x01, 0x37);
+    setName(c64, 'HELLO', 8, 0);
+    call(c64, 0xffd5, { a: 0, x: 0x00, y: 0xd8 }); // load to $D800
+    expect(c64.peek(0xd800) & 0x0f).toBe(0x0e);
+  });
+
   it('calls for other devices are left to the ROM', () => {
     const c64 = machine();
     setName(c64, 'HELLO', 4, 0);

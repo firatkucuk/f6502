@@ -290,41 +290,46 @@ export async function start(options: StartOptions): Promise<Player> {
       baseDispose?.();
     };
   }
-  if (options.disk !== undefined) {
-    const d = options.disk;
-    if (
-      typeof d === 'object' &&
-      !(d instanceof Uint8Array) &&
-      !(d instanceof ArrayBuffer) &&
-      !(d instanceof Blob) &&
-      'source' in d
-    ) {
-      await player.mountDisk(d.source, d.kind, d.name);
-    } else {
-      await player.mountDisk(d as Source);
-    }
-  }
-  if (options.tape !== undefined) await player.insertTape(options.tape);
-  player.resume();
-  if (options.autostart) {
-    c64.runUntilReady(600);
+  try {
     if (options.disk !== undefined) {
-      player.type('LOAD"*",8,1\rRUN\r');
-    } else if (options.tape !== undefined) {
-      player.tape.play();
-      player.type('LOAD"",1\rRUN\r');
+      const d = options.disk;
+      if (
+        typeof d === 'object' &&
+        !(d instanceof Uint8Array) &&
+        !(d instanceof ArrayBuffer) &&
+        !(d instanceof Blob) &&
+        'source' in d
+      ) {
+        await player.mountDisk(d.source, d.kind, d.name);
+      } else {
+        await player.mountDisk(d as Source);
+      }
     }
-  }
-  if (options.program !== undefined) {
-    if (isProgramObject(options.program)) {
-      const { source, address, start: startAddress } = options.program;
-      const opts: LoadOptions = {};
-      if (address !== undefined) opts.address = address;
-      if (startAddress !== undefined) opts.start = startAddress;
-      await player.load(source, opts);
-    } else {
-      await player.load(options.program);
+    if (options.tape !== undefined) await player.insertTape(options.tape);
+    player.resume();
+    if (options.autostart) {
+      c64.runUntilReady(600);
+      if (options.disk !== undefined) {
+        player.type('LOAD"*",8,1\rRUN\r');
+      } else if (options.tape !== undefined) {
+        player.tape.play();
+        player.type('LOAD"",1\rRUN\r');
+      }
     }
+    if (options.program !== undefined) {
+      if (isProgramObject(options.program)) {
+        const { source, address, start: startAddress } = options.program;
+        const opts: LoadOptions = {};
+        if (address !== undefined) opts.address = address;
+        if (startAddress !== undefined) opts.start = startAddress;
+        await player.load(source, opts);
+      } else {
+        await player.load(options.program);
+      }
+    }
+  } catch (error) {
+    player.destroy();
+    throw error;
   }
   return player;
 }
