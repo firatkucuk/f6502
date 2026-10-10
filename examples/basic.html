@@ -37,7 +37,13 @@
         chargen: '../.testdata/openroms/bin/chargen_openroms.rom',
       };
       const prg = new URLSearchParams(location.search).get('prg');
-      F6502.start({ canvas: '#screen', roms, scale: 2, ...(prg ? { program: prg } : {}) })
+      F6502.start({
+        canvas: '#screen',
+        roms,
+        scale: 2,
+        audio: new URLSearchParams(location.search).has('audio'),
+        ...(prg ? { program: prg } : {}),
+      })
         .then((player) => {
           status.textContent = 'running';
           window.player = player;

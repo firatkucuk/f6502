@@ -132,3 +132,32 @@ describe('Player', () => {
     expect(c64.peek(0x0801)).toBe(0x05);
   });
 });
+
+describe('Player audio', () => {
+  it('pumps the audio once per emulated frame and closes it on destroy', () => {
+    const f = fakeEnv();
+    let pumps = 0;
+    let closed = 0;
+    const audio = { pump: () => pumps++, close: () => void closed++, setMuted: () => {} };
+    const player = new Player(new C64(loopRoms()), f.env, { audio });
+    player.resume();
+    f.fire(0);
+    f.fire(100); // several frames elapsed
+    expect(pumps).toBeGreaterThanOrEqual(1);
+    const frames = pumps;
+    player.destroy();
+    expect(closed).toBe(1);
+    expect(frames).toBe(pumps);
+  });
+
+  it('mutes while paused and unmutes on resume', () => {
+    const f = fakeEnv();
+    const muted: boolean[] = [];
+    const audio = { pump: () => 0, close: () => {}, setMuted: (m: boolean) => void muted.push(m) };
+    const player = new Player(new C64(loopRoms()), f.env, { audio });
+    player.resume();
+    player.pause();
+    player.resume();
+    expect(muted).toEqual([false, true, false]);
+  });
+});
