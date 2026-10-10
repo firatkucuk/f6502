@@ -54,6 +54,14 @@ export class Sprites {
     this.mask = 0;
   }
 
+  /**
+   * The expansion flip-flop is held set while Y-expand is clear, evaluated every cycle in the
+   * hardware; applying it when $D017 is written is equivalent and costs nothing per cycle.
+   */
+  yExpandWritten(value: number): void {
+    for (let n = 0; n < 8; n++) if (((value >> n) & 1) === 0) this.expandFF[n] = 1;
+  }
+
   /** Bit n set = sprite n's DMA is on. */
   dmaMask(): number {
     let m = 0;
@@ -64,7 +72,6 @@ export class Sprites {
   /** DMA bookkeeping and fetch events for cycle `c` of line `raster`. */
   cycle(c: number, raster: number): void {
     const regs = this.regs;
-    for (let n = 0; n < 8; n++) if (((regs[0x17]! >> n) & 1) === 0) this.expandFF[n] = 1;
     switch (c) {
       case 15:
         for (let n = 0; n < 8; n++)

@@ -172,6 +172,10 @@ export class VicII implements IoChip {
         this.regs[reg] = value;
         this.checkRasterCompare();
         return;
+      case 0x17:
+        this.regs[reg] = value;
+        this.sprites.yExpandWritten(value);
+        return;
       default:
         if (reg < 0x2f) this.regs[reg] = value;
     }
@@ -240,7 +244,7 @@ export class VicII implements IoChip {
 
     // BA for this cycle: the CPU consults it before its access.
     let ba = this.baStart >= 0 && c <= LAST_C_CYCLE;
-    if (!ba) ba = (SPRITE_BA[c]! & this.sprites.dmaMask()) !== 0;
+    if (!ba && SPRITE_BA[c] !== 0) ba = (SPRITE_BA[c]! & this.sprites.dmaMask()) !== 0;
     this.baLow = ba;
 
     this.cycle = c === CYCLES_PER_LINE ? 1 : c + 1;

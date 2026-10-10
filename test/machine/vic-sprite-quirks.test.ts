@@ -74,7 +74,19 @@ describe('sprite crunch', () => {
     for (let raster = 40; raster <= 52; raster++) line(r, raster);
     // line 53: on a Y-expanded sprite the flip-flop alternates, so find a line with it cleared
     const before = r.sprites.mcBase[0]!;
-    line(r, 53, clearAt === null ? undefined : { cycle: clearAt, fn: () => (r.regs[0x17] = 0) });
+    line(
+      r,
+      53,
+      clearAt === null
+        ? undefined
+        : {
+            cycle: clearAt,
+            fn: () => {
+              r.regs[0x17] = 0;
+              r.sprites.yExpandWritten(0); // what VicII.write does
+            },
+          },
+    );
     return { before, after: r.sprites.mcBase[0]! };
   }
 
