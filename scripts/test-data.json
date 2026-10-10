@@ -271,5 +271,16 @@
       "6502/v1/fe.json": "ab9bed36ae8ba5b3f4738bea6c2fb424304d1dcd2c7131ccab35f5d956bd0716",
       "6502/v1/ff.json": "d9d029aa994d5e4d6875dfe0e2baf67eae1c90e4e3059c3f529562bcaa29accb"
     }
+  },
+  "openroms": {
+    "repo": "MEGA65/open-roms",
+    "sha": "ad178dbe4d48cd6a317737a8e0e7e662f7e33d32",
+    "files": {
+      "bin/chargen_openroms.rom": "5e3451466841b93df7e01e4b635b07b8d8633351bae483b1961d96b3131186e7",
+      "bin/basic_generic.rom": "54a1464b4b27c9dc61bbd62a818fdd12ec99af9089111005a5add0ad0e6bd5ec",
+      "bin/kernal_generic.rom": "88e86ed3d0c710edab8f90ad146faa8de1ead11f43494b176c7b54724ca721c6",
+      "LICENSE": "74f574b1ba42475929d9dec376d1c513eb14b237939474edcf1c48ef2d7faab2",
+      "COPYING": "e57f1c320b8cf8798a7d2ff83a6f9e06a33a03585f6e065fea97f1d86db84052"
+    }
   }
 }

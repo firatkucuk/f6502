@@ -14,5 +14,13 @@
     "isolatedModules": true,
     "ignoreDeprecations": "6.0"
   },
-  "include": ["src", "test", "tsup.config.ts", "vitest.config.ts"]
+  "include": [
+    "src/core",
+    "src/machine",
+    "test/core",
+    "test/machine",
+    "test/conformance",
+    "tsup.config.ts",
+    "vitest.config.ts"
+  ]
 }

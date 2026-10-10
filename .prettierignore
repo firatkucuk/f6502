@@ -4,3 +4,4 @@ dist
 .testdata
 node_modules
 package-lock.json
+.playwright-mcp
