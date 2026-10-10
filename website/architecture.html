@@ -1,0 +1,811 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Architecture — f6502</title>
+  <meta name="description" content="How we built a cycle-accurate Commodore 64 emulator in TypeScript — from the 6502 CPU to VIC-II graphics and SID audio.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Space+Grotesk:wght@300;400;500;600;700&family=Fira+Code:wght@400;500&family=VT323&display=swap">
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    /* memory map mini diagram */
+    .memmap {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      margin: 1.5rem 0;
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+    }
+    .memmap-row {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+      transition: background 0.15s;
+    }
+    .memmap-row:last-child { border-bottom: none; }
+    .memmap-row:hover { background: var(--surface-2); }
+    .memmap-addr {
+      width: 80px;
+      flex-shrink: 0;
+      padding: 0.5rem 0.75rem;
+      color: var(--accent);
+      border-right: 1px solid var(--border);
+      font-size: 0.78rem;
+    }
+    .memmap-label {
+      padding: 0.5rem 0.75rem;
+      color: var(--text-muted);
+      flex: 1;
+    }
+    .memmap-label strong { color: var(--text); }
+    .memmap-size {
+      padding: 0.5rem 0.75rem;
+      color: var(--text-dim);
+      font-size: 0.75rem;
+      flex-shrink: 0;
+    }
+
+    /* register table */
+    .reg-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 0.75rem;
+      margin: 1.5rem 0;
+    }
+    .reg-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.875rem 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .reg-name {
+      font-family: var(--font-pixel);
+      font-size: 10px;
+      color: var(--primary);
+    }
+    .reg-bits {
+      font-family: var(--font-retro);
+      font-size: 18px;
+      color: var(--accent);
+      letter-spacing: 0.05em;
+    }
+    .reg-desc { font-size: 0.8rem; color: var(--text-muted); }
+
+    /* section toc */
+    .toc {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1.25rem 1.5rem;
+      margin: 2rem 0;
+    }
+    .toc-title {
+      font-family: var(--font-pixel);
+      font-size: 9px;
+      letter-spacing: 0.12em;
+      color: var(--accent);
+      margin-bottom: 0.75rem;
+    }
+    .toc ol { padding-left: 1.25rem; }
+    .toc li { margin: 0.3rem 0; }
+    .toc a { color: var(--text-muted); font-size: 0.9rem; text-decoration: none; }
+    .toc a:hover { color: var(--primary); }
+
+    /* vic-ii mode grid */
+    .mode-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 0.75rem;
+      margin: 1.5rem 0;
+    }
+    .mode-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1rem;
+    }
+    .mode-card .mode-bits {
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      color: var(--accent);
+      margin-bottom: 4px;
+    }
+    .mode-card h4 { font-size: 0.9rem; margin-bottom: 4px; }
+    .mode-card p { font-size: 0.8rem; color: var(--text-muted); margin: 0; }
+  </style>
+</head>
+<body>
+
+<!-- ── Navigation ──────────────────────────────────────────────── -->
+<nav class="nav" role="navigation" aria-label="Main">
+  <a class="nav-logo" href="index.html">f6502<span>.</span></a>
+  <ul class="nav-links">
+    <li><a href="index.html">Home</a></li>
+    <li><a href="architecture.html" aria-current="page">Architecture</a></li>
+    <li><a href="usage.html">Usage</a></li>
+    <li><a href="c64script.html">C64Script</a></li>
+    <li><a href="showcases.html">Showcases</a></li>
+  </ul>
+  <a class="nav-gh" href="https://github.com/firatkucuk/f6502" target="_blank" rel="noopener">
+    <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+      <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
+    </svg>
+    GitHub
+  </a>
+  <button class="nav-burger" aria-label="Menu" aria-expanded="false">☰</button>
+</nav>
+
+<div class="page">
+  <!-- ── Hero ─────────────────────────────────────────────────── -->
+  <section class="page-hero">
+    <p class="hero-eyebrow">Deep dive · Hardware · History</p>
+    <h1 class="hero-title" style="font-family:var(--font-pixel);font-size:clamp(22px,3.5vw,38px)">
+      <span class="hi">Under</span> the Hood
+    </h1>
+    <p class="hero-lead">
+      How we built a cycle-accurate Commodore 64 emulator from scratch in TypeScript —
+      and everything you ever wanted to know about the hardware that defined a generation of programmers.
+    </p>
+  </section>
+
+  <div class="article">
+
+    <nav class="toc" aria-label="On this page">
+      <div class="toc-title">On this page</div>
+      <ol>
+        <li><a href="#history-c64">The Commodore 64 (1982)</a></li>
+        <li><a href="#history-6502">The MOS 6502 (1975)</a></li>
+        <li><a href="#cpu-architecture">6502 CPU Architecture</a></li>
+        <li><a href="#vic-ii">VIC-II Graphics Chip</a></li>
+        <li><a href="#sid">SID Sound Chip</a></li>
+        <li><a href="#memory-map">C64 Memory Map</a></li>
+        <li><a href="#emulator-design">Our Emulator Design</a></li>
+        <li><a href="#testing">Testing &amp; Verification</a></li>
+      </ol>
+    </nav>
+
+    <!-- ── History: C64 ─────────────────────────────────────────── -->
+    <h2 id="history-c64">The Commodore 64 (1982)</h2>
+
+    <p>
+      On January 7, 1982, Jack Tramiel strode onto the floor of the Consumer Electronics Show
+      in Las Vegas and announced a machine that would outsell every personal computer in history.
+      The Commodore 64 shipped with 64 kilobytes of RAM, a dedicated sound chip, and a
+      hardware sprite engine — at a retail price of $595.
+    </p>
+    <p>
+      Tramiel's philosophy was captured in a single memorable phrase: <em>"Computers for the masses,
+      not the classes."</em> Within a year the price had dropped below $200. By the time production
+      ended in 1994, Commodore had sold an estimated 17 million units — the best-selling single
+      computer model ever manufactured.
+    </p>
+
+    <div class="timeline reveal">
+      <div class="tl-entry">
+        <div class="tl-year">Jan 1982</div>
+        <h3>CES announcement</h3>
+        <p>Jack Tramiel unveils the C64 at the Winter CES. $595 retail, 64KB RAM — triple what the Apple II offered for twice the price.</p>
+      </div>
+      <div class="tl-entry">
+        <div class="tl-year">Aug 1982</div>
+        <h3>Retail launch</h3>
+        <p>C64 ships to stores. MOS 6510 CPU at 1 MHz (PAL: 0.985 MHz), VIC-II graphics, SID audio, two CIA timers.</p>
+      </div>
+      <div class="tl-entry">
+        <div class="tl-year">1983–1986</div>
+        <h3>Peak years</h3>
+        <p>Price wars with Texas Instruments, Atari and Sinclair drive the C64 to dominance. A thriving software and demo scene emerges.</p>
+      </div>
+      <div class="tl-entry">
+        <div class="tl-year">1987</div>
+        <h3>SID revision</h3>
+        <p>MOS 8580 SID revision introduced. Different filter characteristics than the 6581; both revisions are in service for years. f6502 emulates both.</p>
+      </div>
+      <div class="tl-entry">
+        <div class="tl-year">1994</div>
+        <h3>End of production</h3>
+        <p>Commodore files for bankruptcy. C64 production ends after 12 years and ~17 million units. The demo scene continues to this day.</p>
+      </div>
+    </div>
+
+    <div class="stats reveal">
+      <div class="stat">
+        <span class="stat-val">64KB</span>
+        <span class="stat-label">RAM</span>
+      </div>
+      <div class="stat">
+        <span class="stat-val">1 MHz</span>
+        <span class="stat-label">CPU clock (NTSC)</span>
+      </div>
+      <div class="stat">
+        <span class="stat-val">16</span>
+        <span class="stat-label">Colours</span>
+      </div>
+      <div class="stat">
+        <span class="stat-val">8</span>
+        <span class="stat-label">Hardware sprites</span>
+      </div>
+      <div class="stat">
+        <span class="stat-val">3</span>
+        <span class="stat-label">SID voices</span>
+      </div>
+      <div class="stat">
+        <span class="stat-val">17M</span>
+        <span class="stat-label">Units sold</span>
+      </div>
+    </div>
+
+    <!-- ── History: 6502 ────────────────────────────────────────── -->
+    <h2 id="history-6502">The MOS 6502 (1975)</h2>
+
+    <p>
+      The story of the 6502 begins at Motorola. Chuck Peddle was a chip designer who believed
+      the industry had it backwards — microprocessors cost hundreds of dollars when they should
+      cost tens. When Motorola declined to pursue this vision, Peddle and a team of colleagues
+      left for MOS Technology, a small semiconductor house in Norristown, Pennsylvania.
+    </p>
+    <p>
+      They designed the MOS 6501 and 6502 in nine months. At the 1975 WESCON electronics show,
+      MOS sold the 6502 for $25 — at a time when the Intel 8080 cost $179 and the Motorola
+      6800 cost $175. The audience thought it was a mistake. It wasn't.
+    </p>
+    <p>
+      Apple Computer built the Apple I and Apple II around the 6502. Atari used it for the
+      2600 and 800. Acorn chose it for the BBC Micro. Nintendo built the Famicom (NES) on
+      a 6502 variant. The Commodore 64 used the 6510, a slightly modified version with an
+      onboard I/O port. In total, more than one billion 6502-family chips have been
+      manufactured.
+    </p>
+
+    <div class="infobox accent reveal">
+      <strong>6502 in C64:</strong> The Commodore 64 uses the MOS 6510, a 6502 variant
+      with a built-in 8-bit I/O port at addresses $00 (direction register) and $01
+      (data register). The port controls ROM banking — switching between BASIC, KERNAL,
+      character ROM and RAM — and the tape interface.
+    </div>
+
+    <!-- ── CPU Architecture ─────────────────────────────────────── -->
+    <h2 id="cpu-architecture">6502 CPU Architecture</h2>
+
+    <p>
+      The 6502 is an 8-bit CPU with a 16-bit address bus, giving it access to 64KB of memory.
+      The design is refreshingly lean: six registers, 56 distinct instructions, and 13
+      addressing modes. Every bus access — read or write — takes exactly one clock cycle,
+      which makes it possible to implement cycle-accurate emulation without counting
+      sub-cycle state.
+    </p>
+
+    <h3>Registers</h3>
+    <div class="reg-grid reveal">
+      <div class="reg-card">
+        <span class="reg-name">A — Accumulator</span>
+        <span class="reg-bits">8-bit</span>
+        <span class="reg-desc">Primary arithmetic register. Most operations use A as their target.</span>
+      </div>
+      <div class="reg-card">
+        <span class="reg-name">X — Index X</span>
+        <span class="reg-bits">8-bit</span>
+        <span class="reg-desc">Index register. Used for indexed addressing and as a general scratch register.</span>
+      </div>
+      <div class="reg-card">
+        <span class="reg-name">Y — Index Y</span>
+        <span class="reg-bits">8-bit</span>
+        <span class="reg-desc">Index register. Same role as X; some instructions use Y when X is unavailable.</span>
+      </div>
+      <div class="reg-card">
+        <span class="reg-name">PC — Program Counter</span>
+        <span class="reg-bits">16-bit</span>
+        <span class="reg-desc">Points to the next instruction to execute. Initialized from the reset vector at $FFFC.</span>
+      </div>
+      <div class="reg-card">
+        <span class="reg-name">SP — Stack Pointer</span>
+        <span class="reg-bits">8-bit</span>
+        <span class="reg-desc">Points into page 1 ($0100–$01FF). The hardware stack. Grows downward.</span>
+      </div>
+      <div class="reg-card">
+        <span class="reg-name">P — Status</span>
+        <span class="reg-bits">8-bit</span>
+        <span class="reg-desc">Flags: N V — B D I Z C. Carry, Zero, IRQ disable, BCD, Break, oVerflow, Negative.</span>
+      </div>
+    </div>
+
+    <h3>Addressing modes</h3>
+    <p>
+      The 6502's power comes from its orthogonal addressing modes. The same instruction
+      — say, <code>LDA</code> (Load Accumulator) — can address an immediate value, a zero-page
+      byte, an absolute address, or an indexed/indirect variant, each encoded as a
+      different opcode.
+    </p>
+
+    <div class="table-wrap reveal">
+      <table>
+        <thead>
+          <tr><th>Mode</th><th>Syntax</th><th>Cycles</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Implied</td><td><code>CLC</code></td><td>2</td><td>No operand — acts on an implied register.</td></tr>
+          <tr><td>Accumulator</td><td><code>LSR A</code></td><td>2</td><td>Operand is the accumulator.</td></tr>
+          <tr><td>Immediate</td><td><code>LDA #$42</code></td><td>2</td><td>8-bit literal follows the opcode.</td></tr>
+          <tr><td>Zero Page</td><td><code>LDA $10</code></td><td>3</td><td>8-bit address in page zero — faster!</td></tr>
+          <tr><td>Zero Page,X</td><td><code>LDA $10,X</code></td><td>4</td><td>Zero-page + X register offset.</td></tr>
+          <tr><td>Absolute</td><td><code>LDA $1234</code></td><td>4</td><td>Full 16-bit address.</td></tr>
+          <tr><td>Absolute,X</td><td><code>LDA $1000,X</code></td><td>4–5</td><td>Absolute + X. Extra cycle on page cross.</td></tr>
+          <tr><td>Absolute,Y</td><td><code>LDA $1000,Y</code></td><td>4–5</td><td>Absolute + Y. Extra cycle on page cross.</td></tr>
+          <tr><td>(Indirect,X)</td><td><code>LDA ($10,X)</code></td><td>6</td><td>Pre-indexed indirect via zero page.</td></tr>
+          <tr><td>(Indirect),Y</td><td><code>LDA ($10),Y</code></td><td>5–6</td><td>Post-indexed indirect via zero page.</td></tr>
+          <tr><td>Indirect</td><td><code>JMP ($1234)</code></td><td>5</td><td>Jump only. Reads 16-bit address from memory.</td></tr>
+          <tr><td>Relative</td><td><code>BEQ +$10</code></td><td>2–4</td><td>Branch offset. Signed 8-bit displacement.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="infobox reveal">
+      <strong>The zero page trick:</strong> Addresses $0000–$00FF are "zero page". Accessing them
+      takes one fewer cycle than a full 16-bit address and uses a 1-byte operand instead of 2.
+      C64 programmers cram their hottest variables into zero page. C64Script's <code>@zp</code>
+      annotation does this automatically.
+    </div>
+
+    <h3>Interrupts and vectors</h3>
+    <p>
+      The 6502 has three hardware vectors: <strong>RESET</strong> ($FFFC–$FFFD, read at startup
+      and after a hardware reset), <strong>IRQ</strong> ($FFFE–$FFFF, triggered by the CIAs and
+      VIC-II raster), and <strong>NMI</strong> ($FFFA–$FFFB, non-maskable, used by the C64's
+      RESTORE key). The C64 KERNAL ROM installs handlers at all three.
+    </p>
+
+    <!-- ── VIC-II ─────────────────────────────────────────────────── -->
+    <h2 id="vic-ii">VIC-II Graphics Chip (MOS 6567/6569)</h2>
+
+    <p>
+      The Video Interface Controller II is the graphics heart of the C64. Introduced in 1982
+      alongside the machine, it handles character display, bitmap graphics, hardware sprites,
+      smooth scrolling, raster interrupts, and the complex timing interactions that made the
+      C64 demo scene possible.
+    </p>
+
+    <div class="stats reveal">
+      <div class="stat">
+        <span class="stat-val">320×200</span>
+        <span class="stat-label">Bitmap resolution</span>
+      </div>
+      <div class="stat">
+        <span class="stat-val">40×25</span>
+        <span class="stat-label">Character mode</span>
+      </div>
+      <div class="stat">
+        <span class="stat-val">8</span>
+        <span class="stat-label">Hardware sprites</span>
+      </div>
+      <div class="stat">
+        <span class="stat-val">16</span>
+        <span class="stat-label">Colours</span>
+      </div>
+      <div class="stat">
+        <span class="stat-val">63</span>
+        <span class="stat-label">CPU cycles per raster line</span>
+      </div>
+      <div class="stat">
+        <span class="stat-val">312</span>
+        <span class="stat-label">Raster lines (PAL)</span>
+      </div>
+    </div>
+
+    <h3>Graphics modes</h3>
+    <div class="mode-grid reveal">
+      <div class="mode-card">
+        <div class="mode-bits">BMM=0, MCM=0</div>
+        <h4>Standard Character</h4>
+        <p>40×25 characters, 2 colours per cell. Uses an 8×8 pixel character ROM.</p>
+      </div>
+      <div class="mode-card">
+        <div class="mode-bits">BMM=0, MCM=1</div>
+        <h4>Multicolour Character</h4>
+        <p>40×25 characters, 4 colours per 4×8 pixel cell.</p>
+      </div>
+      <div class="mode-card">
+        <div class="mode-bits">BMM=1, MCM=0</div>
+        <h4>Standard Bitmap</h4>
+        <p>320×200 pixels, 2 colours per 8×8 block. Full screen control.</p>
+      </div>
+      <div class="mode-card">
+        <div class="mode-bits">BMM=1, MCM=1</div>
+        <h4>Multicolour Bitmap</h4>
+        <p>160×200 pixels (doubled), 4 colours per block. Used in most C64 paintings.</p>
+      </div>
+      <div class="mode-card">
+        <div class="mode-bits">ECM=1, BMM=0</div>
+        <h4>Extended Colour Mode</h4>
+        <p>40×25 characters, 4 background colours. Limits charset to 64 glyphs.</p>
+      </div>
+    </div>
+
+    <h3>Hardware sprites</h3>
+    <p>
+      The VIC-II provides 8 hardware sprites, each 24×21 pixels. Sprites have independent
+      positions (X/Y registers), colour, and can be doubled in size. The chip handles
+      sprite-to-background and sprite-to-sprite collision detection in hardware — reading
+      registers $D01E and $D01F tells you which sprites collided since the last read.
+    </p>
+
+    <h3>Badlines and CPU stalling</h3>
+    <p>
+      This is where the C64's timing gets interesting. Every eighth raster line is a
+      "badline" — the VIC-II needs to fetch a row of character pointers from shared memory.
+      During a badline, VIC-II asserts the <strong>BA</strong> (Bus Available) signal low,
+      which stalls the CPU for up to 40 cycles. Any program doing timing-critical work must
+      account for badlines, or graphics will glitch.
+    </p>
+    <p>
+      f6502 implements cycle-exact BA stalling. The emulated CPU checks BA before every
+      bus read, and if BA is low (VIC-II is stealing the bus), it idles rather than
+      proceeding. This is how demo programmers pull off effects that seem impossible on
+      a 1 MHz CPU.
+    </p>
+
+    <h3>Raster interrupts</h3>
+    <p>
+      The VIC-II can trigger an IRQ when the raster beam reaches any specified line.
+      This is the foundation of the C64 demo scene's most iconic tricks: split-screen
+      effects, mid-frame colour changes, hardware sprites repositioned between frames.
+      By changing the screen layout in the IRQ handler precisely timed to the raster beam,
+      programmers can display more than the hardware nominally supports simultaneously.
+    </p>
+
+    <!-- ── SID ────────────────────────────────────────────────────── -->
+    <h2 id="sid">SID Sound Chip (MOS 6581 / 8580)</h2>
+
+    <p>
+      The Sound Interface Device is, arguably, the most beloved chip ever manufactured
+      by MOS Technology. Designed by Bob Yannes (who later co-founded Ensoniq), the SID
+      was wildly overpowered for its era: a fully programmable analog synthesiser on
+      a single chip, stuffed into a home computer that cost less than a console.
+    </p>
+    <p>
+      The SID has three fully independent voices. Each voice can produce four waveforms,
+      has a complete ADSR (Attack Decay Sustain Release) volume envelope, and feeds into
+      a shared resonant low-pass/high-pass/band-pass filter. Professional musicians still
+      compose for it today.
+    </p>
+
+    <div class="stats reveal">
+      <div class="stat">
+        <span class="stat-val">3</span>
+        <span class="stat-label">Independent voices</span>
+      </div>
+      <div class="stat">
+        <span class="stat-val">4</span>
+        <span class="stat-label">Waveforms each</span>
+      </div>
+      <div class="stat">
+        <span class="stat-val">ADSR</span>
+        <span class="stat-label">Per-voice envelope</span>
+      </div>
+      <div class="stat">
+        <span class="stat-val">3-mode</span>
+        <span class="stat-label">Resonant filter</span>
+      </div>
+      <div class="stat">
+        <span class="stat-val">~1 MHz</span>
+        <span class="stat-label">Clock rate</span>
+      </div>
+    </div>
+
+    <h3>The waveforms</h3>
+    <p>
+      Each voice oscillator can produce four basic waveforms, or combinations of them
+      (which create unusual timbres — a quirk of the analog hardware):
+    </p>
+    <ul>
+      <li><strong>Triangle</strong> — smooth, low in harmonics, flute-like</li>
+      <li><strong>Sawtooth</strong> — rich in harmonics, synth-string character</li>
+      <li><strong>Pulse (variable)</strong> — the pulse width register ($D402/$D403) controls the duty cycle from a thin click to a square wave; sweeping it gives the classic "PWM" sound</li>
+      <li><strong>Noise</strong> — a 23-bit linear feedback shift register producing pseudo-random values; used for percussion and sound effects</li>
+    </ul>
+
+    <h3>ADSR envelope</h3>
+    <p>
+      Each voice has a four-stage amplitude envelope. <strong>A</strong>ttack ramps the
+      volume from zero to maximum; <strong>D</strong>ecay falls to the <strong>S</strong>ustain
+      level, which holds as long as the gate bit is set; <strong>R</strong>elease falls
+      back to zero when the gate is cleared. The 6581 has a well-documented bug where the
+      envelope counter can overshoot on fast release — f6502 replicates it.
+    </p>
+
+    <h3>6581 vs 8580</h3>
+    <p>
+      The original 6581 runs on 12V and uses analog circuits that filter with a notoriously
+      non-linear curve — the basis of much SID "warmth". The revised 8580 (1987) runs on 9V,
+      has a cleaner filter response, and a slightly different noise waveform. Many
+      compositions sound noticeably different on each revision. f6502 lets you select the
+      model with <code>audio: &#123; model: '6581' &#125;</code>.
+    </p>
+
+    <div class="infobox yellow reveal">
+      <strong>AudioWorklet:</strong> f6502 outputs SID audio via the Web Audio API's
+      AudioWorklet. The SID runs in the main thread, samples are buffered, and the
+      worklet drains the buffer in the audio processing thread. This avoids the crackling
+      that comes from ScriptProcessor and tolerates frame timing jitter.
+    </div>
+
+    <!-- ── Memory map ────────────────────────────────────────────── -->
+    <h2 id="memory-map">C64 Memory Map</h2>
+    <p>
+      The C64's 64KB address space is divided into regions that can be banked in and
+      out via the I/O port at $01. In the default configuration (LORAM=1, HIRAM=1, CHAREN=1):
+    </p>
+    <div class="memmap reveal">
+      <div class="memmap-row">
+        <span class="memmap-addr">$0000–$00FF</span>
+        <span class="memmap-label"><strong>Zero Page</strong> — fast RAM used by BASIC and OS</span>
+        <span class="memmap-size">256 B</span>
+      </div>
+      <div class="memmap-row">
+        <span class="memmap-addr">$0100–$01FF</span>
+        <span class="memmap-label"><strong>Stack</strong> — 6502 hardware stack (page 1)</span>
+        <span class="memmap-size">256 B</span>
+      </div>
+      <div class="memmap-row">
+        <span class="memmap-addr">$0200–$02FF</span>
+        <span class="memmap-label"><strong>BASIC I/O buffers</strong> — keyboard buffer, etc.</span>
+        <span class="memmap-size">256 B</span>
+      </div>
+      <div class="memmap-row">
+        <span class="memmap-addr">$0801–$9FFF</span>
+        <span class="memmap-label"><strong>BASIC program RAM</strong> — where your BASIC lines live</span>
+        <span class="memmap-size">~38 KB</span>
+      </div>
+      <div class="memmap-row">
+        <span class="memmap-addr">$A000–$BFFF</span>
+        <span class="memmap-label"><strong>BASIC ROM</strong> (banked) — the BASIC interpreter</span>
+        <span class="memmap-size">8 KB</span>
+      </div>
+      <div class="memmap-row">
+        <span class="memmap-addr">$C000–$CFFF</span>
+        <span class="memmap-label"><strong>RAM</strong> — available to machine code programs</span>
+        <span class="memmap-size">4 KB</span>
+      </div>
+      <div class="memmap-row">
+        <span class="memmap-addr">$D000–$D3FF</span>
+        <span class="memmap-label"><strong>VIC-II registers</strong> — graphics, sprites, raster</span>
+        <span class="memmap-size">1 KB</span>
+      </div>
+      <div class="memmap-row">
+        <span class="memmap-addr">$D400–$D7FF</span>
+        <span class="memmap-label"><strong>SID registers</strong> — voices, filter, ADSR</span>
+        <span class="memmap-size">1 KB</span>
+      </div>
+      <div class="memmap-row">
+        <span class="memmap-addr">$D800–$DBFF</span>
+        <span class="memmap-label"><strong>Colour RAM</strong> — one nibble per character cell</span>
+        <span class="memmap-size">1 KB</span>
+      </div>
+      <div class="memmap-row">
+        <span class="memmap-addr">$DC00–$DCFF</span>
+        <span class="memmap-label"><strong>CIA 1</strong> — keyboard matrix, joystick, timers</span>
+        <span class="memmap-size">256 B</span>
+      </div>
+      <div class="memmap-row">
+        <span class="memmap-addr">$DD00–$DDFF</span>
+        <span class="memmap-label"><strong>CIA 2</strong> — serial bus, VIC bank select, timers</span>
+        <span class="memmap-size">256 B</span>
+      </div>
+      <div class="memmap-row">
+        <span class="memmap-addr">$E000–$FFFF</span>
+        <span class="memmap-label"><strong>KERNAL ROM</strong> (banked) — OS routines, interrupt handlers</span>
+        <span class="memmap-size">8 KB</span>
+      </div>
+    </div>
+
+    <!-- ── Emulator Design ─────────────────────────────────────────── -->
+    <h2 id="emulator-design">Our Emulator Design</h2>
+
+    <p>
+      f6502 is a clean-room implementation — no code from any prior emulator. Every
+      component was designed from hardware datasheets, the C64 programmer's reference,
+      and extensive cross-checking against VICE output. The guiding principle: prefer
+      correctness over performance, but make it fast enough to run in a browser at full
+      speed on a mid-range laptop.
+    </p>
+
+    <h3>The bus abstraction</h3>
+    <p>
+      At the core is a minimal bus interface:
+    </p>
+    <div class="terminal reveal">
+      <div class="terminal-bar">
+        <span class="terminal-dot red"></span>
+        <span class="terminal-dot yellow"></span>
+        <span class="terminal-dot green"></span>
+        <span class="terminal-title">src/core/bus.ts</span>
+      </div>
+      <div class="terminal-body">
+        <pre><span class="token-kw">export interface</span> <span class="token-type">Bus</span> {
+  <span class="token-fn">read</span>(addr: <span class="token-type">number</span>): <span class="token-type">number</span>;
+  <span class="token-fn">write</span>(addr: <span class="token-type">number</span>, value: <span class="token-type">number</span>): <span class="token-type">void</span>;
+}</pre>
+      </div>
+    </div>
+    <p>
+      Every bus access — whether it comes from the 6502 CPU, the VIC-II DMA, or a test —
+      goes through this interface. The C64's memory controller implements it, routing reads
+      and writes to the right ROM, RAM, or I/O region based on the current bank state.
+    </p>
+
+    <h3>Cycle accuracy</h3>
+    <p>
+      The 6502 specifies a precise number of cycles for every instruction. f6502 counts
+      cycles as it executes each instruction and calls the VIC-II's <code>tick()</code>
+      method once per CPU cycle. VIC-II maintains its own cycle counter to track which
+      dot it is currently generating. This tight coupling is what makes raster effects
+      work correctly.
+    </p>
+    <p>
+      When VIC-II needs the bus for DMA (character fetch or sprite data), it asserts BA
+      low. The CPU implementation checks BA before each read; if low, it stalls by
+      incrementing the cycle count without advancing the program counter. This is exactly
+      what the real hardware does.
+    </p>
+
+    <h3>VIC-II timing in TypeScript</h3>
+    <div class="terminal reveal">
+      <div class="terminal-bar">
+        <span class="terminal-dot red"></span>
+        <span class="terminal-dot yellow"></span>
+        <span class="terminal-dot green"></span>
+        <span class="terminal-title">src/machine/vic.ts (simplified)</span>
+      </div>
+      <div class="terminal-body">
+        <pre><span class="token-fn">tick</span>(): <span class="token-type">void</span> {
+  <span class="token-kw">const</span> dot = <span class="token-kw">this</span>.dot++;
+  <span class="token-kw">const</span> line = <span class="token-kw">this</span>.raster;
+  <span class="token-kw">const</span> x = dot * <span class="token-num">8</span>;
+
+  <span class="token-cmt">// Badline: VIC steals bus for character fetch</span>
+  <span class="token-kw">if</span> (<span class="token-kw">this</span>.<span class="token-fn">isBadLine</span>(line, dot)) {
+    <span class="token-kw">this</span>.ba = <span class="token-kw">false</span>;
+    <span class="token-kw">this</span>.<span class="token-fn">fetchRow</span>(line);
+  }
+
+  <span class="token-cmt">// Sprite DMA: 2 cycles per sprite on sprite lines</span>
+  <span class="token-kw">if</span> (<span class="token-kw">this</span>.<span class="token-fn">spriteActive</span>(line, dot)) {
+    <span class="token-kw">this</span>.ba = <span class="token-kw">false</span>;
+  }
+
+  <span class="token-fn">renderPixels</span>(line, x); <span class="token-cmt">// 8 pixels per cycle</span>
+}</pre>
+      </div>
+    </div>
+
+    <h3>SID synthesis</h3>
+    <p>
+      The SID emulation runs at the CPU clock rate (~1 MHz). Each clock, every voice's
+      oscillator phase accumulator is advanced. At the audio sample rate (44100 Hz,
+      configurable), the oscillator output is read, the ADSR envelope is applied, and
+      the combined voices are fed through the filter model.
+    </p>
+    <p>
+      The 6581 filter is particularly hard to emulate — it is a four-pole analog filter
+      with a non-linear resonance curve that varies between chips. f6502 uses a
+      documented approximation of the 6581 filter based on measurements from real
+      hardware.
+    </p>
+
+    <h3>C64Script compiler pipeline</h3>
+    <p>
+      C64Script is a TypeScript-inspired language that compiles to 6502 machine code.
+      The compiler is a single-pass design with six stages:
+    </p>
+
+    <div class="pipeline reveal">
+      <div class="pipe-step">
+        <div class="pipe-step-icon">📝</div>
+        <div class="pipe-step-name">Lexer</div>
+        <div class="pipe-step-desc">Source → Tokens</div>
+      </div>
+      <div class="pipe-step">
+        <div class="pipe-step-icon">🌳</div>
+        <div class="pipe-step-name">Parser</div>
+        <div class="pipe-step-desc">Tokens → AST</div>
+      </div>
+      <div class="pipe-step">
+        <div class="pipe-step-icon">✅</div>
+        <div class="pipe-step-name">Checker</div>
+        <div class="pipe-step-desc">Types &amp; Annotations</div>
+      </div>
+      <div class="pipe-step">
+        <div class="pipe-step-icon">⚙️</div>
+        <div class="pipe-step-name">CodeGen</div>
+        <div class="pipe-step-desc">AST → 6502 bytes</div>
+      </div>
+      <div class="pipe-step">
+        <div class="pipe-step-icon">🔗</div>
+        <div class="pipe-step-name">Linker</div>
+        <div class="pipe-step-desc">Resolve labels</div>
+      </div>
+      <div class="pipe-step">
+        <div class="pipe-step-icon">💾</div>
+        <div class="pipe-step-name">PRG Writer</div>
+        <div class="pipe-step-desc">Binary output</div>
+      </div>
+    </div>
+
+    <p>
+      The code generator emits 6502 instructions directly as bytes into a <code>CodeBuffer</code>.
+      Branch targets are emitted as fixups — placeholders that the linker resolves once
+      all code is generated and every label has a known address. This is how standard
+      assemblers work.
+    </p>
+
+    <!-- ── Testing ────────────────────────────────────────────────── -->
+    <h2 id="testing">Testing &amp; Verification</h2>
+
+    <p>
+      Emulator correctness is hard to guarantee with unit tests alone. f6502 uses three
+      layers of testing:
+    </p>
+
+    <h3>Unit and machine tests</h3>
+    <p>
+      Over 600 tests covering individual 6502 instructions, the VIC-II timing logic,
+      SID envelope behaviour, CIA registers, keyboard matrix, and the browser player.
+      These run on every commit via Vitest.
+    </p>
+
+    <h3>Klaus Dormann functional test</h3>
+    <p>
+      The <a href="https://github.com/Klaus2m5/6502_65C02_functional_tests" target="_blank" rel="noopener">Klaus Dormann functional test</a>
+      is the gold standard for 6502 correctness. It is a 64KB program that exercises
+      every legal opcode and addressing mode, trapping the CPU in an infinite loop if
+      any test fails. f6502 runs the full test to completion.
+    </p>
+
+    <h3>VICE conformance tests</h3>
+    <p>
+      VIC-II accuracy is checked against reference screenshots captured from VICE, the
+      most accurate C64 emulator. The SID is verified against VICE's SID test programs —
+      self-checking programs that read back the chip's state and fail if the emulation
+      diverges. This catches subtle timing interactions that unit tests cannot.
+    </p>
+
+    <div class="infobox accent reveal">
+      <strong>Open source:</strong> f6502 is published under the
+      <a href="https://github.com/firatkucuk/f6502/blob/main/LICENSE" target="_blank" rel="noopener">Apache 2.0 licence</a>.
+      ROMs are not included — download the free
+      <a href="https://github.com/MEGA65/open-roms/releases" target="_blank" rel="noopener">OpenROMs</a>
+      or use your own. Run <code>npm run fetch-test-data</code> to download everything needed for
+      conformance testing.
+    </div>
+
+    <div style="margin: 3rem 0; display: flex; gap: 1rem; flex-wrap: wrap;">
+      <a class="btn btn-primary" href="usage.html">Start using f6502 →</a>
+      <a class="btn btn-outline" href="c64script.html">Explore C64Script →</a>
+    </div>
+
+  </div><!-- /.article -->
+
+  <!-- ── Footer ────────────────────────────────────────────────── -->
+  <footer>
+    <div>
+      <div class="footer-brand">f6502</div>
+      <p class="footer-desc">A cycle-accurate Commodore 64 emulator in TypeScript. Apache-2.0.</p>
+    </div>
+    <nav class="footer-links" aria-label="Footer">
+      <a href="index.html">Home</a>
+      <a href="usage.html">Usage</a>
+      <a href="c64script.html">C64Script</a>
+      <a href="showcases.html">Showcases</a>
+      <a href="https://github.com/firatkucuk/f6502" target="_blank" rel="noopener">GitHub</a>
+    </nav>
+  </footer>
+</div>
+
+<script src="js/app.js"></script>
+</body>
+</html>

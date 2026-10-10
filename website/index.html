@@ -1,0 +1,376 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>f6502 — Commodore 64 Emulator in TypeScript</title>
+  <meta name="description" content="A cycle-accurate Commodore 64 / 6502 emulator written in TypeScript. Runs entirely in the browser. No backend, no dependencies.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Space+Grotesk:wght@300;400;500;600;700&family=Fira+Code:wght@400;500&family=VT323&display=swap">
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    /* hero star field */
+    .stars { position: fixed; inset: 0; pointer-events: none; z-index: -1; overflow: hidden; }
+    .star {
+      position: absolute;
+      background: #fff;
+      border-radius: 50%;
+      animation: twinkle var(--d) ease-in-out infinite var(--delay);
+    }
+    @keyframes twinkle {
+      0%,100% { opacity: var(--lo); }
+      50%      { opacity: var(--hi); }
+    }
+
+    /* typed cursor */
+    .cursor {
+      display: inline-block;
+      width: 0.6em; height: 1em;
+      background: var(--primary);
+      margin-left: 2px;
+      vertical-align: text-bottom;
+      animation: blink 1s step-end infinite;
+    }
+    @keyframes blink { 50% { opacity: 0; } }
+
+    /* code sample block */
+    .code-sample { margin: 3rem 0; }
+
+    /* highlight strip before features */
+    .strip {
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      padding: 2rem 1.5rem;
+    }
+    .strip-inner {
+      max-width: var(--max-w);
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-around;
+      flex-wrap: wrap;
+      gap: 1.5rem;
+    }
+    .strip-item { text-align: center; }
+    .strip-item .val {
+      font-family: var(--font-pixel);
+      font-size: 14px;
+      color: var(--primary);
+      text-shadow: 0 0 14px var(--primary-glow);
+      display: block;
+      margin-bottom: 4px;
+    }
+    .strip-item .lbl {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Star field ──────────────────────────────────────────────── -->
+<div class="stars" id="stars"></div>
+
+<!-- ── Navigation ──────────────────────────────────────────────── -->
+<nav class="nav" role="navigation" aria-label="Main">
+  <a class="nav-logo" href="index.html">f6502<span>.</span></a>
+  <ul class="nav-links">
+    <li><a href="index.html">Home</a></li>
+    <li><a href="architecture.html">Architecture</a></li>
+    <li><a href="usage.html">Usage</a></li>
+    <li><a href="c64script.html">C64Script</a></li>
+    <li><a href="showcases.html">Showcases</a></li>
+  </ul>
+  <a class="nav-gh" href="https://github.com/firatkucuk/f6502" target="_blank" rel="noopener">
+    <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+      <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
+    </svg>
+    GitHub
+  </a>
+  <button class="nav-burger" aria-label="Menu" aria-expanded="false">☰</button>
+</nav>
+
+<!-- ── Hero ────────────────────────────────────────────────────── -->
+<div class="page">
+  <section class="hero">
+    <p class="hero-eyebrow">Open Source · TypeScript · No Backend</p>
+    <h1 class="hero-title">
+      <span class="hi">f6502</span><br>
+      Commodore 64<br>
+      in your browser
+    </h1>
+    <p class="hero-lead">
+      A cycle-accurate 6502 / C64 emulator written entirely in TypeScript.
+      Runs the real machine — VIC-II graphics, SID audio, CIA timers — with
+      no native code, no backend, no runtime dependencies.
+    </p>
+    <div class="hero-actions">
+      <a class="btn btn-primary" href="#demo">▶ Try the Demo</a>
+      <a class="btn btn-outline" href="architecture.html">Under the hood</a>
+      <a class="btn btn-outline" href="https://github.com/firatkucuk/f6502" target="_blank" rel="noopener">View source</a>
+    </div>
+  </section>
+
+  <!-- strip of stats -->
+  <div class="strip">
+    <div class="strip-inner">
+      <div class="strip-item reveal">
+        <span class="val">6510</span>
+        <span class="lbl">CPU core (6502 variant)</span>
+      </div>
+      <div class="strip-item reveal">
+        <span class="val">VIC-II</span>
+        <span class="lbl">Cycle-exact graphics</span>
+      </div>
+      <div class="strip-item reveal">
+        <span class="val">SID</span>
+        <span class="lbl">6581 &amp; 8580 audio</span>
+      </div>
+      <div class="strip-item reveal">
+        <span class="val">0</span>
+        <span class="lbl">Runtime dependencies</span>
+      </div>
+      <div class="strip-item reveal">
+        <span class="val">TS</span>
+        <span class="lbl">Full TypeScript source</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Live Demo ─────────────────────────────────────────────── -->
+  <section class="demo-section" id="demo">
+    <div class="demo-inner">
+      <p class="demo-label">▸ Live Demo — runs in your browser</p>
+
+      <div class="crt-wrap">
+        <div class="crt-bezel">
+          <div class="crt-screen-wrap" style="position:relative">
+            <!-- emulator canvas -->
+            <canvas id="c64-canvas" class="crt-canvas" width="384" height="272"
+              tabindex="0" aria-label="Commodore 64 screen. Click to focus and type."></canvas>
+
+            <!-- ROM loader overlay -->
+            <div class="rom-loader" id="rom-loader">
+              <div class="rom-loader-logo">
+               **** COMMODORE 64 BASIC V2 ****<br>
+               64K RAM SYSTEM  38911 BASIC BYTES FREE<br>
+               <br>
+               READY.
+              </div>
+              <div class="rom-loader-sub">▋</div>
+              <p>Load your C64 ROMs to start.<br>
+                 Free <a href="https://github.com/MEGA65/open-roms/releases" target="_blank" rel="noopener">OpenROMs</a> work perfectly.</p>
+              <div class="rom-loader-actions">
+                <button class="rom-file-btn" id="btn-load-roms">
+                  📂 SELECT ROM FILES
+                </button>
+                <input class="rom-file-input" id="rom-file-input" type="file"
+                       accept=".rom,.bin" multiple aria-label="Select ROM files">
+                <p class="rom-status" id="rom-status">
+                  Select kernal.rom · basic.rom · chargen.rom
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div class="crt-brand">COMMODORE 64 — f6502 EMULATOR</div>
+          <div class="crt-led" id="crt-led" style="display:none"></div>
+        </div>
+      </div>
+
+      <!-- controls -->
+      <div class="demo-controls">
+        <button class="btn btn-outline" id="btn-pause" disabled>Pause</button>
+        <button class="btn btn-outline" id="btn-reset" disabled>Reset</button>
+        <button class="btn btn-outline" id="btn-load-prg" disabled>Load .prg</button>
+        <input id="prg-file-input" type="file" accept=".prg" style="display:none"
+               aria-label="Select PRG program file">
+      </div>
+
+      <p style="text-align:center;font-size:0.82rem;color:var(--text-dim);margin-top:1.25rem">
+        Click the screen to focus it, then type BASIC commands.
+        ROMs are stored locally in your browser — you only need to load them once.
+      </p>
+    </div>
+  </section>
+
+  <!-- ── Features ──────────────────────────────────────────────── -->
+  <section class="section">
+    <p class="section-label">What's inside</p>
+    <h2 class="section-title">The whole machine, faithfully emulated</h2>
+    <p class="section-lead">
+      Every component of the C64 is implemented from the transistor level up —
+      as accurate as we can make it without running in silicon.
+    </p>
+
+    <div class="features">
+      <div class="feature-card reveal">
+        <span class="feature-icon">⚙️</span>
+        <h3>MOS 6510 CPU</h3>
+        <p>Cycle-accurate execution, all addressing modes, undocumented opcodes, and the i/o port at $00/$01.</p>
+      </div>
+      <div class="feature-card reveal">
+        <span class="feature-icon">🖥️</span>
+        <h3>VIC-II Graphics</h3>
+        <p>All graphics modes, 8 hardware sprites, collisions, badline DMA stalls, border opening, raster interrupts.</p>
+      </div>
+      <div class="feature-card reveal">
+        <span class="feature-icon">🔊</span>
+        <h3>SID Sound</h3>
+        <p>6581 and 8580 models. Three voices, ADSR envelopes (with the classic delay bug), resonant filter, ring mod, sync.</p>
+      </div>
+      <div class="feature-card reveal">
+        <span class="feature-icon">⌨️</span>
+        <h3>CIA Timers &amp; Keyboard</h3>
+        <p>Two 6526 CIA chips, keyboard matrix, joystick ports, TOD clock.</p>
+      </div>
+      <div class="feature-card reveal">
+        <span class="feature-icon">🌐</span>
+        <h3>Pure Browser</h3>
+        <p>AudioWorklet for SID output, requestAnimationFrame loop, canvas rendering — no WASM, no native code.</p>
+      </div>
+      <div class="feature-card reveal">
+        <span class="feature-icon">📝</span>
+        <h3>C64Script</h3>
+        <p>A TypeScript-inspired language that compiles directly to 6502 machine code. Write C64 programs without assembly.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Quick Start ────────────────────────────────────────────── -->
+  <section class="section" style="padding-top:0">
+    <p class="section-label">Get started</p>
+    <h2 class="section-title">Running in five lines of HTML</h2>
+
+    <div class="code-sample reveal terminal">
+      <div class="terminal-bar">
+        <span class="terminal-dot red"></span>
+        <span class="terminal-dot yellow"></span>
+        <span class="terminal-dot green"></span>
+        <span class="terminal-title">index.html</span>
+      </div>
+      <div class="terminal-body">
+        <pre><span class="token-kw">&lt;canvas</span> <span class="token-type">id</span><span class="token-kw">=</span><span class="token-str">"screen"</span><span class="token-kw">&gt;&lt;/canvas&gt;</span>
+<span class="token-kw">&lt;script</span> <span class="token-type">src</span><span class="token-kw">=</span><span class="token-str">"f6502.min.js"</span><span class="token-kw">&gt;&lt;/script&gt;</span>
+<span class="token-kw">&lt;script&gt;</span>
+  <span class="token-fn">F6502.start</span>({
+    canvas: <span class="token-str">'#screen'</span>,
+    roms: {
+      kernal:  <span class="token-str">'kernal.rom'</span>,
+      basic:   <span class="token-str">'basic.rom'</span>,
+      chargen: <span class="token-str">'chargen.rom'</span>,
+    },
+    program: <span class="token-str">'game.prg'</span>, <span class="token-cmt">// optional</span>
+    audio:   <span class="token-kw">true</span>,
+  });
+<span class="token-kw">&lt;/script&gt;</span></pre>
+      </div>
+    </div>
+
+    <div style="margin-top:2rem;display:flex;gap:1rem;flex-wrap:wrap">
+      <a class="btn btn-outline" href="usage.html">Full API docs →</a>
+      <a class="btn btn-outline" href="c64script.html">C64Script language →</a>
+    </div>
+  </section>
+
+  <!-- ── C64Script teaser ───────────────────────────────────────── -->
+  <section class="section" style="padding-top:0">
+    <p class="section-label">C64Script</p>
+    <h2 class="section-title">Write C64 programs in a language that feels like TypeScript</h2>
+    <p class="section-lead">
+      C64Script compiles to native 6502 machine code. No assembly required.
+      You get typed variables, functions, loops, and direct access to
+      every hardware register.
+    </p>
+
+    <div class="terminal reveal">
+      <div class="terminal-bar">
+        <span class="terminal-dot red"></span>
+        <span class="terminal-dot yellow"></span>
+        <span class="terminal-dot green"></span>
+        <span class="terminal-title">demo.c64s</span>
+      </div>
+      <div class="terminal-body">
+        <pre><span class="token-cmt">// Rainbow border — cycles all 16 C64 colours</span>
+<span class="token-kw">program</span>(<span class="token-num">0x0810</span>) {
+  <span class="token-kw">var</span> <span class="token-type">color</span>: <span class="token-type">byte</span> <span class="token-ann">@zp</span> = <span class="token-num">0</span>;
+
+  <span class="token-kw">loop</span> {
+    <span class="token-kw">c64</span>.border = color;
+    color = color + <span class="token-num">1</span>;
+    <span class="token-kw">if</span> (color == <span class="token-num">16</span>) { color = <span class="token-num">0</span>; }
+  }
+}</pre>
+      </div>
+    </div>
+
+    <a class="btn btn-outline" href="c64script.html" style="margin-top:2rem">
+      Learn C64Script →
+    </a>
+  </section>
+
+  <!-- ── About section ─────────────────────────────────────────── -->
+  <section class="section" style="padding-top:0">
+    <div class="divider"><span class="divider-label">About this project</span></div>
+    <p style="max-width:65ch;color:var(--text-muted)">
+      f6502 started as a passion project to understand how the Commodore 64 worked at
+      the hardware level. Every chip — CPU, VIC-II, SID, CIAs — is implemented from
+      scratch in TypeScript, guided by hardware manuals, VICE reference output, and
+      the open-source test suite from the Commodore community.
+    </p>
+    <p style="max-width:65ch;color:var(--text-muted);margin-top:1rem">
+      The emulator is tested against the
+      <a href="https://github.com/Klaus2m5/6502_65C02_functional_tests" target="_blank" rel="noopener">Klaus Dormann functional tests</a>,
+      VICE reference screenshots for VIC-II accuracy, and the VICE SID test programs.
+      It is published under the Apache 2.0 licence.
+    </p>
+    <div style="margin-top:2rem">
+      <a class="btn btn-outline" href="architecture.html">Explore the architecture →</a>
+    </div>
+  </section>
+
+  <!-- ── Footer ────────────────────────────────────────────────── -->
+  <footer>
+    <div>
+      <div class="footer-brand">f6502</div>
+      <p class="footer-desc">A cycle-accurate Commodore 64 emulator in TypeScript. Apache-2.0.</p>
+    </div>
+    <nav class="footer-links" aria-label="Footer">
+      <a href="architecture.html">Architecture</a>
+      <a href="usage.html">Usage</a>
+      <a href="c64script.html">C64Script</a>
+      <a href="showcases.html">Showcases</a>
+      <a href="https://github.com/firatkucuk/f6502" target="_blank" rel="noopener">GitHub</a>
+    </nav>
+  </footer>
+</div>
+
+<script>
+  /* ── star field generator ── */
+  (function () {
+    const el = document.getElementById('stars');
+    if (!el) return;
+    const count = 80;
+    for (let i = 0; i < count; i++) {
+      const s = document.createElement('div');
+      s.className = 'star';
+      const size = Math.random() * 2 + 0.5;
+      const lo = (Math.random() * 0.2 + 0.05).toFixed(2);
+      const hi = (Math.random() * 0.5 + 0.3).toFixed(2);
+      const delay = -(Math.random() * 6).toFixed(1) + 's';
+      const duration = (Math.random() * 4 + 2).toFixed(1) + 's';
+      s.style.cssText = `
+        width:${size}px;height:${size}px;
+        top:${Math.random()*100}%;left:${Math.random()*100}%;
+        --d:${duration};--delay:${delay};--lo:${lo};--hi:${hi};
+      `;
+      el.appendChild(s);
+    }
+  })();
+</script>
+<script src="js/app.js"></script>
+<script src="dist/f6502.min.js"></script>
+<script src="js/demo.js"></script>
+</body>
+</html>
