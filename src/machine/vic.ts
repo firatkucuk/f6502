@@ -1,5 +1,6 @@
 import type { IoChip } from './io';
 import { PALETTE } from './palette';
+import { renderGraphics } from './vic-graphics';
 
 export const FRAME_WIDTH = 384;
 export const FRAME_HEIGHT = 272;
@@ -37,9 +38,13 @@ export class VicII implements IoChip {
   private vmli = 0;
   private readonly chars = new Uint8Array(40);
   private readonly colors = new Uint8Array(40);
-  private readonly prev = new Uint8Array(8);
-  private readonly cur = new Uint8Array(8);
-  private readonly shifted = new Uint8Array(8);
+  private readonly bgColors = new Uint8Array(4);
+  private readonly gColor = new Uint8Array(8);
+  private readonly gFg = new Uint8Array(8);
+  private readonly prevColor = new Uint8Array(8);
+  private readonly prevFg = new Uint8Array(8);
+  private readonly shiftedColor = new Uint8Array(8);
+  private readonly shiftedFg = new Uint8Array(8);
 
   constructor(private readonly mem: VicMemory) {
     this.reset();
@@ -64,7 +69,8 @@ export class VicII implements IoChip {
     this.vcBase = this.vc = this.rc = this.vmli = 0;
     this.raster = 0;
     this.cycle = 1;
-    this.prev.fill(0);
+    this.prevColor.fill(0);
+    this.prevFg.fill(0);
     // Raster 0 matches compare 0 at power-on; that is the initial state, not an edge.
     this.matched = true;
   }
@@ -179,35 +185,57 @@ export class VicII implements IoChip {
 
   private outputCycle(c: number): void {
     const regs = this.regs;
-    const bg = regs[0x21]! & 0x0f;
-    let glyph = 0;
-    let fg = 0;
+    const ecm = (regs[0x11]! & 0x40) !== 0;
+    const mode = (ecm ? 4 : 0) | (regs[0x11]! & 0x20 ? 2 : 0) | (regs[0x16]! & 0x10 ? 1 : 0);
+    const bg = this.bgColors;
+    bg[0] = regs[0x21]! & 0x0f;
+    bg[1] = regs[0x22]! & 0x0f;
+    bg[2] = regs[0x23]! & 0x0f;
+    bg[3] = regs[0x24]! & 0x0f;
 
     if (c >= FIRST_G_CYCLE && c <= LAST_G_CYCLE) {
+      let glyph: number;
+      let code = 0;
+      let nibble = 0;
       if (this.displayState) {
         const vm = ((regs[0x18]! >> 4) & 0x0f) << 10;
-        const cb = ((regs[0x18]! >> 1) & 0x07) << 11;
         if (this.badline) {
           this.chars[this.vmli] = this.mem.readMem(vm + this.vc);
           this.colors[this.vmli] = this.mem.readColor(this.vc & 0x3ff) & 0x0f;
         }
-        const code = this.chars[this.vmli]!;
-        fg = this.colors[this.vmli]!;
-        glyph = this.mem.readMem(cb + code * 8 + this.rc);
+        code = this.chars[this.vmli]!;
+        nibble = this.colors[this.vmli]!;
+        let addr: number;
+        if (mode & 2) {
+          addr = ((regs[0x18]! & 0x08) << 10) | (this.vc << 3) | this.rc;
+        } else {
+          const cb = ((regs[0x18]! >> 1) & 0x07) << 11;
+          addr = cb + ((ecm ? code & 0x3f : code) << 3) + this.rc;
+        }
+        glyph = this.mem.readMem(addr);
         this.vc = (this.vc + 1) & 0x3ff;
         this.vmli = (this.vmli + 1) % 40;
       } else {
-        glyph = this.mem.readMem(0x3fff);
+        glyph = this.mem.readMem(ecm ? 0x39ff : 0x3fff);
       }
+      renderGraphics(this.gColor, this.gFg, mode, glyph, code, nibble, bg);
+    } else {
+      this.gColor.fill(bg[0]!);
+      this.gFg.fill(0);
     }
-
-    for (let i = 0; i < 8; i++) this.cur[i] = (glyph >> (7 - i)) & 1 ? fg : bg;
 
     const xs = regs[0x16]! & 7;
     for (let i = 0; i < 8; i++) {
-      this.shifted[i] = i >= xs ? this.cur[i - xs]! : this.prev[8 + i - xs]!;
+      if (i >= xs) {
+        this.shiftedColor[i] = this.gColor[i - xs]!;
+        this.shiftedFg[i] = this.gFg[i - xs]!;
+      } else {
+        this.shiftedColor[i] = this.prevColor[8 + i - xs]!;
+        this.shiftedFg[i] = this.prevFg[8 + i - xs]!;
+      }
     }
-    this.prev.set(this.cur);
+    this.prevColor.set(this.gColor);
+    this.prevFg.set(this.gFg);
 
     if (this.raster < FIRST_VISIBLE_RASTER || this.raster > LAST_VISIBLE_RASTER) return;
     const csel = (regs[0x16]! & 0x08) !== 0;
@@ -223,7 +251,7 @@ export class VicII implements IoChip {
     const fx0 = (c - FIRST_VISIBLE_CYCLE) * 8;
     for (let i = 0; i < 8; i++) {
       const fx = fx0 + i;
-      const colour = verticalOpen && fx >= left && fx < right ? this.shifted[i]! : border;
+      const colour = verticalOpen && fx >= left && fx < right ? this.shiftedColor[i]! : border;
       this.frame[rowBase + fx] = PALETTE[colour]!;
     }
   }
