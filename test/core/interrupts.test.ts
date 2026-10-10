@@ -173,3 +173,49 @@ describe('NMI hijack of BRK', () => {
     expect(m.cpu.regs.pc).toBe(0x0400);
   });
 });
+
+describe('I flag effect timing (RTI, PLP) and last-cycle IRQ', () => {
+  it('RTI that clears I takes a pending IRQ immediately, before any instruction at the return address', () => {
+    const m = boot([0x40, 0xea, 0xea]); // RTI at $0200
+    m.bus.mem[0x01fd] = 0x04; // return address $0400
+    m.bus.mem[0x01fc] = 0x00;
+    m.bus.mem[0x01fb] = 0x20; // P with I clear
+    m.cpu.regs.sp = 0xfa;
+    m.bus.mem[0x0400] = 0xea;
+    m.cpu.setIrq(true);
+    m.cpu.step(); // RTI
+    expect(m.cpu.regs.pc).toBe(0x0400);
+    m.cpu.step(); // interrupt sequence, not the NOP at $0400
+    expect(m.cpu.regs.pc).toBe(0x0300);
+    expect(m.bus.mem[0x01fd]).toBe(0x04);
+    expect(m.bus.mem[0x01fc]).toBe(0x00);
+  });
+
+  it('PLP that clears I delays the IRQ by one instruction', () => {
+    const m = boot([0x28, 0xea, 0xea]); // PLP, NOP, NOP
+    m.bus.mem[0x01fd] = 0x20; // P with I clear
+    m.cpu.regs.sp = 0xfc;
+    m.cpu.setIrq(true);
+    m.cpu.step(); // PLP
+    expect(m.cpu.regs.p & I).toBe(0);
+    m.cpu.step(); // NOP still runs
+    expect(m.cpu.regs.pc).toBe(0x0202);
+    m.cpu.step(); // now the interrupt
+    expect(m.cpu.regs.pc).toBe(0x0300);
+  });
+
+  it('an IRQ asserted on the last cycle of an ordinary instruction waits one more instruction', () => {
+    const m = machine([0xea, 0xea, 0xea], {
+      onCycle: () => {
+        if (m.cpu.cycles === 9) m.cpu.setIrq(true); // NOP occupies cycles 8 and 9
+      },
+    });
+    m.cpu.reset();
+    m.cpu.regs.p &= ~I;
+    m.cpu.step(); // first NOP
+    m.cpu.step(); // second NOP still executes
+    expect(m.cpu.regs.pc).toBe(0x0202);
+    m.cpu.step(); // interrupt
+    expect(m.cpu.regs.pc).toBe(0x0300);
+  });
+});

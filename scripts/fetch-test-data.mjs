@@ -1,6 +1,10 @@
 // Downloads third-party test data (not vendored: GPL / large) into .testdata/.
 //   node scripts/fetch-test-data.mjs          verify against the pinned manifest
 //   node scripts/fetch-test-data.mjs --pin    resolve HEAD SHAs, download, write the manifest
+//   node scripts/fetch-test-data.mjs --pin <source>...  pin only the named sources (klaus,
+//       singlestep, openroms); other manifest entries are kept. A bare --pin re-pins ALL sources
+//       and re-downloads everything (singlestep is about 1.1 GB).
+//   node scripts/fetch-test-data.mjs <source>...        verify/download only the named sources
 import { createHash } from 'node:crypto';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
@@ -108,6 +112,11 @@ async function fetchSource(source, sha, expected) {
     const url = `https://raw.githubusercontent.com/${source.repo}/${sha}/${file}`;
     const buf = await get(url);
     const sum = sha256(buf);
+    if (expected && expected[file] === undefined) {
+      throw new Error(
+        `${file} is not in the manifest: re-pin with "node scripts/fetch-test-data.mjs --pin ${source.dest}"`,
+      );
+    }
     if (expected && expected[file] !== sum) {
       throw new Error(`checksum mismatch for ${file}: expected ${expected[file]}, got ${sum}`);
     }

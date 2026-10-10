@@ -43,7 +43,13 @@
           window.player = player;
           document.getElementById('prg').addEventListener('change', async (e) => {
             const file = e.target.files[0];
-            if (file) await player.load(file);
+            if (!file) return;
+            try {
+              await player.load(file);
+              status.textContent = 'running';
+            } catch (error) {
+              status.textContent = error.name + ': ' + error.message;
+            }
           });
         })
         .catch((error) => {

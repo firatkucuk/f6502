@@ -12,6 +12,10 @@ export interface Registers {
 }
 
 export class MOS6502 {
+  /**
+   * Register file. Callers that write to it must keep fields in range (a, x, y, sp, p: 0-255;
+   * pc: 0-65535); the CPU does not renormalise values written from outside.
+   */
   readonly regs: Registers = { a: 0, x: 0, y: 0, sp: 0, pc: 0, p: I | U };
   cycles = 0;
   /** Set by JAM opcodes, cleared by reset(). */

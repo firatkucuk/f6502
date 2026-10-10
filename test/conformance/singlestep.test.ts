@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { MOS6502, type Bus } from '../../src/core';
+import { MOS6502, OPS, type Bus } from '../../src/core';
 
 interface State {
   pc: number;
@@ -44,6 +44,15 @@ class TraceBus implements Bus {
 }
 
 const hex = (n: number) => n.toString(16).padStart(2, '0');
+
+describe('SingleStepTests skip list', () => {
+  it('only skips JAM opcodes (anything else would silently drop 10,000 vectors)', () => {
+    for (const key of Object.keys(SKIP)) {
+      const opcode = Number.parseInt(key, 16);
+      expect(OPS[opcode]?.kind, `opcode $${key}`).toBe('jam');
+    }
+  });
+});
 
 describe('SingleStepTests/65x02 (NMOS 6502)', () => {
   for (let opcode = 0; opcode < 256; opcode++) {

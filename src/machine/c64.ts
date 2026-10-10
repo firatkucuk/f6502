@@ -134,11 +134,15 @@ export class C64 {
     this.restoreCountdown = RESTORE_PULSE_CYCLES;
   }
 
-  /** Queues text for the KERNAL keyboard buffer (PETSCII: letters upper-case, \n and \r = RETURN). */
+  /**
+   * Queues text for the KERNAL keyboard buffer. Letters become the (upper-case) PETSCII letters,
+   * \n and \r are RETURN, `£ ^ _` map to their PETSCII codes; characters with no PETSCII
+   * equivalent (`\\ { | } ~` and backtick, non-Latin text) are skipped.
+   */
   type(text: string): void {
     for (const ch of text) {
-      const code = ch === '\n' || ch === '\r' ? 0x0d : ch.toUpperCase().charCodeAt(0) & 0xff;
-      this.typeQueue.push(code);
+      const code = toPetscii(ch);
+      if (code !== null) this.typeQueue.push(code);
     }
     this.pumpTypeQueue();
   }
@@ -178,13 +182,13 @@ export class C64 {
     return this.bus.peek(addr);
   }
 
-  /** Test/diagnostic helper: write straight into RAM, ignoring banking. */
+  /** @internal Test/diagnostic helper: write straight into RAM, ignoring banking. */
   pokeRam(addr: number, value: number): void {
     this.bus.ram[addr & 0xffff] = value & 0xff;
   }
 
-  /** Test/diagnostic helper: a CPU-visible bus write. */
-  writeIo(addr: number, value: number): void {
+  /** @internal Test/diagnostic helper: a CPU-visible bus write (RAM, I/O or the 6510 port). */
+  busWrite(addr: number, value: number): void {
     this.bus.write(addr, value);
   }
 
@@ -213,6 +217,17 @@ export class C64 {
       ram[0xc6] = n + 1;
     }
   }
+}
+
+/** ASCII/Unicode character -> PETSCII byte, or null when the C64 has no such key. */
+function toPetscii(ch: string): number | null {
+  if (ch === '\n' || ch === '\r') return 0x0d;
+  if (ch === '£') return 0x5c;
+  const code = ch.toUpperCase().charCodeAt(0);
+  if (ch.length === 0 || code > 0x7f) return null;
+  if (code === 0x5c || code >= 0x60) return null; // \ and { | } ~ ` DEL have no PETSCII
+  if (code < 0x20) return null;
+  return code;
 }
 
 function screenCodeToChar(code: number): string {
