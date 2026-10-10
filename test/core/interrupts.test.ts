@@ -1,0 +1,153 @@
+import { describe, expect, it } from 'vitest';
+import { B, I } from '../../src/core/flags';
+import { boot, machine } from './helpers';
+
+describe('IRQ', () => {
+  it('is serviced after the current instruction: 7 cycles, B=0 pushed, I set', () => {
+    const m = boot([0xea, 0xea]);
+    m.cpu.regs.p &= ~I;
+    m.cpu.setIrq(true);
+    m.cpu.step(); // NOP executes, interrupt decided
+    expect(m.cpu.regs.pc).toBe(0x0201);
+    expect(m.cpu.step()).toBe(7);
+    expect(m.cpu.regs.pc).toBe(0x0300);
+    expect(m.cpu.regs.p & I).toBe(I);
+    expect(m.bus.mem[0x01fd]).toBe(0x02);
+    expect(m.bus.mem[0x01fc]).toBe(0x01);
+    expect(m.bus.mem[0x01fb] & B).toBe(0);
+  });
+
+  it('is never serviced while I is set, even if held for a long time', () => {
+    const m = boot(new Array(64).fill(0xea));
+    m.cpu.setIrq(true); // I is set after reset
+    for (let i = 0; i < 50; i++) m.cpu.step();
+    expect(m.cpu.regs.pc).toBe(0x0200 + 50);
+  });
+
+  it('CLI delays servicing by one instruction', () => {
+    const m = boot([0x58, 0xea, 0xea]);
+    m.cpu.setIrq(true);
+    m.cpu.step(); // CLI
+    m.cpu.step(); // NOP still runs
+    expect(m.cpu.regs.pc).toBe(0x0202);
+    m.cpu.step(); // interrupt sequence
+    expect(m.cpu.regs.pc).toBe(0x0300);
+  });
+
+  it('SEI does not mask an IRQ that was already pending when it started', () => {
+    const m = boot([0x78, 0xea]);
+    m.cpu.regs.p &= ~I;
+    m.cpu.setIrq(true);
+    m.cpu.step(); // SEI executes; the poll happened before I changed
+    expect(m.cpu.regs.p & I).toBe(I);
+    m.cpu.step(); // interrupt is taken anyway
+    expect(m.cpu.regs.pc).toBe(0x0300);
+    expect(m.bus.mem[0x01fd]).toBe(0x02); // return address is the instruction after SEI
+    expect(m.bus.mem[0x01fc]).toBe(0x01);
+    expect(m.bus.mem[0x01fb] & I).toBe(I); // pushed P already shows I set
+  });
+});
+
+describe('NMI', () => {
+  it('is serviced via $FFFA regardless of I, and takes 7 cycles', () => {
+    const m = boot([0xea, 0xea]);
+    m.cpu.setNmi(true);
+    m.cpu.step();
+    expect(m.cpu.step()).toBe(7);
+    expect(m.cpu.regs.pc).toBe(0x0400);
+  });
+
+  it('a held-low NMI line does not retrigger; a new edge does', () => {
+    const m = boot(new Array(32).fill(0xea));
+    m.bus.mem[0x0400] = 0xea;
+    m.bus.mem[0x0401] = 0xea;
+    m.bus.mem[0x0402] = 0xea;
+    m.cpu.setNmi(true);
+    m.cpu.step(); // NOP
+    m.cpu.step(); // NMI sequence -> $0400
+    expect(m.cpu.regs.pc).toBe(0x0400);
+    m.cpu.step();
+    m.cpu.step();
+    expect(m.cpu.regs.pc).toBe(0x0402); // line still held: no second NMI
+    m.cpu.setNmi(false);
+    m.cpu.setNmi(true);
+    m.cpu.step();
+    m.cpu.step();
+    expect(m.cpu.regs.pc).toBe(0x0400); // fresh edge serviced again
+  });
+
+  it('has priority over IRQ', () => {
+    const m = boot([0xea, 0xea]);
+    m.cpu.regs.p &= ~I;
+    m.cpu.setIrq(true);
+    m.cpu.setNmi(true);
+    m.cpu.step();
+    m.cpu.step();
+    expect(m.cpu.regs.pc).toBe(0x0400);
+  });
+});
+
+describe('poll timing', () => {
+  it('not-taken branch (2 cycles): IRQ asserted in its cycle 1 is serviced right after it', () => {
+    const m = machine([0xf0, 0x00, 0xea, 0xea], {
+      onCycle: () => {
+        if (m.cpu.cycles === 8) m.cpu.setIrq(true);
+      },
+    });
+    m.cpu.reset();
+    m.cpu.regs.p &= ~I;
+    m.cpu.step(); // BEQ not taken (Z=0)
+    m.cpu.step(); // interrupt sequence
+    expect(m.cpu.regs.pc).toBe(0x0300);
+  });
+
+  it('taken branch without page cross: IRQ asserted in cycle 2 is delayed by one instruction', () => {
+    const m = machine([0xd0, 0x00, 0xea, 0xea], {
+      onCycle: () => {
+        if (m.cpu.cycles === 9) m.cpu.setIrq(true);
+      },
+    });
+    m.cpu.reset();
+    m.cpu.regs.p &= ~I;
+    m.cpu.step(); // BNE taken (3 cycles: 8,9,10)
+    m.cpu.step(); // NOP runs first
+    expect(m.cpu.regs.pc).toBe(0x0203);
+    m.cpu.step(); // now the interrupt
+    expect(m.cpu.regs.pc).toBe(0x0300);
+  });
+});
+
+describe('NMI hijack of BRK', () => {
+  it('NMI arriving before the vector fetch hijacks BRK; B is still pushed as 1', () => {
+    const m = machine([0x00, 0xea], {
+      onCycle: () => {
+        if (m.cpu.cycles === 10) m.cpu.setNmi(true); // BRK cycles are 8..14
+      },
+    });
+    m.cpu.reset();
+    m.cpu.step();
+    expect(m.cpu.regs.pc).toBe(0x0400);
+    expect(m.bus.mem[0x01fb] & B).toBe(B);
+    m.bus.mem[0x0400] = 0xea;
+    m.bus.mem[0x0401] = 0xea;
+    m.cpu.step();
+    m.cpu.step();
+    expect(m.cpu.regs.pc).toBe(0x0402); // the NMI was consumed, not repeated
+  });
+
+  it('NMI arriving after the vector fetch is serviced after the first handler instruction', () => {
+    const m = machine([0x00, 0xea], {
+      onCycle: () => {
+        if (m.cpu.cycles === 14) m.cpu.setNmi(true);
+      },
+    });
+    m.cpu.reset();
+    m.bus.mem[0x0300] = 0xea;
+    m.cpu.step(); // BRK -> $0300 (normal vector)
+    expect(m.cpu.regs.pc).toBe(0x0300);
+    m.cpu.step(); // handler's first instruction
+    expect(m.cpu.regs.pc).toBe(0x0301);
+    m.cpu.step(); // NMI sequence
+    expect(m.cpu.regs.pc).toBe(0x0400);
+  });
+});
