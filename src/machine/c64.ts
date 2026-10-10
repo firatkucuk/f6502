@@ -5,10 +5,12 @@ import { CpuPort } from './cpu-port';
 import { Keyboard, type C64Key } from './keyboard';
 import { validateRoms, type RomSet } from './memory';
 import { parsePrg, rawProgram, type Prg } from './prg';
+import { Sid, type SidOptions } from './sid';
 import { FRAME_HEIGHT, FRAME_WIDTH, VicII } from './vic';
 
 export interface C64Options {
   video?: 'pal';
+  sid?: SidOptions;
 }
 
 export interface LoadPrgOptions {
@@ -34,6 +36,7 @@ export class C64 {
   private readonly cia1: Cia;
   private readonly cia2: Cia;
   private readonly vic: VicII;
+  readonly sid: Sid;
   private readonly keyboard = new Keyboard();
   private restoreCountdown = 0;
   private credit = 0;
@@ -55,7 +58,12 @@ export class C64 {
       readMem: (a) => this.bus.vicRead(a),
       readColor: (i) => this.bus.colorRam[i & 0x3ff]!,
     });
-    this.bus = new C64Bus(roms, { vic: this.vic, cia1: this.cia1, cia2: this.cia2 }, this.port);
+    this.sid = new Sid(options.sid);
+    this.bus = new C64Bus(
+      roms,
+      { vic: this.vic, cia1: this.cia1, cia2: this.cia2, sid: this.sid },
+      this.port,
+    );
     this.cpu = new MOS6502(this.bus, {
       onCycle: () => this.tickChips(),
       rdy: () => !this.vic.baLow,
@@ -73,6 +81,7 @@ export class C64 {
     this.cia1.reset();
     this.cia2.reset();
     this.vic.reset();
+    this.sid.reset();
     this.vic.tick(); // process the first cycle before the CPU's first access
     this.keyboard.releaseAll();
     this.typeQueue.length = 0;
@@ -192,6 +201,11 @@ export class C64 {
   }
 
   /** @internal Test/diagnostic helper: a CPU-visible bus write (RAM, I/O or the 6510 port). */
+  /** Debug/test accessor: a CPU-visible read with side effects, as the CPU would do it. */
+  busRead(addr: number): number {
+    return this.bus.read(addr);
+  }
+
   busWrite(addr: number, value: number): void {
     this.bus.write(addr, value);
   }
@@ -202,6 +216,7 @@ export class C64 {
     this.cia1.tick();
     this.cia2.tick();
     this.vic.tick();
+    this.sid.tick();
     this.bus.vicBank = ~this.cia2.outputA() & 3;
     let restoreActive = false;
     if (this.restoreCountdown > 0) {

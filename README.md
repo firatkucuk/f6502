@@ -2,13 +2,15 @@
 
 A browser-based 6502 / Commodore 64 emulator in TypeScript. No backend, no runtime dependencies.
 
-Status: the cycle-accurate 6502 core, the C64 machine (memory map, CIAs, keyboard) and a PAL
-VIC-II with all graphics modes, sprites, collisions, badline and sprite-DMA CPU stalls, border
-opening and sprite crunch, plus the browser layer, are implemented. The VIC-II is checked against
-VICE reference screenshots: 14 of the 137 PAL reference tests match pixel for pixel (several of them
-excluding a text label, whose glyph shapes come from a different character ROM); the others are
-tracked in issue #43. Sound, disk/tape media and the demo site are planned (see
-`docs/superpowers/specs/`).
+Status: the cycle-accurate 6502 core, the C64 machine (memory map, CIAs, keyboard), a PAL VIC-II
+with all graphics modes, sprites, collisions, badline and sprite-DMA CPU stalls, border opening and
+sprite crunch, a clean-room SID (6581 and 8580 models, three voices, ADSR with the delay bug, noise,
+sync, ring mod, filter) with `AudioWorklet` playback via `start({ audio: true })`, and the browser
+layer are implemented. The VIC-II is checked against VICE reference screenshots (14 of 137 match
+pixel for pixel, the rest are tracked in #43) and the SID against the VICE SID test programs (17
+self-checking programs pass; the rest are tracked in #52). Combined waveforms
+and the 6581 filter curve are documented approximations. Disk/tape media and the demo site are
+planned (see `docs/superpowers/specs/`).
 
 ## Browser usage
 

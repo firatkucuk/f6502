@@ -1,0 +1,1110 @@
+[
+  {
+    "name": "busvalue/busvalue.prg",
+    "prg": "SID/busvalue/busvalue.prg",
+    "model": "6581",
+    "frames": 150,
+    "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
+    "checks": [
+      {
+        "type": "border",
+        "colour": 5
+      }
+    ],
+    "expect": "known-fail:data-bus value decay details of write-only registers differ",
+    "failing": 1
+  },
+  {
+    "name": "detect/detect-1-new.prg",
+    "prg": "SID/detect/detect-1-new.prg",
+    "model": "8580",
+    "frames": 150,
+    "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
+    "checks": [
+      {
+        "type": "border",
+        "colour": 5
+      }
+    ],
+    "expect": "pass"
+  },
+  {
+    "name": "detect/detect-1-old.prg",
+    "prg": "SID/detect/detect-1-old.prg",
+    "model": "6581",
+    "frames": 150,
+    "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
+    "checks": [
+      {
+        "type": "border",
+        "colour": 5
+      }
+    ],
+    "expect": "pass"
+  },
+  {
+    "name": "detect/detect-2-new.prg",
+    "prg": "SID/detect/detect-2-new.prg",
+    "model": "8580",
+    "frames": 150,
+    "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
+    "checks": [
+      {
+        "type": "border",
+        "colour": 5
+      }
+    ],
+    "expect": "known-fail:the detection method relies on a combined-waveform/noise behaviour our approximation does not reproduce",
+    "failing": 1
+  },
+  {
+    "name": "detect/detect-2-old.prg",
+    "prg": "SID/detect/detect-2-old.prg",
+    "model": "6581",
+    "frames": 150,
+    "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
+    "checks": [
+      {
+        "type": "border",
+        "colour": 5
+      }
+    ],
+    "expect": "pass"
+  },
+  {
+    "name": "detectmirrors/main.prg",
+    "prg": "SID/detectmirrors/main.prg",
+    "model": "6581",
+    "frames": 150,
+    "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
+    "checks": [
+      {
+        "type": "border",
+        "colour": 5
+      }
+    ],
+    "expect": "known-fail:differs from the documented hardware behaviour",
+    "failing": 1
+  },
+  {
+    "name": "env_test/env_test_adra_1.prg",
+    "prg": "SID/env_test/env_test_adra_1.prg",
+    "model": "6581",
+    "frames": 150,
+    "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
+    "checks": [
+      {
+        "type": "border",
+        "colour": 5
+      }
+    ],
+    "expect": "known-fail:gate/rate-counter pipeline timing (ENV3 start-up delays) is not modelled; the test plots measured vs expected grids on screen",
+    "failing": 1
+  },
+  {
+    "name": "env_test/env_test_adra_2.prg",
+    "prg": "SID/env_test/env_test_adra_2.prg",
+    "model": "6581",
+    "frames": 150,
+    "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
+    "checks": [
+      {
+        "type": "border",
+        "colour": 5
+      }
+    ],
+    "expect": "known-fail:gate/rate-counter pipeline timing (ENV3 start-up delays) is not modelled; the test plots measured vs expected grids on screen",
+    "failing": 1
+  },
+  {
+    "name": "env_test/env_test_ar_1.prg",
+    "prg": "SID/env_test/env_test_ar_1.prg",
+    "model": "6581",
+    "frames": 150,
+    "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
+    "checks": [
+      {
+        "type": "border",
+        "colour": 5
+      }
+    ],
+    "expect": "known-fail:gate/rate-counter pipeline timing (ENV3 start-up delays) is not modelled; the test plots measured vs expected grids on screen",
+    "failing": 1
+  },
+  {
+    "name": "env_test/env_test_ar_2.prg",
+    "prg": "SID/env_test/env_test_ar_2.prg",
+    "model": "6581",
+    "frames": 150,
+    "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
+    "checks": [
+      {
+        "type": "border",
+        "colour": 5
+      }
+    ],
+    "expect": "known-fail:gate/rate-counter pipeline timing (ENV3 start-up delays) is not modelled; the test plots measured vs expected grids on screen",
+    "failing": 1
+  },
+  {
+    "name": "env_test/env_test_ar_3.prg",
+    "prg": "SID/env_test/env_test_ar_3.prg",
+    "model": "6581",
+    "frames": 150,
+    "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
+    "checks": [
+      {
+        "type": "border",
+        "colour": 5
+      }
+    ],
+    "expect": "known-fail:gate/rate-counter pipeline timing (ENV3 start-up delays) is not modelled; the test plots measured vs expected grids on screen",
+    "failing": 1
+  },
+  {
+    "name": "env_test/env_test_ra_0000.prg",
+    "prg": "SID/env_test/env_test_ra_0000.prg",
+    "model": "6581",
+    "frames": 150,
+    "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
+    "checks": [
+      {
+        "type": "border",
+        "colour": 5
+      }
+    ],
+    "expect": "known-fail:gate/rate-counter pipeline timing (ENV3 start-up delays) is not modelled; the test plots measured vs expected grids on screen",
+    "failing": 1
+  },
+  {
+    "name": "env_test/env_test_ra_0100.prg",
+    "prg": "SID/env_test/env_test_ra_0100.prg",
+    "model": "6581",
+    "frames": 150,
+    "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
+    "checks": [
+      {
+        "type": "border",
+        "colour": 5
+      }
+    ],
+    "expect": "known-fail:gate/rate-counter pipeline timing (ENV3 start-up delays) is not modelled; the test plots measured vs expected grids on screen",
+    "failing": 1
+  },
+  {
+    "name": "env_test/env_test_ra_ff00.prg",
+    "prg": "SID/env_test/env_test_ra_ff00.prg",
+    "model": "6581",
+    "frames": 150,
+    "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
+    "checks": [
+      {
+        "type": "border",
+        "colour": 5
+      }
+    ],
+    "expect": "known-fail:gate/rate-counter pipeline timing (ENV3 start-up delays) is not modelled; the test plots measured vs expected grids on screen",
+    "failing": 1
+  },
+  {
+    "name": "envelope/lft-adsr-test.prg",
+    "prg": "SID/envelope/lft-adsr-test.prg",
+    "model": "6581",
+    "frames": 150,
+    "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
+    "checks": [
+      {
+        "type": "border",
+        "colour": 5
+      }
+    ],
+    "expect": "pass"
+  },
+  {
+    "name": "envelope/testADSRDelayBug.prg",
+    "prg": "SID/envelope/testADSRDelayBug.prg",
+    "model": "6581",
+    "frames": 150,
+    "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
+    "checks": [
+      {
+        "type": "border",
+        "colour": 5
+      }
+    ],
+    "expect": "pass"
+  },
+  {
+    "name": "envelope/testFlip00toFF.prg",
+    "prg": "SID/envelope/testFlip00toFF.prg",
+    "model": "6581",
+    "frames": 150,
+    "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
+    "checks": [
+      {
+        "type": "border",
+        "colour": 5
+      }
+    ],
+    "expect": "pass"
+  },
+  {
+    "name": "envelope/testFlipFFto00.prg",
+    "prg": "SID/envelope/testFlipFFto00.prg",
+    "model": "6581",
+    "frames": 150,
+    "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
+    "checks": [
+      {
+        "type": "border",
+        "colour": 5
+      }
+    ],
+    "expect": "pass"
+  },
+  {
+    "name": "noiselfsrinit/scan.prg",
+    "prg": "SID/noiselfsrinit/scan.prg",
+    "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
+    "checks": [
+      {
+        "type": "border",
+        "colour": 5
+      }
+    ],
+    "model": "6581",
+    "frames": 150,
+    "expect": "known-fail:noise output after LFSR init at a fixed phase differs from the documented 8580 values",
+    "failing": 1
+  },
+  {
+    "name": "noiselfsrinit/simple.prg",
+    "prg": "SID/noiselfsrinit/simple.prg",
+    "model": "6581",
+    "frames": 150,
+    "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
+    "checks": [
+      {
+        "type": "border",
+        "colour": 5
+      }
+    ],
+    "expect": "known-fail:printed noise value after LFSR init differs from the documented hardware value ($7F)",
+    "failing": 1
+  },
+  {
+    "name": "noisewriteback/noise_writeback_check_8_to_8_new.prg",
+    "prg": "SID/noisewriteback/noise_writeback_check_8_to_8_new.prg",
+    "model": "6581",
+    "frames": 150,
+    "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
+    "checks": [
+      {
+        "type": "border",
+        "colour": 5
+      }
+    ],
+    "expect": "known-fail:noise-waveform LFSR write-back with combined waveforms is only approximated",
+    "failing": 1
+  },
+  {
+    "name": "noisewriteback/noise_writeback_check_8_to_8_old.prg",
+    "prg": "SID/noisewriteback/noise_writeback_check_8_to_8_old.prg",
+    "model": "6581",
+    "frames": 150,
+    "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
+    "checks": [
+      {
+        "type": "border",
+        "colour": 5
+      }
+    ],
+    "expect": "known-fail:noise-waveform LFSR write-back with combined waveforms is only approximated",
+    "failing": 1
+  },
+  {
+    "name": "noisewriteback/noise_writeback_check_8_to_9_new.prg",
+    "prg": "SID/noisewriteback/noise_writeback_check_8_to_9_new.prg",
+    "model": "6581",
+    "frames": 150,
+    "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
+    "checks": [
+      {
+        "type": "border",
+        "colour": 5
+      }
+    ],
+    "expect": "known-fail:noise-waveform LFSR write-back with combined waveforms is only approximated",
+    "failing": 1
+  },
+  {
+    "name": "noisewriteback/noise_writeback_check_8_to_9_old.prg",
+    "prg": "SID/noisewriteback/noise_writeback_check_8_to_9_old.prg",
+    "model": "6581",
+    "frames": 150,
+    "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
+    "checks": [
+      {
+        "type": "border",
+        "colour": 5
+      }
+    ],
+    "expect": "known-fail:noise-waveform LFSR write-back with combined waveforms is only approximated",
+    "failing": 1
+  },
+  {
+    "name": "noisewriteback/noise_writeback_check_8_to_C_new.prg",
+    "prg": "SID/noisewriteback/noise_writeback_check_8_to_C_new.prg",
+    "model": "6581",
+    "frames": 150,
+    "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
+    "checks": [
+      {
+        "type": "border",
+        "colour": 5
+      }
+    ],
+    "expect": "known-fail:noise-waveform LFSR write-back with combined waveforms is only approximated",
+    "failing": 1
+  },
+  {
+    "name": "noisewriteback/noise_writeback_check_8_to_C_old.prg",
+    "prg": "SID/noisewriteback/noise_writeback_check_8_to_C_old.prg",
+    "model": "6581",
+    "frames": 150,
+    "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
+    "checks": [
+      {
+        "type": "border",
+        "colour": 5
+      }
+    ],
+    "expect": "known-fail:noise-waveform LFSR write-back with combined waveforms is only approximated",
+    "failing": 1
+  },
+  {
+    "name": "noisewriteback/noise_writeback_check_9_to_8_new.prg",
+    "prg": "SID/noisewriteback/noise_writeback_check_9_to_8_new.prg",
+    "model": "6581",
+    "frames": 150,
+    "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
+    "checks": [
+      {
+        "type": "border",
+        "colour": 5
+      }
+    ],
+    "expect": "known-fail:noise-waveform LFSR write-back with combined waveforms is only approximated",
+    "failing": 1
+  },
+  {
+    "name": "noisewriteback/noise_writeback_check_9_to_8_old.prg",
+    "prg": "SID/noisewriteback/noise_writeback_check_9_to_8_old.prg",
+    "model": "6581",
+    "frames": 150,
+    "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
+    "checks": [
+      {
+        "type": "border",
+        "colour": 5
+      }
+    ],
+    "expect": "known-fail:noise-waveform LFSR write-back with combined waveforms is only approximated",
+    "failing": 1
+  },
+  {
+    "name": "noisewriteback/noise_writeback_check_9_to_9_new.prg",
+    "prg": "SID/noisewriteback/noise_writeback_check_9_to_9_new.prg",
+    "model": "6581",
+    "frames": 150,
+    "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
+    "checks": [
+      {
+        "type": "border",
+        "colour": 5
+      }
+    ],
+    "expect": "known-fail:noise-waveform LFSR write-back with combined waveforms is only approximated",
+    "failing": 1
+  },
+  {
+    "name": "noisewriteback/noise_writeback_check_9_to_9_old.prg",
+    "prg": "SID/noisewriteback/noise_writeback_check_9_to_9_old.prg",
+    "model": "6581",
+    "frames": 150,
+    "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
+    "checks": [
+      {
+        "type": "border",
+        "colour": 5
+      }
+    ],
+    "expect": "known-fail:noise-waveform LFSR write-back with combined waveforms is only approximated",
+    "failing": 1
+  },
+  {
+    "name": "noisewriteback/noise_writeback_check_9_to_A_new.prg",
+    "prg": "SID/noisewriteback/noise_writeback_check_9_to_A_new.prg",
+    "model": "6581",
+    "frames": 150,
+    "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
+    "checks": [
+      {
+        "type": "border",
+        "colour": 5
+      }
+    ],
+    "expect": "known-fail:noise-waveform LFSR write-back with combined waveforms is only approximated",
+    "failing": 1
+  },
+  {
+    "name": "noisewriteback/noise_writeback_check_9_to_A_old.prg",
+    "prg": "SID/noisewriteback/noise_writeback_check_9_to_A_old.prg",
+    "model": "6581",
+    "frames": 150,
+    "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
+    "checks": [
+      {
+        "type": "border",
+        "colour": 5
+      }
+    ],
+    "expect": "known-fail:noise-waveform LFSR write-back with combined waveforms is only approximated",
+    "failing": 1
+  },
+  {
+    "name": "noisewriteback/noise_writeback_check_A_to_8_new.prg",
+    "prg": "SID/noisewriteback/noise_writeback_check_A_to_8_new.prg",
+    "model": "6581",
+    "frames": 150,
+    "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
+    "checks": [
+      {
+        "type": "border",
+        "colour": 5
+      }
+    ],
+    "expect": "known-fail:noise-waveform LFSR write-back with combined waveforms is only approximated",
+    "failing": 1
+  },
+  {
+    "name": "noisewriteback/noise_writeback_check_A_to_8_old.prg",
+    "prg": "SID/noisewriteback/noise_writeback_check_A_to_8_old.prg",
+    "model": "6581",
+    "frames": 150,
+    "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
+    "checks": [
+      {
+        "type": "border",
+        "colour": 5
+      }
+    ],
+    "expect": "known-fail:noise-waveform LFSR write-back with combined waveforms is only approximated",
+    "failing": 1
+  },
+  {
+    "name": "noisewriteback/noise_writeback_check_A_to_9_new.prg",
+    "prg": "SID/noisewriteback/noise_writeback_check_A_to_9_new.prg",
+    "model": "6581",
+    "frames": 150,
+    "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
+    "checks": [
+      {
+        "type": "border",
+        "colour": 5
+      }
+    ],
+    "expect": "known-fail:noise-waveform LFSR write-back with combined waveforms is only approximated",
+    "failing": 1
+  },
+  {
+    "name": "noisewriteback/noise_writeback_check_A_to_9_old.prg",
+    "prg": "SID/noisewriteback/noise_writeback_check_A_to_9_old.prg",
+    "model": "6581",
+    "frames": 150,
+    "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
+    "checks": [
+      {
+        "type": "border",
+        "colour": 5
+      }
+    ],
+    "expect": "known-fail:noise-waveform LFSR write-back with combined waveforms is only approximated",
+    "failing": 1
+  },
+  {
+    "name": "noisewriteback/noise_writeback_check_A_to_A_new.prg",
+    "prg": "SID/noisewriteback/noise_writeback_check_A_to_A_new.prg",
+    "model": "6581",
+    "frames": 150,
+    "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
+    "checks": [
+      {
+        "type": "border",
+        "colour": 5
+      }
+    ],
+    "expect": "known-fail:noise-waveform LFSR write-back with combined waveforms is only approximated",
+    "failing": 1
+  },
+  {
+    "name": "noisewriteback/noise_writeback_check_A_to_A_old.prg",
+    "prg": "SID/noisewriteback/noise_writeback_check_A_to_A_old.prg",
+    "model": "6581",
+    "frames": 150,
+    "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
+    "checks": [
+      {
+        "type": "border",
+        "colour": 5
+      }
+    ],
+    "expect": "known-fail:noise-waveform LFSR write-back with combined waveforms is only approximated",
+    "failing": 1
+  },
+  {
+    "name": "noisewriteback/noise_writeback_check_C_to_C_new.prg",
+    "prg": "SID/noisewriteback/noise_writeback_check_C_to_C_new.prg",
+    "model": "6581",
+    "frames": 150,
+    "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
+    "checks": [
+      {
+        "type": "border",
+        "colour": 5
+      }
+    ],
+    "expect": "known-fail:noise-waveform LFSR write-back with combined waveforms is only approximated",
+    "failing": 1
+  },
+  {
+    "name": "noisewriteback/noise_writeback_check_C_to_C_old.prg",
+    "prg": "SID/noisewriteback/noise_writeback_check_C_to_C_old.prg",
+    "model": "6581",
+    "frames": 150,
+    "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
+    "checks": [
+      {
+        "type": "border",
+        "colour": 5
+      }
+    ],
+    "expect": "known-fail:noise-waveform LFSR write-back with combined waveforms is only approximated",
+    "failing": 1
+  },
+  {
+    "name": "noisewriteback/noise_writeback_check_D_to_E_new.prg",
+    "prg": "SID/noisewriteback/noise_writeback_check_D_to_E_new.prg",
+    "model": "6581",
+    "frames": 150,
+    "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
+    "checks": [
+      {
+        "type": "border",
+        "colour": 5
+      }
+    ],
+    "expect": "known-fail:noise-waveform LFSR write-back with combined waveforms is only approximated",
+    "failing": 1
+  },
+  {
+    "name": "noisewriteback/noise_writeback_check_D_to_E_old.prg",
+    "prg": "SID/noisewriteback/noise_writeback_check_D_to_E_old.prg",
+    "model": "6581",
+    "frames": 150,
+    "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
+    "checks": [
+      {
+        "type": "border",
+        "colour": 5
+      }
+    ],
+    "expect": "known-fail:noise-waveform LFSR write-back with combined waveforms is only approximated",
+    "failing": 1
+  },
+  {
+    "name": "noisewriteback/noise_writeback_check_E_to_B_new.prg",
+    "prg": "SID/noisewriteback/noise_writeback_check_E_to_B_new.prg",
+    "model": "6581",
+    "frames": 150,
+    "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
+    "checks": [
+      {
+        "type": "border",
+        "colour": 5
+      }
+    ],
+    "expect": "known-fail:noise-waveform LFSR write-back with combined waveforms is only approximated",
+    "failing": 1
+  },
+  {
+    "name": "noisewriteback/noise_writeback_check_E_to_B_old.prg",
+    "prg": "SID/noisewriteback/noise_writeback_check_E_to_B_old.prg",
+    "model": "6581",
+    "frames": 150,
+    "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
+    "checks": [
+      {
+        "type": "border",
+        "colour": 5
+      }
+    ],
+    "expect": "known-fail:noise-waveform LFSR write-back with combined waveforms is only approximated",
+    "failing": 1
+  },
+  {
+    "name": "noisewriteback/noise_writeback_check_E_to_D_new.prg",
+    "prg": "SID/noisewriteback/noise_writeback_check_E_to_D_new.prg",
+    "model": "6581",
+    "frames": 150,
+    "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
+    "checks": [
+      {
+        "type": "border",
+        "colour": 5
+      }
+    ],
+    "expect": "known-fail:noise-waveform LFSR write-back with combined waveforms is only approximated",
+    "failing": 1
+  },
+  {
+    "name": "noisewriteback/noise_writeback_check_E_to_D_old.prg",
+    "prg": "SID/noisewriteback/noise_writeback_check_E_to_D_old.prg",
+    "model": "6581",
+    "frames": 150,
+    "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
+    "checks": [
+      {
+        "type": "border",
+        "colour": 5
+      }
+    ],
+    "expect": "known-fail:noise-waveform LFSR write-back with combined waveforms is only approximated",
+    "failing": 1
+  },
+  {
+    "name": "osc3-wave0/osc3-wave0-new.prg",
+    "prg": "SID/osc3-wave0/osc3-wave0-new.prg",
+    "model": "6581",
+    "frames": 150,
+    "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
+    "checks": [
+      {
+        "type": "border",
+        "colour": 5
+      }
+    ],
+    "expect": "pass"
+  },
+  {
+    "name": "osc3-wave0/osc3-wave0.prg",
+    "prg": "SID/osc3-wave0/osc3-wave0.prg",
+    "model": "6581",
+    "frames": 150,
+    "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
+    "checks": [
+      {
+        "type": "border",
+        "colour": 5
+      }
+    ],
+    "expect": "pass"
+  },
+  {
+    "name": "osc_topbit/osc_topbit_test_noise_new.prg",
+    "prg": "SID/osc_topbit/osc_topbit_test_noise_new.prg",
+    "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
+    "checks": [
+      {
+        "type": "border",
+        "colour": 5
+      }
+    ],
+    "model": "8580",
+    "frames": 600,
+    "expect": "pass"
+  },
+  {
+    "name": "osc_topbit/osc_topbit_test_noise_old.prg",
+    "prg": "SID/osc_topbit/osc_topbit_test_noise_old.prg",
+    "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
+    "checks": [
+      {
+        "type": "border",
+        "colour": 5
+      }
+    ],
+    "model": "6581",
+    "frames": 600,
+    "expect": "known-fail:oscillator top-bit behaviour of the old chip revision (new/old variants differ) is not modelled",
+    "failing": 1
+  },
+  {
+    "name": "osc_topbit/osc_topbit_test_pulse_new.prg",
+    "prg": "SID/osc_topbit/osc_topbit_test_pulse_new.prg",
+    "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
+    "checks": [
+      {
+        "type": "border",
+        "colour": 5
+      }
+    ],
+    "model": "8580",
+    "frames": 600,
+    "expect": "pass"
+  },
+  {
+    "name": "osc_topbit/osc_topbit_test_pulse_old.prg",
+    "prg": "SID/osc_topbit/osc_topbit_test_pulse_old.prg",
+    "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
+    "checks": [
+      {
+        "type": "border",
+        "colour": 5
+      }
+    ],
+    "model": "6581",
+    "frames": 600,
+    "expect": "known-fail:oscillator top-bit behaviour of the old chip revision (new/old variants differ) is not modelled",
+    "failing": 1
+  },
+  {
+    "name": "osc_topbit/osc_topbit_test_triangle_new.prg",
+    "prg": "SID/osc_topbit/osc_topbit_test_triangle_new.prg",
+    "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
+    "checks": [
+      {
+        "type": "border",
+        "colour": 5
+      }
+    ],
+    "model": "8580",
+    "frames": 600,
+    "expect": "pass"
+  },
+  {
+    "name": "osc_topbit/osc_topbit_test_triangle_old.prg",
+    "prg": "SID/osc_topbit/osc_topbit_test_triangle_old.prg",
+    "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
+    "checks": [
+      {
+        "type": "border",
+        "colour": 5
+      }
+    ],
+    "model": "6581",
+    "frames": 600,
+    "expect": "known-fail:oscillator top-bit behaviour of the old chip revision (new/old variants differ) is not modelled",
+    "failing": 1
+  },
+  {
+    "name": "oscinit/allinit.prg",
+    "prg": "SID/oscinit/allinit.prg",
+    "model": "6581",
+    "frames": 150,
+    "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
+    "checks": [
+      {
+        "type": "border",
+        "colour": 5
+      }
+    ],
+    "expect": "known-fail:noise/all oscillator power-up state differs from the documented values",
+    "failing": 1
+  },
+  {
+    "name": "oscinit/noiseinit.prg",
+    "prg": "SID/oscinit/noiseinit.prg",
+    "model": "6581",
+    "frames": 150,
+    "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
+    "checks": [
+      {
+        "type": "border",
+        "colour": 5
+      }
+    ],
+    "expect": "known-fail:noise/all oscillator power-up state differs from the documented values",
+    "failing": 1
+  },
+  {
+    "name": "oscinit/oscinit.prg",
+    "prg": "SID/oscinit/oscinit.prg",
+    "model": "6581",
+    "frames": 150,
+    "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
+    "checks": [
+      {
+        "type": "border",
+        "colour": 5
+      }
+    ],
+    "expect": "pass"
+  },
+  {
+    "name": "ringmod/ringmodtest.prg",
+    "prg": "SID/ringmod/ringmodtest.prg",
+    "model": "6581",
+    "frames": 150,
+    "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
+    "checks": [
+      {
+        "type": "border",
+        "colour": 5
+      }
+    ],
+    "expect": "pass"
+  },
+  {
+    "name": "waveforms/waveforms-10-6581.prg",
+    "prg": "SID/waveforms/waveforms-10-6581.prg",
+    "model": "6581",
+    "frames": 150,
+    "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
+    "checks": [
+      {
+        "type": "border",
+        "colour": 5
+      }
+    ],
+    "expect": "pass"
+  },
+  {
+    "name": "waveforms/waveforms-10-8580.prg",
+    "prg": "SID/waveforms/waveforms-10-8580.prg",
+    "model": "8580",
+    "frames": 150,
+    "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
+    "checks": [
+      {
+        "type": "border",
+        "colour": 5
+      }
+    ],
+    "expect": "known-fail:combined waveforms are analytical approximations, not the measured per-chip tables",
+    "failing": 1
+  },
+  {
+    "name": "waveforms/waveforms-20-6581.prg",
+    "prg": "SID/waveforms/waveforms-20-6581.prg",
+    "model": "6581",
+    "frames": 150,
+    "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
+    "checks": [
+      {
+        "type": "border",
+        "colour": 5
+      }
+    ],
+    "expect": "pass"
+  },
+  {
+    "name": "waveforms/waveforms-20-8580.prg",
+    "prg": "SID/waveforms/waveforms-20-8580.prg",
+    "model": "8580",
+    "frames": 150,
+    "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
+    "checks": [
+      {
+        "type": "border",
+        "colour": 5
+      }
+    ],
+    "expect": "known-fail:combined waveforms are analytical approximations, not the measured per-chip tables",
+    "failing": 1
+  },
+  {
+    "name": "waveforms/waveforms-40-6581.prg",
+    "prg": "SID/waveforms/waveforms-40-6581.prg",
+    "model": "6581",
+    "frames": 150,
+    "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
+    "checks": [
+      {
+        "type": "border",
+        "colour": 5
+      }
+    ],
+    "expect": "known-fail:combined waveforms are analytical approximations, not the measured per-chip tables",
+    "failing": 1
+  },
+  {
+    "name": "waveforms/waveforms-40-8580.prg",
+    "prg": "SID/waveforms/waveforms-40-8580.prg",
+    "model": "8580",
+    "frames": 150,
+    "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
+    "checks": [
+      {
+        "type": "border",
+        "colour": 5
+      }
+    ],
+    "expect": "known-fail:combined waveforms are analytical approximations, not the measured per-chip tables",
+    "failing": 1
+  },
+  {
+    "name": "wb_testsuite/noise_writeback_check_8_to_8_new.prg",
+    "prg": "SID/wb_testsuite/noise_writeback_check_8_to_8_new.prg",
+    "model": "6581",
+    "frames": 150,
+    "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
+    "checks": [
+      {
+        "type": "border",
+        "colour": 5
+      }
+    ],
+    "expect": "known-fail:noise-waveform LFSR write-back with combined waveforms is only approximated",
+    "failing": 1
+  },
+  {
+    "name": "wb_testsuite/noise_writeback_check_8_to_E_old.prg",
+    "prg": "SID/wb_testsuite/noise_writeback_check_8_to_E_old.prg",
+    "model": "6581",
+    "frames": 150,
+    "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
+    "checks": [
+      {
+        "type": "border",
+        "colour": 5
+      }
+    ],
+    "expect": "known-fail:noise-waveform LFSR write-back with combined waveforms is only approximated",
+    "failing": 1
+  },
+  {
+    "name": "wb_testsuite/noise_writeback_check_9_to_D_old.prg",
+    "prg": "SID/wb_testsuite/noise_writeback_check_9_to_D_old.prg",
+    "model": "6581",
+    "frames": 150,
+    "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
+    "checks": [
+      {
+        "type": "border",
+        "colour": 5
+      }
+    ],
+    "expect": "known-fail:noise-waveform LFSR write-back with combined waveforms is only approximated",
+    "failing": 1
+  },
+  {
+    "name": "wb_testsuite/noise_writeback_check_A_to_C_old.prg",
+    "prg": "SID/wb_testsuite/noise_writeback_check_A_to_C_old.prg",
+    "model": "6581",
+    "frames": 150,
+    "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
+    "checks": [
+      {
+        "type": "border",
+        "colour": 5
+      }
+    ],
+    "expect": "known-fail:noise-waveform LFSR write-back with combined waveforms is only approximated",
+    "failing": 1
+  },
+  {
+    "name": "wb_testsuite/noise_writeback_check_B_to_B_new.prg",
+    "prg": "SID/wb_testsuite/noise_writeback_check_B_to_B_new.prg",
+    "model": "6581",
+    "frames": 150,
+    "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
+    "checks": [
+      {
+        "type": "border",
+        "colour": 5
+      }
+    ],
+    "expect": "known-fail:noise-waveform LFSR write-back with combined waveforms is only approximated",
+    "failing": 1
+  },
+  {
+    "name": "wb_testsuite/noise_writeback_check_C_to_A_new.prg",
+    "prg": "SID/wb_testsuite/noise_writeback_check_C_to_A_new.prg",
+    "model": "6581",
+    "frames": 150,
+    "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
+    "checks": [
+      {
+        "type": "border",
+        "colour": 5
+      }
+    ],
+    "expect": "known-fail:noise-waveform LFSR write-back with combined waveforms is only approximated",
+    "failing": 1
+  },
+  {
+    "name": "wb_testsuite/noise_writeback_check_D_to_9_old.prg",
+    "prg": "SID/wb_testsuite/noise_writeback_check_D_to_9_old.prg",
+    "model": "6581",
+    "frames": 150,
+    "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
+    "checks": [
+      {
+        "type": "border",
+        "colour": 5
+      }
+    ],
+    "expect": "known-fail:noise-waveform LFSR write-back with combined waveforms is only approximated",
+    "failing": 1
+  },
+  {
+    "name": "wb_testsuite/noise_writeback_check_E_to_9_new.prg",
+    "prg": "SID/wb_testsuite/noise_writeback_check_E_to_9_new.prg",
+    "model": "6581",
+    "frames": 150,
+    "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
+    "checks": [
+      {
+        "type": "border",
+        "colour": 5
+      }
+    ],
+    "expect": "known-fail:noise-waveform LFSR write-back with combined waveforms is only approximated",
+    "failing": 1
+  },
+  {
+    "name": "wb_testsuite/noise_writeback_check_F_to_8_old.prg",
+    "prg": "SID/wb_testsuite/noise_writeback_check_F_to_8_old.prg",
+    "model": "6581",
+    "frames": 150,
+    "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
+    "checks": [
+      {
+        "type": "border",
+        "colour": 5
+      }
+    ],
+    "expect": "known-fail:noise-waveform LFSR write-back with combined waveforms is only approximated",
+    "failing": 1
+  },
+  {
+    "name": "wb_testsuite/noise_writeback_check_F_to_F_new.prg",
+    "prg": "SID/wb_testsuite/noise_writeback_check_F_to_F_new.prg",
+    "model": "6581",
+    "frames": 150,
+    "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
+    "checks": [
+      {
+        "type": "border",
+        "colour": 5
+      }
+    ],
+    "expect": "known-fail:noise-waveform LFSR write-back with combined waveforms is only approximated",
+    "failing": 1
+  },
+  {
+    "name": "writedelay/writedelay.prg",
+    "prg": "SID/writedelay/writedelay.prg",
+    "model": "6581",
+    "frames": 150,
+    "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
+    "checks": [
+      {
+        "type": "border",
+        "colour": 5
+      }
+    ],
+    "expect": "pass"
+  }
+]

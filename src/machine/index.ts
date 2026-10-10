@@ -3,3 +3,4 @@ export { RomError, type RomSet } from './memory';
 export { PrgError } from './prg';
 export type { C64Key } from './keyboard';
 export { FRAME_HEIGHT, FRAME_WIDTH } from './vic';
+export { Sid, SID_CLOCK, type SidOptions } from './sid';
