@@ -60,6 +60,32 @@ describe('KeyQueue', () => {
     expect(calls).toEqual(['+LSHIFT', '+2']);
   });
 
+  it('applies at most one non-modifier press per frame so rollover keeps typing order', () => {
+    const { queue, calls } = rig();
+    queue.press('T');
+    queue.press('H');
+    queue.release('T');
+    queue.release('H');
+    queue.pump();
+    expect(calls).toEqual(['+T']); // H waits: two distinct keys in one scan lose the first
+    queue.pump();
+    expect(calls).toEqual(['+T', '+H']);
+    for (let i = 0; i < 8; i++) queue.pump();
+    expect(calls).toEqual(['+T', '+H', '-T', '-H']);
+  });
+
+  it('modifiers do not use up the per-frame key slot', () => {
+    const { queue, calls } = rig();
+    queue.press('LSHIFT');
+    queue.press('A');
+    queue.press('CTRL');
+    queue.press('B');
+    queue.pump();
+    expect(calls).toEqual(['+LSHIFT', '+A', '+CTRL']); // B is the second real key: next frame
+    queue.pump();
+    expect(calls).toEqual(['+LSHIFT', '+A', '+CTRL', '+B']);
+  });
+
   it('keeps RESTORE in order with key operations', () => {
     const { queue, calls } = rig();
     queue.press('A');
