@@ -28,8 +28,11 @@ export class MOS6502 {
   private samplePrev = false;
   /** Decision taken at the end of the previous instruction. */
   private serviceNext = false;
-  /** Set by a taken, non-page-crossing branch: suppresses this instruction's poll. */
-  private skipPoll = false;
+  /**
+   * Set by a taken, non-page-crossing branch: the poll result of its first cycle, which is the
+   * only poll such a branch performs. Overrides the penultimate-cycle sample.
+   */
+  private branchPoll: boolean | null = null;
   /** High byte of the base address of the last indexed access (for SHA/SHX/SHY/TAS). */
   private baseHi = 0;
   /** Whether the last indexed access crossed a page. */
@@ -50,7 +53,7 @@ export class MOS6502 {
     this.halted = false;
     this.nmiLatched = false;
     this.serviceNext = false;
-    this.skipPoll = false;
+    this.branchPoll = null;
     this.read(r.pc); // cycles 1-2: dummy reads
     this.read(r.pc);
     for (let i = 0; i < 3; i++) {
@@ -104,8 +107,8 @@ export class MOS6502 {
         this.halted = true;
         break;
     }
-    this.serviceNext = this.samplePrev && !this.skipPoll;
-    this.skipPoll = false;
+    this.serviceNext = this.branchPoll ?? this.samplePrev;
+    this.branchPoll = null;
     return this.cycles - start;
   }
 
@@ -581,6 +584,7 @@ export class MOS6502 {
   private execBranch(m: string): void {
     const r = this.regs;
     const offset = this.fetch(); // cycle 2
+    const polled = this.samplePrev; // sample from the end of cycle 1
     let taken: boolean;
     switch (m) {
       case 'BPL':
@@ -616,7 +620,9 @@ export class MOS6502 {
     if ((target & 0xff00) !== (r.pc & 0xff00)) {
       this.read((r.pc & 0xff00) | (target & 0xff)); // cycle 4: page-fixup dummy read
     } else {
-      this.skipPoll = true; // a taken, non-crossing branch delays interrupt servicing
+      // A taken, non-crossing branch has no poll at the end of cycle 2: only what was pending
+      // at the end of cycle 1 is serviced after it; anything newer waits one instruction.
+      this.branchPoll = polled;
     }
     r.pc = target;
   }
