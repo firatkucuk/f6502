@@ -6,6 +6,9 @@ import { Voice } from './sid-voice';
 
 export const SID_CLOCK = 985_248;
 const BUS_DECAY_CYCLES = 8192;
+/** The model runs in batches: at most this many CPU cycles behind, or on any read/drain. */
+const CATCH_UP_CYCLES = 16384;
+const QUEUE_SIZE = 256;
 
 export interface SidOptions {
   model?: '6581' | '8580';
@@ -30,6 +33,14 @@ export class Sid implements IoChip {
   private bp = 0;
   private dcIn = 0;
   private dcOut = 0;
+  /** CPU cycles seen by `tick()` and how many of them the model has simulated. */
+  private now = 0;
+  private simulated = 0;
+  /** Register writes waiting for the model to catch up: (cycle, register, value). */
+  private readonly queueAt = new Float64Array(QUEUE_SIZE);
+  private readonly queueReg = new Uint8Array(QUEUE_SIZE);
+  private readonly queueValue = new Uint8Array(QUEUE_SIZE);
+  private queueLength = 0;
 
   constructor(options: SidOptions = {}) {
     this.sampleRate = options.sampleRate ?? 48000;
@@ -46,10 +57,13 @@ export class Sid implements IoChip {
   }
 
   set model(name: '6581' | '8580') {
+    this.catchUp(); // what was played so far belongs to the old model
     this.modelParams = modelByName(name);
   }
 
   reset(): void {
+    this.now = this.simulated = 0;
+    this.queueLength = 0;
     this.regs.fill(0);
     for (const e of this.envelopes) e.reset();
     for (const v of this.voices) v.reset();
@@ -63,12 +77,12 @@ export class Sid implements IoChip {
   }
 
   read(reg: number): number {
-    const v = this.peek(reg);
-    return v;
+    return this.peek(reg);
   }
 
   peek(reg: number): number {
     reg &= 0x1f;
+    this.catchUp();
     switch (reg) {
       case 0x19:
       case 0x1a:
@@ -83,8 +97,14 @@ export class Sid implements IoChip {
   }
 
   write(reg: number, value: number): void {
-    reg &= 0x1f;
-    value &= 0xff;
+    if (this.queueLength === QUEUE_SIZE) this.catchUp();
+    const i = this.queueLength++;
+    this.queueAt[i] = this.now;
+    this.queueReg[i] = reg & 0x1f;
+    this.queueValue[i] = value & 0xff;
+  }
+
+  private applyWrite(reg: number, value: number): void {
     this.busValue = value;
     this.busAge = 0;
     if (reg >= 0x19) {
@@ -123,8 +143,33 @@ export class Sid implements IoChip {
     }
   }
 
-  /** One CPU cycle. */
+  /** One CPU cycle. The model itself runs lazily (see `catchUp`). */
   tick(): void {
+    if (++this.now - this.simulated >= CATCH_UP_CYCLES) this.catchUp();
+  }
+
+  /** Simulate up to the current cycle, applying the queued register writes at their cycles. */
+  private catchUp(): void {
+    const target = this.now;
+    let qi = 0;
+    const n = this.queueLength;
+    while (this.simulated < target) {
+      while (qi < n && this.queueAt[qi]! <= this.simulated) {
+        this.applyWrite(this.queueReg[qi]!, this.queueValue[qi]!);
+        qi++;
+      }
+      const stop = qi < n ? Math.min(this.queueAt[qi]!, target) : target;
+      for (let c = stop - this.simulated; c > 0; c--) this.step();
+      this.simulated = stop;
+    }
+    while (qi < n) {
+      this.applyWrite(this.queueReg[qi]!, this.queueValue[qi]!);
+      qi++;
+    }
+    this.queueLength = 0;
+  }
+
+  private step(): void {
     const [v0, v1, v2] = this.voices as [Voice, Voice, Voice];
     v0.advance();
     v1.advance();
@@ -149,8 +194,10 @@ export class Sid implements IoChip {
       let filt = 0;
       for (let n = 0; n < 3; n++) {
         if (n === 2 && (this.regs[0x18]! & 0x80) !== 0 && (filterRoute & 0x04) === 0) continue; // voice 3 off
+        const env = this.envelopes[n]!.counter;
+        if (env === 0) continue; // silent: no need to evaluate the waveform
         const w = this.voices[n]!.wave(m);
-        const v = ((w - m.zero) / 2048) * (this.envelopes[n]!.counter / 255);
+        const v = ((w - m.zero) / 2048) * (env / 255);
         if ((filterRoute >> n) & 1) filt += v;
         else dry += v;
       }
@@ -194,6 +241,7 @@ export class Sid implements IoChip {
   }
 
   drainSamples(out: Float32Array): number {
+    this.catchUp();
     return this.ring.drain(out);
   }
 }

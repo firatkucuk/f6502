@@ -14,7 +14,12 @@ export class Envelope {
 
   private state = RELEASE;
   private gate = false;
-  private rateCounter = 0;
+  /** Rate counter value at `syncCycle`; the live value is (rateBase + cycle - syncCycle) & $7FFF. */
+  private rateBase = 0;
+  private syncCycle = 0;
+  private cycle = 0;
+  /** The cycle at which the rate counter next equals the period. */
+  private nextEvent = RATE_PERIOD[0] as number;
   private ratePeriod: number = RATE_PERIOD[0];
   private expCounter = 0;
   private expPeriod = 1;
@@ -28,12 +33,14 @@ export class Envelope {
     this.counter = 0;
     this.state = RELEASE;
     this.gate = false;
-    this.rateCounter = 0;
+    this.rateBase = 0;
+    this.syncCycle = this.cycle;
     this.expCounter = 0;
     this.expPeriod = 1;
     this.holdZero = true;
     this.attack = this.decay = this.sustain = this.release = 0;
     this.ratePeriod = RATE_PERIOD[0];
+    this.schedule();
   }
 
   setGate(on: boolean): void {
@@ -41,35 +48,61 @@ export class Envelope {
     this.gate = on;
     if (on) {
       this.state = ATTACK;
-      this.ratePeriod = RATE_PERIOD[this.attack]!;
+      this.setPeriod(RATE_PERIOD[this.attack]!);
       this.holdZero = false;
     } else {
       this.state = RELEASE;
-      this.ratePeriod = RATE_PERIOD[this.release]!;
+      this.setPeriod(RATE_PERIOD[this.release]!);
     }
   }
 
   setAttackDecay(value: number): void {
     this.attack = (value >> 4) & 0x0f;
     this.decay = value & 0x0f;
-    if (this.state === ATTACK) this.ratePeriod = RATE_PERIOD[this.attack]!;
-    else if (this.state === DECAY) this.ratePeriod = RATE_PERIOD[this.decay]!;
+    if (this.state === ATTACK) this.setPeriod(RATE_PERIOD[this.attack]!);
+    else if (this.state === DECAY) this.setPeriod(RATE_PERIOD[this.decay]!);
   }
 
   setSustainRelease(value: number): void {
     this.sustain = (value >> 4) & 0x0f;
     this.release = value & 0x0f;
-    if (this.state === RELEASE) this.ratePeriod = RATE_PERIOD[this.release]!;
+    if (this.state === RELEASE) this.setPeriod(RATE_PERIOD[this.release]!);
   }
 
-  /** One cycle. The rate counter is 15 bits and is only cleared when it matches the period. */
+  private liveRate(): number {
+    return (this.rateBase + this.cycle - this.syncCycle) & 0x7fff;
+  }
+
+  /** Change the compare value: the rate counter keeps its value (the ADSR delay bug). */
+  private setPeriod(period: number): void {
+    this.rateBase = this.liveRate();
+    this.syncCycle = this.cycle;
+    this.ratePeriod = period;
+    this.schedule();
+  }
+
+  /** Cycle of the next compare match: the counter counts up, wrapping through $7FFF. */
+  private schedule(): void {
+    const rc = this.rateBase;
+    const wait = this.ratePeriod > rc ? this.ratePeriod - rc : 0x8000 - rc + this.ratePeriod;
+    this.nextEvent = this.syncCycle + wait;
+  }
+
+  /** One cycle: only does work when the rate counter reaches the period. */
   tick(): void {
-    this.rateCounter = (this.rateCounter + 1) & 0x7fff;
-    if (this.rateCounter !== this.ratePeriod) return;
-    this.rateCounter = 0;
-    if (this.state !== ATTACK && ++this.expCounter !== this.expPeriod) return;
+    if (++this.cycle !== this.nextEvent) return;
+    this.rateBase = 0;
+    this.syncCycle = this.cycle;
+    if (this.state !== ATTACK && ++this.expCounter !== this.expPeriod) {
+      this.schedule();
+      return;
+    }
     this.expCounter = 0;
-    if (this.holdZero) return;
+    if (!this.holdZero) this.advance();
+    this.schedule();
+  }
+
+  private advance(): void {
     switch (this.state) {
       case ATTACK:
         this.counter = (this.counter + 1) & 0xff;

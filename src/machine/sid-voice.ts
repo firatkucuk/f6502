@@ -1,6 +1,7 @@
 import type { SidModelParams } from './sid-model';
 
 const NOISE_RESET = 0x7ffff8;
+const NOISE_TAPS = [20, 18, 14, 11, 9, 5, 2, 0];
 /** Cycles the TEST bit must be held before the LFSR is reset. */
 const TEST_LFSR_DELAY = 0x8000;
 /** Cycles after which a floating (no waveform selected) output has decayed to zero. */
@@ -36,18 +37,21 @@ export class Voice {
 
   /** Advance the oscillator by one cycle (before sync is applied). */
   advance(): void {
-    const old = this.acc;
-    if (this.control & 0x08) {
+    const control = this.control;
+    if ((control & 0x08) !== 0) {
       this.acc = 0;
       this.msbRising = false;
       if (++this.testCycles >= TEST_LFSR_DELAY) this.lfsr = NOISE_RESET;
     } else {
-      this.testCycles = 0;
-      this.acc = (old + this.freq) & 0xffffff;
-      this.msbRising = (old & 0x800000) === 0 && (this.acc & 0x800000) !== 0;
-      if ((old & 0x080000) === 0 && (this.acc & 0x080000) !== 0) this.clockNoise();
+      if (this.testCycles !== 0) this.testCycles = 0;
+      const old = this.acc;
+      const acc = (old + this.freq) & 0xffffff;
+      this.acc = acc;
+      const rose = (old ^ acc) & acc; // bits that went 0 -> 1
+      this.msbRising = (rose & 0x800000) !== 0;
+      if ((rose & 0x080000) !== 0) this.clockNoise();
     }
-    if (this.floatAge < FLOAT_DECAY_CYCLES) this.floatAge++;
+    if ((control & 0xf0) === 0 && this.floatAge < FLOAT_DECAY_CYCLES) this.floatAge++;
   }
 
   /** Hard sync: if enabled, a rising MSB of the source voice resets this accumulator. */
@@ -118,7 +122,7 @@ export class Voice {
   }
 
   private writeBack(out: number): void {
-    const taps = [20, 18, 14, 11, 9, 5, 2, 0];
+    const taps = NOISE_TAPS;
     let l = this.lfsr;
     for (let i = 0; i < 8; i++) {
       if (((out >> (11 - i)) & 1) === 0) l &= ~(1 << taps[i]!);
