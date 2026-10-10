@@ -26,4 +26,20 @@ export default tseslint.config(
       ],
     },
   },
+  {
+    files: ['src/machine/**/*.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['**/browser', '**/browser/*'],
+              message: 'machine/ must not import from browser/',
+            },
+          ],
+        },
+      ],
+    },
+  },
 );

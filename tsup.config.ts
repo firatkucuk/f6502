@@ -8,6 +8,7 @@ export default defineConfig([
     clean: true,
     target: 'es2022',
     outDir: 'dist',
+    tsconfig: 'tsconfig.browser.json',
   },
   {
     entry: { 'f6502.min': 'src/index.ts' },
@@ -16,6 +17,7 @@ export default defineConfig([
     minify: true,
     target: 'es2022',
     outDir: 'dist',
+    tsconfig: 'tsconfig.browser.json',
     outExtension: () => ({ js: '.js' }),
   },
 ]);
