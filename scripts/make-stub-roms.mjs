@@ -47,6 +47,8 @@ mkdirSync(outDir, { recursive: true });
   kernal[p++] = 0x85; kernal[p++] = 0x01; // STA $01  (KERNAL+BASIC+IO enabled)
   kernal[p++] = 0xA9; kernal[p++] = 0x1B; // LDA #$1B
   kernal[p++] = 0x8D; kernal[p++] = 0x11; kernal[p++] = 0xD0; // STA $D011 (screen on)
+  kernal[p++] = 0xA9; kernal[p++] = 0x15; // LDA #$15
+  kernal[p++] = 0x8D; kernal[p++] = 0x18; kernal[p++] = 0xD0; // STA $D018 (screen at $0400)
 
   // Write "READY." to screen RAM at $04C8 (row 5, col 0)
   // Screen codes: R=18, E=5, A=1, D=4, Y=25, .=46
