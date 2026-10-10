@@ -241,6 +241,36 @@ export class MOS6502 {
     return this.nz((v >> 1) | (c << 7));
   }
 
+  private arr(v: number): void {
+    const r = this.regs;
+    const t = r.a & v;
+    const c = r.p & C;
+    let res = (t >> 1) | (c << 7);
+    let p = r.p & ~(N | V | Z | C);
+    if (res & 0x80) p |= N;
+    if (res === 0) p |= Z;
+    if (r.p & D) {
+      if (((res ^ t) & 0x40) !== 0) p |= V;
+      if ((t & 0x0f) + (t & 0x01) > 5) res = (res & 0xf0) | ((res + 6) & 0x0f);
+      if ((t & 0xf0) + (t & 0x10) > 0x50) {
+        res = (res & 0x0f) | ((res + 0x60) & 0xf0);
+        p |= C;
+      }
+    } else {
+      if (res & 0x40) p |= C;
+      if (((res >> 6) ^ (res >> 5)) & 1) p |= V;
+    }
+    r.p = p;
+    r.a = res & 0xff;
+  }
+
+  /** SHA/SHX/SHY/TAS: value & (H+1); on a page cross the target's high byte becomes the value. */
+  private writeUnstable(addr: number, source: number): void {
+    const value = source & ((this.baseHi + 1) & 0xff);
+    const target = this.crossed ? (value << 8) | (addr & 0xff) : addr;
+    this.write(target, value);
+  }
+
   // ---- addressing modes -------------------------------------------------
 
   /** Returns the effective address, performing the real bus accesses of the mode. */
@@ -351,6 +381,36 @@ export class MOS6502 {
       case 'BIT':
         r.p = (r.p & ~(N | V | Z)) | (v & (N | V)) | ((r.a & v) === 0 ? Z : 0);
         break;
+      case 'LAX':
+        r.a = r.x = this.nz(v);
+        break;
+      case 'ANC':
+        r.a = this.nz(r.a & v);
+        r.p = (r.p & ~C) | ((r.a >> 7) & 1);
+        break;
+      case 'ALR':
+        r.a = this.lsr(r.a & v);
+        break;
+      case 'ARR':
+        this.arr(v);
+        break;
+      case 'SBX': {
+        const t = r.a & r.x;
+        r.p = (r.p & ~C) | (t >= v ? C : 0);
+        r.x = this.nz((t - v) & 0xff);
+        break;
+      }
+      case 'ANE':
+        r.a = this.nz((r.a | this.magic) & r.x & v);
+        break;
+      case 'LXA':
+        r.a = r.x = this.nz((r.a | this.magic) & v);
+        break;
+      case 'LAS': {
+        const t = v & r.sp;
+        r.a = r.x = r.sp = this.nz(t);
+        break;
+      }
       case 'NOP':
         break;
       default:
@@ -369,6 +429,22 @@ export class MOS6502 {
         break;
       case 'STY':
         this.write(addr, r.y);
+        break;
+      case 'SAX':
+        this.write(addr, r.a & r.x);
+        break;
+      case 'SHA':
+        this.writeUnstable(addr, r.a & r.x);
+        break;
+      case 'SHX':
+        this.writeUnstable(addr, r.x);
+        break;
+      case 'SHY':
+        this.writeUnstable(addr, r.y);
+        break;
+      case 'TAS':
+        r.sp = r.a & r.x;
+        this.writeUnstable(addr, r.sp);
         break;
       default:
         throw this.unimplemented(m);
@@ -397,6 +473,30 @@ export class MOS6502 {
         break;
       case 'DEC':
         n = this.nz((v - 1) & 0xff);
+        break;
+      case 'SLO':
+        n = this.asl(v);
+        this.regs.a = this.nz(this.regs.a | n);
+        break;
+      case 'RLA':
+        n = this.rol(v);
+        this.regs.a = this.nz(this.regs.a & n);
+        break;
+      case 'SRE':
+        n = this.lsr(v);
+        this.regs.a = this.nz(this.regs.a ^ n);
+        break;
+      case 'RRA':
+        n = this.ror(v);
+        this.adc(n);
+        break;
+      case 'DCP':
+        n = (v - 1) & 0xff;
+        this.compare(this.regs.a, n);
+        break;
+      case 'ISC':
+        n = (v + 1) & 0xff;
+        this.sbc(n);
         break;
       default:
         throw this.unimplemented(m);

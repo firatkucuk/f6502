@@ -14,7 +14,7 @@ describe('IRQ', () => {
     expect(m.cpu.regs.p & I).toBe(I);
     expect(m.bus.mem[0x01fd]).toBe(0x02);
     expect(m.bus.mem[0x01fc]).toBe(0x01);
-    expect(m.bus.mem[0x01fb] & B).toBe(0);
+    expect(m.bus.mem[0x01fb]! & B).toBe(0);
   });
 
   it('is never serviced while I is set, even if held for a long time', () => {
@@ -44,7 +44,7 @@ describe('IRQ', () => {
     expect(m.cpu.regs.pc).toBe(0x0300);
     expect(m.bus.mem[0x01fd]).toBe(0x02); // return address is the instruction after SEI
     expect(m.bus.mem[0x01fc]).toBe(0x01);
-    expect(m.bus.mem[0x01fb] & I).toBe(I); // pushed P already shows I set
+    expect(m.bus.mem[0x01fb]! & I).toBe(I); // pushed P already shows I set
   });
 });
 
@@ -127,7 +127,7 @@ describe('NMI hijack of BRK', () => {
     m.cpu.reset();
     m.cpu.step();
     expect(m.cpu.regs.pc).toBe(0x0400);
-    expect(m.bus.mem[0x01fb] & B).toBe(B);
+    expect(m.bus.mem[0x01fb]! & B).toBe(B);
     m.bus.mem[0x0400] = 0xea;
     m.bus.mem[0x0401] = 0xea;
     m.cpu.step();
