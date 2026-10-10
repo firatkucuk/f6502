@@ -2,8 +2,28 @@
 
 A browser-based 6502 / Commodore 64 emulator in TypeScript. No backend, no runtime dependencies.
 
-Status: the cycle-accurate MOS 6502 core is implemented and tested. The C64 machine, browser
-integration, demo site and CI are planned (see `docs/superpowers/specs/`).
+Status: the cycle-accurate 6502 core, a C64 machine skeleton (memory map, CIAs, keyboard, VIC-II
+text mode) and the browser layer are implemented. Bitmap/sprite graphics, sound, disk and the demo
+site are planned (see `docs/superpowers/specs/`).
+
+## Browser usage
+
+```html
+<canvas id="screen"></canvas>
+<script src="f6502.min.js"></script>
+<script>
+  F6502.start({
+    canvas: '#screen',
+    roms: { kernal: 'kernal.rom', basic: 'basic.rom', chargen: 'chargen.rom' },
+    program: 'game.prg', // optional
+  });
+</script>
+```
+
+ROMs are never bundled: supply your own or the free [OpenROMs](https://github.com/MEGA65/open-roms)
+(`npm run fetch-test-data` downloads them to `.testdata/openroms/`). Cross-origin URLs need CORS
+headers. Try it locally with `npm run build && npm run example`, then open
+`http://127.0.0.1:8080/examples/basic.html`.
 
 ## Core usage
 
@@ -46,6 +66,7 @@ Every `bus.read` / `bus.write` call is exactly one CPU cycle.
 | `npm run lint`             | ESLint (incl. the `core/` boundary rule) + Prettier check                         |
 | `npm run typecheck`        | `tsc --noEmit`                                                                    |
 | `npm run bench`            | throughput of the core on the Klaus functional test (needs `build` and test data) |
+| `npm run example`          | serve the repo so `examples/basic.html` can load the fetched ROMs                 |
 
 ## Licence
 

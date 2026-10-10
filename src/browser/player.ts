@@ -1,6 +1,7 @@
 import { C64, type LoadPrgOptions } from '../machine/c64';
 import { FrameClock } from './clock';
 import { KeyMapper, type KeyEventLike } from './keymap';
+import { KeyQueue } from './keyqueue';
 import { toBytes, type Source } from './loader';
 
 export class ReadyTimeoutError extends Error {
@@ -33,6 +34,7 @@ export class Player {
   private rafId = 0;
   private readonly clock = new FrameClock();
   private readonly mapper: KeyMapper;
+  private readonly keys: KeyQueue;
   private readonly unlisten: Array<() => void> = [];
   private readonly readyFrames: number;
 
@@ -42,11 +44,12 @@ export class Player {
     options: PlayerOptions = {},
   ) {
     this.readyFrames = options.readyFrames ?? 600;
-    this.mapper = new KeyMapper({
+    this.keys = new KeyQueue({
       press: (k) => c64.keyDown(k),
       release: (k) => c64.keyUp(k),
       restore: () => c64.restore(),
     });
+    this.mapper = new KeyMapper(this.keys);
     this.unlisten.push(
       env.listen('keydown', (e) => {
         if (this.mapper.down(e)) e.preventDefault?.();
@@ -54,7 +57,10 @@ export class Player {
       env.listen('keyup', (e) => {
         if (this.mapper.up(e)) e.preventDefault?.();
       }),
-      env.listen('blur', () => this.mapper.releaseAll()),
+      env.listen('blur', () => {
+        this.mapper.releaseAll();
+        this.keys.flush();
+      }),
     );
   }
 
@@ -89,6 +95,7 @@ export class Player {
   destroy(): void {
     this.pause();
     this.mapper.releaseAll();
+    this.keys.flush();
     for (const off of this.unlisten) off();
     this.unlisten.length = 0;
   }
@@ -97,7 +104,10 @@ export class Player {
     this.rafId = this.env.requestFrame((now) => {
       if (!this.running) return;
       const frames = this.clock.advance(now);
-      for (let i = 0; i < frames; i++) this.c64.runFrame();
+      for (let i = 0; i < frames; i++) {
+        this.keys.pump();
+        this.c64.runFrame();
+      }
       if (frames > 0) this.env.present(this.c64.frame.pixels);
       this.schedule();
     });
