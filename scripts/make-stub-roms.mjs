@@ -17,37 +17,66 @@ const outDir = join(root, 'website', 'demos');
 mkdirSync(outDir, { recursive: true });
 
 // ── KERNAL (8192 bytes, loaded at $E000-$FFFF) ────────────────────────────────
-// $E000: RTI         — NMI/IRQ handler (single byte, silences spurious NMI)
-// $E001-$E00B: init sequence
-//   LDA #$2F; STA $00   — 6510 data-direction port
-//   LDA #$37; STA $01   — 6510 port: KERNAL+BASIC+IO enabled
-//   LDA #$1B; STA $D011 — VIC-II: screen on, 25 rows
-//   JMP $0810           — jump straight into our PRG
-// $FFFA-$FFFF: vectors
-//   $FFFA/$FFFB = NMI  → $E000 (RTI)
-//   $FFFC/$FFFD = RESET → $E001 (init)
-//   $FFFE/$FFFF = IRQ  → $E000 (RTI)
+// Boot sequence compatible with f6502's player.load() mechanism:
+//
+//   player.load() works in two phases:
+//     1. runUntilReady()  — runs CPU frames until "READY." appears on screen
+//     2. applyPrg()       — copies PRG bytes to RAM, then types "SYS 2064\r"
+//                           into the keyboard buffer ($00C6 / $0277)
+//
+//   So the KERNAL must:
+//     a. Write "READY." to screen (screen codes: R=18 E=5 A=1 D=4 Y=25 .=46)
+//        at row 5 col 0 = $04C8, matching screenCodeToChar() in c64.ts
+//     b. Poll $00C6 (keyboard buffer count) until non-zero
+//     c. JMP $0810 — by this point the PRG has been written to RAM
+//
+// $E000: RTI         — NMI/IRQ handler
+// $E001-$E025: init + READY + wait loop
+// $FFFA-$FFFF: hardware vectors
 {
-  const kernal = new Uint8Array(8192).fill(0xEA); // NOP fill (harmless if executed)
+  const kernal = new Uint8Array(8192).fill(0xEA); // NOP fill
   let p = 0;
 
-  // $E000: RTI
+  // $E000: RTI (NMI/IRQ handler — just return)
   kernal[p++] = 0x40;
 
-  // $E001: init sequence
+  // $E001: init
   kernal[p++] = 0xA9; kernal[p++] = 0x2F; // LDA #$2F
-  kernal[p++] = 0x85; kernal[p++] = 0x00; // STA $00
+  kernal[p++] = 0x85; kernal[p++] = 0x00; // STA $00  (6510 port direction)
   kernal[p++] = 0xA9; kernal[p++] = 0x37; // LDA #$37
-  kernal[p++] = 0x85; kernal[p++] = 0x01; // STA $01
+  kernal[p++] = 0x85; kernal[p++] = 0x01; // STA $01  (KERNAL+BASIC+IO enabled)
   kernal[p++] = 0xA9; kernal[p++] = 0x1B; // LDA #$1B
-  kernal[p++] = 0x8D; kernal[p++] = 0x11; kernal[p++] = 0xD0; // STA $D011
+  kernal[p++] = 0x8D; kernal[p++] = 0x11; kernal[p++] = 0xD0; // STA $D011 (screen on)
+
+  // Write "READY." to screen RAM at $04C8 (row 5, col 0)
+  // Screen codes: R=18, E=5, A=1, D=4, Y=25, .=46
+  kernal[p++] = 0xA9; kernal[p++] = 18;   // LDA #18 (R)
+  kernal[p++] = 0x8D; kernal[p++] = 0xC8; kernal[p++] = 0x04; // STA $04C8
+  kernal[p++] = 0xA9; kernal[p++] = 5;    // LDA #5  (E)
+  kernal[p++] = 0x8D; kernal[p++] = 0xC9; kernal[p++] = 0x04; // STA $04C9
+  kernal[p++] = 0xA9; kernal[p++] = 1;    // LDA #1  (A)
+  kernal[p++] = 0x8D; kernal[p++] = 0xCA; kernal[p++] = 0x04; // STA $04CA
+  kernal[p++] = 0xA9; kernal[p++] = 4;    // LDA #4  (D)
+  kernal[p++] = 0x8D; kernal[p++] = 0xCB; kernal[p++] = 0x04; // STA $04CB
+  kernal[p++] = 0xA9; kernal[p++] = 25;   // LDA #25 (Y)
+  kernal[p++] = 0x8D; kernal[p++] = 0xCC; kernal[p++] = 0x04; // STA $04CC
+  kernal[p++] = 0xA9; kernal[p++] = 46;   // LDA #46 (.)
+  kernal[p++] = 0x8D; kernal[p++] = 0xCD; kernal[p++] = 0x04; // STA $04CD
+
+  // Poll $00C6 (keyboard buffer count) — non-zero means applyPrg() has run
+  // and the PRG bytes are already at $0810.
+  const waitAddr = p; // remember loop top (relative to $E000)
+  kernal[p++] = 0xA5; kernal[p++] = 0xC6; // LDA $C6 (zero-page keyboard buffer count)
+  kernal[p++] = 0xF0; kernal[p++] = 0xFC; // BEQ waitAddr (back 4 bytes = loop)
+
+  // PRG is loaded — jump into it
   kernal[p++] = 0x4C; kernal[p++] = 0x10; kernal[p++] = 0x08; // JMP $0810
 
-  // Hardware vectors at $FFFA-$FFFF (offset from $E000 = 0x1FFA)
+  // Hardware vectors at $FFFA-$FFFF (offset 0x1FFA from $E000)
   const VECS = 0x1FFA;
-  kernal[VECS + 0] = 0x00; kernal[VECS + 1] = 0xE0; // NMI  → $E000
-  kernal[VECS + 2] = 0x01; kernal[VECS + 3] = 0xE0; // RESET → $E001
-  kernal[VECS + 4] = 0x00; kernal[VECS + 5] = 0xE0; // IRQ  → $E000
+  kernal[VECS + 0] = 0x00; kernal[VECS + 1] = 0xE0; // NMI  → $E000 (RTI)
+  kernal[VECS + 2] = 0x01; kernal[VECS + 3] = 0xE0; // RESET → $E001 (init)
+  kernal[VECS + 4] = 0x00; kernal[VECS + 5] = 0xE0; // IRQ  → $E000 (RTI)
 
   writeFileSync(join(outDir, 'kernal.bin'), kernal);
   console.log('wrote kernal.bin  (8192 bytes)');
