@@ -61,15 +61,27 @@ describe('OpenROMs boot', () => {
     expect(c64.screenText().some((line) => line.trim() === 'HI')).toBe(true);
   });
 
+  it('a loadPrg issued before boot is deferred until READY. and then runs', () => {
+    const c64 = new C64(roms());
+    const prg = Uint8Array.from([
+      0x01, 0x08, 0x0b, 0x08, 0x0a, 0x00, 0x99, 0x22, 0x48, 0x49, 0x22, 0x00, 0x00, 0x00,
+    ]);
+    c64.loadPrg(prg); // power-on: BASIC's NEW would wipe an immediate copy
+    expect(c64.runUntilReady(600)).toBe(true);
+    runFrames(c64, 120);
+    expect(c64.screenText().some((line) => line.trim() === 'HI')).toBe(true);
+  });
+
   it('runs a machine-code .prg via SYS and returns to READY.', () => {
     const c64 = new C64(roms());
     expect(c64.runUntilReady(600)).toBe(true);
     // $C000: LDA #$08 ; STA $0400 ; RTS  (screen code 8 = 'H' in the top-left cell)
+    const before = c64.screenText().filter((l) => l.includes('READY.')).length;
     c64.loadPrg(Uint8Array.from([0x00, 0xc0, 0xa9, 0x08, 0x8d, 0x00, 0x04, 0x60]));
     runFrames(c64, 120);
     expect(c64.peek(0x0400)).toBe(0x08);
     const readyCount = c64.screenText().filter((l) => l.includes('READY.')).length;
-    expect(readyCount).toBeGreaterThanOrEqual(1);
+    expect(readyCount).toBe(before + 1);
     expect(c64.cpu.halted).toBe(false);
   });
 });

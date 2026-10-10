@@ -88,7 +88,8 @@ export class Player {
   async load(source: Source, options: LoadOptions = {}): Promise<void> {
     const bytes = await toBytes(source);
     const ready = this.c64.runUntilReady(this.readyFrames);
-    this.c64.loadPrg(bytes, options);
+    // We have already waited for READY. (or given up), so load now rather than deferring.
+    this.c64.loadPrg(bytes, { ...options, whenReady: false });
     if (!ready) throw new ReadyTimeoutError(this.readyFrames);
   }
 
@@ -168,7 +169,10 @@ export async function start(options: StartOptions): Promise<Player> {
     requestFrame: (cb) => requestAnimationFrame(cb),
     cancelFrame: (id) => cancelAnimationFrame(id),
     listen: (type, handler) => {
-      const source = type === 'blur' ? canvas : target;
+      // In document mode the canvas never has focus, so window blur is the signal that a key-up
+      // may have gone to another window.
+      const source: EventTarget =
+        type === 'blur' ? (options.keyboardTarget === 'document' ? window : canvas) : target;
       const fn = handler as unknown as EventListener;
       source.addEventListener(type, fn);
       return () => source.removeEventListener(type, fn);

@@ -155,7 +155,7 @@ describe('loadPrg', () => {
     const prg = Uint8Array.from([
       0x01, 0x08, 0x0b, 0x08, 0x0a, 0x00, 0x99, 0x22, 0x48, 0x49, 0x22, 0x00, 0x00, 0x00,
     ]);
-    c64.loadPrg(prg);
+    c64.loadPrg(prg, { whenReady: false });
     c64.runFrame();
     expect(c64.peek(0x0801)).toBe(0x0b);
     const end = 0x0801 + 12;
@@ -168,7 +168,7 @@ describe('loadPrg', () => {
 
   it('types SYS <address> for machine code at another address', () => {
     const c64 = newMachine();
-    c64.loadPrg(Uint8Array.from([0x00, 0xc0, 0x60]));
+    c64.loadPrg(Uint8Array.from([0x00, 0xc0, 0x60]), { whenReady: false });
     c64.runFrame();
     expect(c64.peek(0xc000)).toBe(0x60);
     expect(typed(c64)).toBe('SYS 49152\r');
@@ -176,7 +176,11 @@ describe('loadPrg', () => {
 
   it('explicit address/start places a raw binary and SYSes the start', () => {
     const c64 = newMachine();
-    c64.loadPrg(Uint8Array.from([0xea, 0x60]), { address: 0xc000, start: 0xc001 });
+    c64.loadPrg(Uint8Array.from([0xea, 0x60]), {
+      address: 0xc000,
+      start: 0xc001,
+      whenReady: false,
+    });
     c64.runFrame();
     expect(c64.peek(0xc000)).toBe(0xea);
     expect(typed(c64)).toBe('SYS 49153\r');
@@ -184,10 +188,39 @@ describe('loadPrg', () => {
 
   it("run: 'none' only copies", () => {
     const c64 = newMachine();
-    c64.loadPrg(Uint8Array.from([0x01, 0x08, 0x05]), { run: 'none' });
+    c64.loadPrg(Uint8Array.from([0x01, 0x08, 0x05]), { run: 'none', whenReady: false });
     c64.runFrame();
     expect(c64.peek(0x0801)).toBe(0x05);
     expect(c64.peek(0xc6)).toBe(0);
+  });
+
+  it('defers until READY. is on screen by default (a load before boot would be wiped by NEW)', () => {
+    const c64 = newMachine();
+    c64.pokeRam(0x0801, 0x77); // sentinel
+    c64.loadPrg(Uint8Array.from([0x01, 0x08, 0x05]), { run: 'none' });
+    expect(c64.peek(0x0801)).toBe(0x77);
+    c64.runFrame();
+    c64.runFrame();
+    expect(c64.peek(0x0801)).toBe(0x77); // still not ready
+    c64.runFrame();
+    [0x12, 0x05, 0x01, 0x04, 0x19, 0x2e].forEach((code, i) => c64.pokeRam(0x0400 + 40 + i, code));
+    c64.runFrame();
+    expect(c64.peek(0x0801)).toBe(0x05);
+  });
+
+  it('a deferred load starts the program once it lands', () => {
+    const c64 = newMachine();
+    c64.loadPrg(Uint8Array.from([0x00, 0xc0, 0x60]));
+    expect(typed(c64)).toBe('');
+    c64.runFrame();
+    [0x12, 0x05, 0x01, 0x04, 0x19, 0x2e].forEach((code, i) => c64.pokeRam(0x0400 + 40 + i, code));
+    c64.runFrame();
+    expect(typed(c64)).toBe('SYS 49152\r');
+  });
+
+  it('a malformed PRG is rejected immediately even when the load would be deferred', () => {
+    const c64 = newMachine();
+    expect(() => c64.loadPrg(Uint8Array.from([0x01, 0x08]))).toThrow(PrgError);
   });
 
   it('rejects a truncated PRG without writing anything', () => {

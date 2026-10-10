@@ -17,6 +17,11 @@ export interface LoadPrgOptions {
   address?: number;
   /** Start address for `SYS` (default: the load address). */
   start?: number;
+  /**
+   * Defer the copy and start until READY. is on screen (default true): a load issued while the
+   * KERNAL is still cold-starting would be wiped by BASIC's NEW. Pass false to load immediately.
+   */
+  whenReady?: boolean;
 }
 
 export const CYCLES_PER_FRAME = 19_656;
@@ -33,6 +38,7 @@ export class C64 {
   private restoreCountdown = 0;
   private credit = 0;
   private readonly typeQueue: number[] = [];
+  private pendingLoad: { prg: Prg; options: LoadPrgOptions } | null = null;
 
   constructor(roms: RomSet, options: C64Options = {}) {
     validateRoms(roms);
@@ -66,6 +72,7 @@ export class C64 {
     this.vic.reset();
     this.keyboard.releaseAll();
     this.typeQueue.length = 0;
+    this.pendingLoad = null;
     this.restoreCountdown = 0;
     this.credit = 0;
     this.cpu.reset();
@@ -81,6 +88,11 @@ export class C64 {
     const start = this.vic.frameCount;
     while (this.vic.frameCount === start) this.cpu.step();
     this.pumpTypeQueue();
+    if (this.pendingLoad !== null && this.isReady()) {
+      const { prg, options } = this.pendingLoad;
+      this.pendingLoad = null;
+      this.applyPrg(prg, options);
+    }
   }
 
   /** Runs frames until READY. is on screen; returns false after `maxFrames`. */
@@ -131,9 +143,21 @@ export class C64 {
     this.pumpTypeQueue();
   }
 
+  /**
+   * Places a program in RAM and starts it (see `LoadPrgOptions`). A malformed program throws
+   * immediately. By default the copy and start wait for READY. (`whenReady: false` loads now).
+   */
   loadPrg(bytes: Uint8Array, options: LoadPrgOptions = {}): void {
     const prg: Prg =
       options.address !== undefined ? rawProgram(bytes, options.address) : parsePrg(bytes);
+    if ((options.whenReady ?? true) && !this.isReady()) {
+      this.pendingLoad = { prg, options };
+      return;
+    }
+    this.applyPrg(prg, options);
+  }
+
+  private applyPrg(prg: Prg, options: LoadPrgOptions): void {
     this.bus.ram.set(prg.data, prg.address);
     let run = options.run ?? 'auto';
     if (run === 'auto') {
