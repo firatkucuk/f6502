@@ -2,12 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { VicII } from '../../src/machine/vic';
 import { Sprites } from '../../src/machine/vic-sprites';
 
-function rig(primed = true) {
+function rig() {
   const regs = new Uint8Array(0x40);
   const ram = new Uint8Array(0x4000);
   const sprites = new Sprites(regs, { readMem: (a) => ram[a & 0x3fff]! });
   regs[0x18] = 0x10;
-  if (primed) sprites.mcBase.fill(0);
   return { regs, ram, sprites };
 }
 
@@ -43,37 +42,33 @@ function line(
 }
 
 describe('MCBASE', () => {
-  it('is a 6-bit counter that powers up at $3F: the first display lasts 64 lines, then it is normal', () => {
-    const r = rig(false);
+  it('is cleared when DMA turns on and again when the display ends', () => {
+    const r = rig();
     enable(r, 0, 100, 50);
-    const shown: number[] = [];
-    for (let raster = 40; raster <= 200; raster++) {
+    const seen: number[] = [];
+    for (let raster = 40; raster <= 80; raster++) {
       line(r, raster);
-      // display flag during the line = on at cycle 30 of this line (set at cycle 58 before)
-      if (r.sprites.display[0]) shown.push(raster);
+      seen.push(r.sprites.mcBase[0]!);
     }
-    expect(shown.length).toBeGreaterThanOrEqual(63);
-    const second: number[] = [];
-    for (let raster = 40; raster <= 90; raster++) {
-      line(r, raster);
-      if (r.sprites.display[0]) second.push(raster);
-    }
-    expect(second.length).toBeLessThanOrEqual(22);
-    expect(second.length).toBeGreaterThanOrEqual(20);
+    expect(Math.max(...seen)).toBe(60); // 20 rows of 3 bytes fetched by the last line
+    expect(r.sprites.mcBase[0]).toBe(0);
   });
 
-  it('is cleared when display ends, not when DMA turns on', () => {
-    const r = rig(true);
+  it('wraps as a 6-bit counter', () => {
+    const r = rig();
     enable(r, 0, 100, 50);
-    for (let raster = 40; raster <= 80; raster++) line(r, raster);
+    r.sprites.mcBase[0] = 61;
+    r.sprites.dma[0] = 1;
+    line(r, 40); // cycle 15: 61 + 2 = 63, cycle 16: + 1 wraps to 0 (63 is only checked after it)
     expect(r.sprites.mcBase[0]).toBe(0);
+    expect(r.sprites.dma[0]).toBe(1);
   });
 });
 
 describe('sprite crunch', () => {
   /** Y-expanded sprite; returns mcBase after the cycle-16 of the line where expandFF is 0. */
   function mcBaseAfterLine(clearAt: number | null) {
-    const r = rig(true);
+    const r = rig();
     enable(r, 0, 100, 50);
     r.regs[0x17] = 0x01;
     for (let raster = 40; raster <= 52; raster++) line(r, raster);
@@ -103,7 +98,7 @@ describe('sprite crunch', () => {
 
 describe('shifters', () => {
   it('a started shifter finishes its row after the display flag drops at cycle 58', () => {
-    const r = rig(true);
+    const r = rig();
     // sprite 0: X=350, Y=50, only its LAST row (row 20) is set; sprite 1 at X=360 overlaps it.
     r.regs[0x15] = 0x03;
     r.regs[0] = 350 - 256;
@@ -122,7 +117,7 @@ describe('shifters', () => {
   });
 
   it('a shifter started at the end of a line keeps running into the next line', () => {
-    const r = rig(true);
+    const r = rig();
     r.regs[0x15] = 0x01;
     r.regs[0] = 400 - 256;
     r.regs[0x10] = 0x01;
@@ -132,6 +127,25 @@ describe('shifters', () => {
     for (let raster = 40; raster <= 51; raster++) line(r, raster);
     const next = line(r, 52);
     expect(next[410]).toBe(1); // tail of the shifter that started at X=400 on line 51
+  });
+});
+
+describe('X-expand switched mid-sprite', () => {
+  it('continues from the current source pixel instead of rewinding', () => {
+    const r = rig();
+    r.regs[0x15] = 0x01;
+    r.regs[0] = 96;
+    r.regs[1] = 50;
+    r.ram[0x07f8] = 0x40;
+    for (let row = 0; row < 21; row++) {
+      r.ram.set([0x92, 0x49, 0x24], 0x40 * 64 + row * 3); // source pixel i set when i % 3 == 0
+    }
+    for (let raster = 40; raster <= 51; raster++) line(r, raster);
+    // Cycle 25 covers X 96..103: switch to X-expand once it has been drawn.
+    const masks = line(r, 52, { cycle: 25, fn: () => (r.regs[0x1d] = 0x01) });
+    expect(masks.slice(96, 104)).toEqual([1, 0, 0, 1, 0, 0, 1, 0]); // source pixels 0..7
+    // Expanded from X=104: source pixel 8, 9, 10, 11, 12 each two pixels wide.
+    expect(masks.slice(104, 114)).toEqual([0, 0, 1, 1, 0, 0, 0, 0, 1, 1]);
   });
 });
 

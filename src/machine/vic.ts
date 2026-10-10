@@ -85,11 +85,6 @@ export class VicII implements IoChip {
     };
   }
 
-  /** @internal Test helper: the post-power-on state in which no sprite anomaly is pending. */
-  clearSpriteMcBase(): void {
-    this.sprites.mcBase.fill(0);
-  }
-
   reset(): void {
     this.regs.fill(0);
     this.status = 0;
