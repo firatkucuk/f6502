@@ -130,11 +130,16 @@ must still pass.
   produces sprite crunch.
 - A started shifter runs its full 24 (48) pixels regardless of the display flag and is not reset at
   the line boundary (fixes the two shifter items of #34).
-- MCBASE is a 6-bit counter. *Amended during implementation:* it is cleared when sprite DMA turns on
-  (Bauer's rule), not at display end, and there is no `$3F` power-on anomaly. The spec first assumed
-  the VICE `spritemcbase` behaviour, but that test is not in the pinned VICE-testprogs tree and the
-  `spritedma/d017-*` reference screenshots match Bauer's rule (they do not match the anomaly).
-  Whether the 6569R3 truly differs remains unverified.
+- MCBASE is a 6-bit counter cleared when sprite DMA turns on (Bauer 3.8 rule 3; VICE's
+  `turn_sprite_dma_on` does the same). *Amended during implementation.* The 6569 power-on anomaly
+  described by VICE-testprogs `VICII/spritemcbase/readme.txt` (MCBASE about `$3F` until the sprite's
+  first DMA, a one-frame glitch, absent on the 8565) is not modelled: that test has no reference
+  image (so the fetch script never listed it), VICE does not model it, and it is unobservable after
+  a sprite's first DMA. The `spritedma/d017-*` references do not discriminate between the variants
+  (all pass), so they are not evidence for either rule. The literal "clear at display end (cycle 58)"
+  reading is ruled out by `spriteenable3` (Y changed at cycle 57 gives DMA without display; 332
+  versus 546 differing pixels). A reference-neutral way to add the anomaly later: power-on `$3F`,
+  cleared when MCBASE reaches 63 at cycle 16.
 
 ## 8. Verification
 
@@ -152,7 +157,7 @@ Third-party subset (independent references):
   C64 colours and compares colour indices with our frame.
 - Selection: PAL 6569 variants only, one test per behaviour (DMA delay, sprite crunch, MCBASE,
   collision clear, border opening, FLD, sprite DMA), at least 10 tests, skipping NTSC and 8565.
-  *Amended:* the pinned tree has no MCBASE test, and the manifest holds every PAL test with a
+  *Amended:* `spritemcbase` has no reference image and is not fetched, and the manifest holds every PAL test with a
   reference screenshot (137) rather than one per behaviour; the 10 passing ones are the gate.
 
 ## 9. Definition of done
@@ -178,4 +183,4 @@ Third-party subset (independent references):
   match.
 - Throughput margin is thin (11x with 8 sprites at the end of sub-project 3); per-cycle schedule
   work must not regress it below the 10x guard.
-- The MCBASE rule rests on one VICE readme; the reference screenshot arbitrates.
+- The MCBASE power-on anomaly rests on one VICE readme and cannot be checked against a reference image; it is not modelled (see section 7).
