@@ -17,7 +17,7 @@
   {
     "name": "detect/detect-1-new.prg",
     "prg": "SID/detect/detect-1-new.prg",
-    "model": "6581",
+    "model": "8580",
     "frames": 150,
     "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
     "checks": [
@@ -40,13 +40,12 @@
         "colour": 5
       }
     ],
-    "expect": "known-fail:chip-model specific expectation (the same behaviour is produced for both models, so the other variant fails by design)",
-    "failing": 1
+    "expect": "pass"
   },
   {
     "name": "detect/detect-2-new.prg",
     "prg": "SID/detect/detect-2-new.prg",
-    "model": "6581",
+    "model": "8580",
     "frames": 150,
     "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
     "checks": [
@@ -55,7 +54,7 @@
         "colour": 5
       }
     ],
-    "expect": "known-fail:chip-model specific expectation (the same behaviour is produced for both models, so the other variant fails by design)",
+    "expect": "known-fail:the detection method relies on a combined-waveform/noise behaviour our approximation does not reproduce",
     "failing": 1
   },
   {
@@ -262,6 +261,21 @@
       }
     ],
     "expect": "pass"
+  },
+  {
+    "name": "noiselfsrinit/scan.prg",
+    "prg": "SID/noiselfsrinit/scan.prg",
+    "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
+    "checks": [
+      {
+        "type": "border",
+        "colour": 5
+      }
+    ],
+    "model": "6581",
+    "frames": 150,
+    "expect": "known-fail:noise output after LFSR init at a fixed phase differs from the documented 8580 values",
+    "failing": 1
   },
   {
     "name": "noiselfsrinit/simple.prg",
@@ -697,6 +711,93 @@
     "expect": "pass"
   },
   {
+    "name": "osc_topbit/osc_topbit_test_noise_new.prg",
+    "prg": "SID/osc_topbit/osc_topbit_test_noise_new.prg",
+    "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
+    "checks": [
+      {
+        "type": "border",
+        "colour": 5
+      }
+    ],
+    "model": "8580",
+    "frames": 600,
+    "expect": "pass"
+  },
+  {
+    "name": "osc_topbit/osc_topbit_test_noise_old.prg",
+    "prg": "SID/osc_topbit/osc_topbit_test_noise_old.prg",
+    "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
+    "checks": [
+      {
+        "type": "border",
+        "colour": 5
+      }
+    ],
+    "model": "6581",
+    "frames": 600,
+    "expect": "known-fail:oscillator top-bit behaviour of the old chip revision (new/old variants differ) is not modelled",
+    "failing": 1
+  },
+  {
+    "name": "osc_topbit/osc_topbit_test_pulse_new.prg",
+    "prg": "SID/osc_topbit/osc_topbit_test_pulse_new.prg",
+    "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
+    "checks": [
+      {
+        "type": "border",
+        "colour": 5
+      }
+    ],
+    "model": "8580",
+    "frames": 600,
+    "expect": "pass"
+  },
+  {
+    "name": "osc_topbit/osc_topbit_test_pulse_old.prg",
+    "prg": "SID/osc_topbit/osc_topbit_test_pulse_old.prg",
+    "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
+    "checks": [
+      {
+        "type": "border",
+        "colour": 5
+      }
+    ],
+    "model": "6581",
+    "frames": 600,
+    "expect": "known-fail:oscillator top-bit behaviour of the old chip revision (new/old variants differ) is not modelled",
+    "failing": 1
+  },
+  {
+    "name": "osc_topbit/osc_topbit_test_triangle_new.prg",
+    "prg": "SID/osc_topbit/osc_topbit_test_triangle_new.prg",
+    "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
+    "checks": [
+      {
+        "type": "border",
+        "colour": 5
+      }
+    ],
+    "model": "8580",
+    "frames": 600,
+    "expect": "pass"
+  },
+  {
+    "name": "osc_topbit/osc_topbit_test_triangle_old.prg",
+    "prg": "SID/osc_topbit/osc_topbit_test_triangle_old.prg",
+    "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
+    "checks": [
+      {
+        "type": "border",
+        "colour": 5
+      }
+    ],
+    "model": "6581",
+    "frames": 600,
+    "expect": "known-fail:oscillator top-bit behaviour of the old chip revision (new/old variants differ) is not modelled",
+    "failing": 1
+  },
+  {
     "name": "oscinit/allinit.prg",
     "prg": "SID/oscinit/allinit.prg",
     "model": "6581",
@@ -780,7 +881,7 @@
         "colour": 5
       }
     ],
-    "expect": "known-fail:chip-model specific expectation (the same behaviour is produced for both models, so the other variant fails by design)",
+    "expect": "known-fail:combined waveforms are analytical approximations, not the measured per-chip tables",
     "failing": 1
   },
   {
@@ -809,7 +910,7 @@
         "colour": 5
       }
     ],
-    "expect": "known-fail:chip-model specific expectation (the same behaviour is produced for both models, so the other variant fails by design)",
+    "expect": "known-fail:combined waveforms are analytical approximations, not the measured per-chip tables",
     "failing": 1
   },
   {
@@ -824,7 +925,7 @@
         "colour": 5
       }
     ],
-    "expect": "known-fail:chip-model specific expectation (the same behaviour is produced for both models, so the other variant fails by design)",
+    "expect": "known-fail:combined waveforms are analytical approximations, not the measured per-chip tables",
     "failing": 1
   },
   {
@@ -839,7 +940,7 @@
         "colour": 5
       }
     ],
-    "expect": "known-fail:chip-model specific expectation (the same behaviour is produced for both models, so the other variant fails by design)",
+    "expect": "known-fail:combined waveforms are analytical approximations, not the measured per-chip tables",
     "failing": 1
   },
   {

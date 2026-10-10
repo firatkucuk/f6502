@@ -64,6 +64,22 @@ describe('AudioPump', () => {
     expect(sink).toBeNull();
   });
 
+  it('mutes while either paused or hidden', () => {
+    const f = fakeSink();
+    const pump = new AudioPump(fakeSid([0.1]), f.sink);
+    pump.setHidden(true);
+    expect(f.muted).toBe(true);
+    pump.setMuted(true);
+    pump.setHidden(false);
+    expect(f.muted).toBe(true); // still paused
+    pump.setMuted(false);
+    expect(f.muted).toBe(false);
+    pump.setMuted(false);
+    pump.setHidden(true);
+    pump.setMuted(false); // resume while the tab is hidden
+    expect(f.muted).toBe(true);
+  });
+
   it('close() closes the sink and further pumps are no-ops', () => {
     const f = fakeSink();
     const pump = new AudioPump(fakeSid([0.1]), f.sink);

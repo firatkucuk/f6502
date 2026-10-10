@@ -149,6 +149,17 @@ describe('Voice sync and combined waveforms', () => {
     expect(v.wave(MODEL_8580)).toBe(tri & saw);
   });
 
+  it('the 6581 triangle+sawtooth never reaches the top bit (chip detection relies on it)', () => {
+    const v = new Voice();
+    v.control = 0x30;
+    for (const acc of [0x800000, 0xc00000, 0xff0000, 0xfff000]) {
+      v.acc = acc;
+      expect(v.wave(MODEL_6581) & 0x800).toBe(0);
+    }
+    v.acc = 0xff0000;
+    expect(v.wave(MODEL_8580) & 0x800).toBe(0x800);
+  });
+
   it('the 6581 leaks combined waveforms more than the 8580 (never more bits set)', () => {
     const v = new Voice();
     v.control = 0x60;

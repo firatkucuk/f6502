@@ -69,8 +69,11 @@ References start at raster line 16, ours at 15, so row y+1 of ours is compared w
   The expected values are the programs' own assertions of documented hardware behaviour.
 - Not machine-checkable and therefore left out: `zerolevel` (analogue measurements for a human to
   read), `resid-test` (data dumps to compare with another emulator), `paddles`, `paddlescope`,
-  `stereo`, `csid-light-tests`, `sidcheck` (detection or interactive tools).
+  `stereo`, `csid-light-tests`, `sidcheck` (detection or interactive tools), `bitfade`,
+  `exp_counter_reset` and `noisewriteback/noise_writeback_test*` (no testbench convention: the
+  border stays constant or cycles; checked over 600 frames).
 - Only a sample of `wb_testsuite` (a family of about 130 near-identical write-back combinations)
-  is in the manifest; `noisewriteback` is included in full.
+  is in the manifest; `noisewriteback` check programs are included in full. `osc_topbit` needs
+  about 500 frames to finish and runs 600.
 - The OpenROMs boot is used as for the VICE harness; no start-up state is restored because these
   programs set up their own VIC and SID state.

@@ -7,7 +7,7 @@ with all graphics modes, sprites, collisions, badline and sprite-DMA CPU stalls,
 sprite crunch, a clean-room SID (6581 and 8580 models, three voices, ADSR with the delay bug, noise,
 sync, ring mod, filter) with `AudioWorklet` playback via `start({ audio: true })`, and the browser
 layer are implemented. The VIC-II is checked against VICE reference screenshots (14 of 137 match
-pixel for pixel, the rest are tracked in #43) and the SID against the VICE SID test programs (13
+pixel for pixel, the rest are tracked in #43) and the SID against the VICE SID test programs (17
 self-checking programs pass; the rest are tracked in #52). Combined waveforms
 and the 6581 filter curve are documented approximations. Disk/tape media and the demo site are
 planned (see `docs/superpowers/specs/`).

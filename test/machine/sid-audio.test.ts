@@ -115,6 +115,32 @@ describe('SID audio output', () => {
     }
   });
 
+  it('the filter stays stable at every resonance with a high cutoff', () => {
+    for (const model of ['6581', '8580'] as const) {
+      for (let res = 0; res < 16; res++) {
+        const s = new Sid({ model });
+        s.write(0x15, 0x07);
+        s.write(0x16, 0xff); // FC = $7FF
+        s.write(0x17, (res << 4) | 0x01);
+        s.write(0x18, 0x1f);
+        setVoice(s, 0, 3000, 0x20);
+        render(s, 0.1);
+        s.write(0x04, 0x20); // release: the voice goes silent
+        render(s, 0.3);
+        const tail = render(s, 0.1);
+        expect(rms(tail), `${model} res ${res}`).toBeLessThan(0.05);
+      }
+    }
+  });
+
+  it('volume steps are audible (digi playback) even with silent voices', () => {
+    const s = new Sid();
+    render(s, 0.05);
+    s.write(0x18, 0x0f);
+    const out = render(s, 0.01);
+    expect(Math.max(...out.map(Math.abs))).toBeGreaterThan(0.001);
+  });
+
   it('switching the model mid-note keeps playing without NaN', () => {
     const s = new Sid();
     s.write(0x18, 0x0f);

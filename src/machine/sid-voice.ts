@@ -35,6 +35,15 @@ export class Voice {
     this.floatAge = 0;
   }
 
+  /** Write the control register. Deselecting every waveform latches the last output first. */
+  setControl(value: number, model: SidModelParams): void {
+    const oldSel = this.control & 0xf0;
+    const newSel = value & 0xf0;
+    if (oldSel !== 0 && newSel === 0) this.wave(model); // latch what was last on the output
+    this.control = value;
+    if (newSel === 0 && oldSel !== 0) this.floatAge = 0;
+  }
+
   /** Advance the oscillator by one cycle (before sync is applied). */
   advance(): void {
     const control = this.control;
@@ -113,7 +122,6 @@ export class Voice {
         const noise = this.noiseOut();
         out &= noise;
         this.writeBack(out);
-        out &= noise;
       }
     }
     this.floating = out;

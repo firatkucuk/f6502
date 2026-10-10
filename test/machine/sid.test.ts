@@ -70,6 +70,21 @@ describe('Sid registers', () => {
   });
 });
 
+describe('OSC3 with the waveform deselected', () => {
+  it('keeps the last output of the previous waveform even if it was never sampled', () => {
+    const s = new Sid();
+    s.write(0x0e, 0x00);
+    s.write(0x0f, 0x00); // voice 3 frequency 0
+    s.write(0x10, 0x00);
+    s.write(0x11, 0x00); // pulse width 0: pulse output is all ones
+    s.write(0x12, 0x40); // pulse
+    ticks(s, 10); // envelope is zero: the mixer never evaluates this voice
+    s.write(0x12, 0x00); // no waveform
+    ticks(s, 10);
+    expect(s.peek(0x1b)).toBe(0xff);
+  });
+});
+
 describe('C64 wiring', () => {
   it('routes $D400-$D7FF to the SID and ticks it every cycle', () => {
     const c64 = new C64(markerRoms());

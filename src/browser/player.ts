@@ -236,7 +236,7 @@ export async function start(options: StartOptions): Promise<Player> {
   const pump = sink ? new AudioPump(c64.sid, sink) : undefined;
   const player = new Player(c64, env, pump ? { audio: pump } : {});
   if (pump) {
-    const onVisibility = () => pump.setMuted(document.hidden);
+    const onVisibility = () => pump.setHidden(document.hidden);
     document.addEventListener('visibilitychange', onVisibility);
     const baseDispose = env.dispose;
     env.dispose = () => {

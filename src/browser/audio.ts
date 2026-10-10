@@ -15,6 +15,7 @@ const CHUNK = 4096;
 export class AudioPump {
   private readonly buffer = new Float32Array(CHUNK);
   private muted = false;
+  private hidden = false;
   private closed = false;
 
   constructor(
@@ -29,15 +30,22 @@ export class AudioPump {
       const n = this.source.drainSamples(this.buffer);
       if (n === 0) break;
       total += n;
-      if (!this.muted) this.sink.push(this.buffer.slice(0, n));
+      if (!this.muted && !this.hidden) this.sink.push(this.buffer.slice(0, n));
       if (n < this.buffer.length) break;
     }
-    return this.muted ? 0 : total;
+    return this.muted || this.hidden ? 0 : total;
   }
 
+  /** Paused by the player. */
   setMuted(muted: boolean): void {
     this.muted = muted;
-    this.sink.setMuted(muted);
+    this.sink.setMuted(this.muted || this.hidden);
+  }
+
+  /** The page is not visible. Independent of `setMuted`: either one silences the output. */
+  setHidden(hidden: boolean): void {
+    this.hidden = hidden;
+    this.sink.setMuted(this.muted || this.hidden);
   }
 
   close(): void {
@@ -101,7 +109,12 @@ export async function createWorkletSink(options: {
       console.warn('f6502: AudioWorklet is not available; running silent');
       return null;
     }
-    const ctx = new Ctx({ sampleRate: options.sampleRate, latencyHint: 'interactive' });
+    let ctx: AudioContext;
+    try {
+      ctx = new Ctx({ sampleRate: options.sampleRate, latencyHint: 'interactive' });
+    } catch {
+      ctx = new Ctx({ latencyHint: 'interactive' }); // the browser rejected the rate: resample
+    }
     const url = URL.createObjectURL(new Blob([WORKLET_SOURCE], { type: 'text/javascript' }));
     await ctx.audioWorklet.addModule(url);
     URL.revokeObjectURL(url);

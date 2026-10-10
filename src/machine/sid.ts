@@ -29,10 +29,12 @@ export class Sid implements IoChip {
   private accFilt = 0;
   private accCount = 0;
   private subCycle = 0;
-  private lp = 0;
-  private bp = 0;
+  private ic1 = 0; // trapezoidal state-variable filter state
+  private ic2 = 0;
   private dcIn = 0;
   private dcOut = 0;
+  /** One-pole DC blocker pole for a corner of about 10 Hz at the output rate. */
+  private readonly dcBlock: number;
   /** CPU cycles seen by `tick()` and how many of them the model has simulated. */
   private now = 0;
   private simulated = 0;
@@ -46,6 +48,7 @@ export class Sid implements IoChip {
     this.sampleRate = options.sampleRate ?? 48000;
     this.modelParams = modelByName(options.model ?? '6581');
     this.ring = new SampleRing(this.sampleRate); // one second
+    this.dcBlock = 1 - (2 * Math.PI * 10) / this.sampleRate;
     // Sync / ring mod sources: voice 1 <- voice 3, voice 2 <- voice 1, voice 3 <- voice 2.
     this.voices[0]!.source = this.voices[2]!;
     this.voices[1]!.source = this.voices[0]!;
@@ -70,7 +73,7 @@ export class Sid implements IoChip {
     this.busValue = 0;
     this.busAge = 0;
     this.ring.clear();
-    this.lp = this.bp = this.dcIn = this.dcOut = 0;
+    this.ic1 = this.ic2 = this.dcIn = this.dcOut = 0;
     this.phase = 0;
     this.accDry = this.accFilt = 0;
     this.accCount = 0;
@@ -131,7 +134,7 @@ export class Sid implements IoChip {
           v.pw = (v.pw & 0x00ff) | ((value & 0x0f) << 8);
           break;
         case 4:
-          v.control = value;
+          v.setControl(value, this.modelParams);
           e.setGate((value & 1) !== 0);
           break;
         case 5:
@@ -174,9 +177,11 @@ export class Sid implements IoChip {
     v0.advance();
     v1.advance();
     v2.advance();
-    v0.applySync();
-    v1.applySync();
-    v2.applySync();
+    if (((v0.control | v1.control | v2.control) & 0x02) !== 0) {
+      v0.applySync();
+      v1.applySync();
+      v2.applySync();
+    }
     const e = this.envelopes;
     e[0]!.tick();
     e[1]!.tick();
@@ -218,22 +223,28 @@ export class Sid implements IoChip {
     const fc = (this.regs[0x15]! & 7) | (this.regs[0x16]! << 3);
     const res = this.regs[0x17]! >> 4;
     const m = this.modelParams;
-    const f = Math.min(2 * Math.sin((Math.PI * m.cutoffHz(fc)) / this.sampleRate), 1.2);
-    const q = 1 / m.q(res);
-    const hp = filtIn - this.lp - q * this.bp;
-    this.bp += f * hp;
-    this.lp += f * this.bp;
-    if (!Number.isFinite(this.lp) || !Number.isFinite(this.bp)) this.lp = this.bp = 0;
-    this.bp = Math.max(-8, Math.min(8, this.bp));
-    this.lp = Math.max(-8, Math.min(8, this.lp));
+    // Zero-delay-feedback (trapezoidal) state-variable filter: stable for any cutoff and Q.
+    const hz = Math.min(m.cutoffHz(fc), this.sampleRate * 0.45);
+    const g = Math.tan((Math.PI * hz) / this.sampleRate);
+    const k = 1 / m.q(res);
+    const a1 = 1 / (1 + g * (g + k));
+    const a2 = g * a1;
+    const v3 = filtIn - this.ic2;
+    const bp = a1 * this.ic1 + a2 * v3;
+    const lp = this.ic2 + a2 * this.ic1 + g * a2 * v3;
+    this.ic1 = 2 * bp - this.ic1;
+    this.ic2 = 2 * lp - this.ic2;
+    const hp = filtIn - k * bp - lp;
+    if (!Number.isFinite(this.ic1) || !Number.isFinite(this.ic2)) this.ic1 = this.ic2 = 0;
     let filtered = 0;
-    if (mode & 0x10) filtered += this.lp;
-    if (mode & 0x20) filtered += this.bp;
+    if (mode & 0x10) filtered += lp;
+    if (mode & 0x20) filtered += bp;
     if (mode & 0x40) filtered += hp;
     const vol = (mode & 0x0f) / 15;
-    let s = ((dry + filtered) / 3) * vol;
+    // The master volume scales a small DC level (per model), so volume steps are audible (digi).
+    let s = ((dry + filtered) / 3 + m.dcLevel) * vol;
     // One-pole DC blocker (about 10 Hz): the per-model zero level and volume changes are DC.
-    const y = s - this.dcIn + 0.9987 * this.dcOut;
+    const y = s - this.dcIn + this.dcBlock * this.dcOut;
     this.dcIn = s;
     this.dcOut = y;
     s = Math.max(-1, Math.min(1, y));
