@@ -34,6 +34,9 @@ jobs:
       - name: Build emulator
         run: npm run build
 
+      - name: Build demo PRGs
+        run: node scripts/build-nyancat-prg.mjs
+
       - name: Stage emulator bundle
         run: mkdir -p website/dist && cp dist/f6502.min.js website/dist/
 

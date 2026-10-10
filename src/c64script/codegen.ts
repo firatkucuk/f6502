@@ -89,7 +89,75 @@ export function generate(cp: CheckedProgram): CodeBuffer {
     }
   }
 
+  // ─── Built-in: poke(addr: u16, val: u8) ────────────────────────────────
+  function evalConst(e: Expr): number | null {
+    if (e.tag === 'intLit') return e.value;
+    if (e.tag === 'ident') {
+      const v = cp.vars.get(e.name);
+      return v?.constValue ?? null;
+    }
+    if (e.tag === 'binary') {
+      const l = evalConst(e.lhs), r = evalConst(e.rhs);
+      if (l === null || r === null) return null;
+      switch (e.op) {
+        case '+': return (l + r) & 0xFFFF;
+        case '-': return (l - r) & 0xFFFF;
+        case '*': return (l * r) & 0xFFFF;
+        case '&': return l & r;
+        case '|': return l | r;
+        case '^': return l ^ r;
+      }
+    }
+    return null;
+  }
+
+  // ─── Built-in: clrscr() — clears screen RAM + color RAM ────────────────
+  function genClrscr(): void {
+    // Fill screen RAM $0400-$07E7 with spaces (0x20)
+    emit(0xA9, 0x20);                        // LDA #' '
+    emit(0xA2, 0x00);                        // LDX #0
+    const scrLoop = bytes.length;
+    emit(0x9D, 0x00, 0x04);                  // STA $0400,X
+    emit(0x9D, 0x00, 0x05);                  // STA $0500,X
+    emit(0x9D, 0x00, 0x06);                  // STA $0600,X
+    emit(0xE8);                              // INX
+    emit(0xD0, (scrLoop - bytes.length - 1) & 0xFF); // BNE scrLoop
+    // Last partial page: $0700-$07E7 (232 bytes), avoid sprite ptrs $07F8-$07FF
+    emit(0xA2, 231);                         // LDX #231
+    const scrLoop2 = bytes.length;
+    emit(0x9D, 0x00, 0x07);                  // STA $0700,X
+    emit(0xCA);                              // DEX
+    emit(0x10, (scrLoop2 - bytes.length - 1) & 0xFF); // BPL scrLoop2
+    // Fill color RAM $D800-$DBFF with black (0)
+    emit(0xA9, 0x00);                        // LDA #0
+    emit(0xA2, 0x00);                        // LDX #0
+    const colLoop = bytes.length;
+    emit(0x9D, 0x00, 0xD8);                  // STA $D800,X
+    emit(0x9D, 0x00, 0xD9);                  // STA $D900,X
+    emit(0x9D, 0x00, 0xDA);                  // STA $DA00,X
+    emit(0xE8);                              // INX
+    emit(0xD0, (colLoop - bytes.length - 1) & 0xFF); // BNE colLoop
+    emit(0xA2, 231);                         // LDX #231
+    const colLoop2 = bytes.length;
+    emit(0x9D, 0x00, 0xDB);                  // STA $DB00,X
+    emit(0xCA);                              // DEX
+    emit(0x10, (colLoop2 - bytes.length - 1) & 0xFF); // BPL colLoop2
+  }
+
   function genCall(e: Extract<Expr, { tag: 'call' }>): void {
+    // ── built-in: poke(addr, val) ──────────────────────────────────────────
+    if (e.name === 'poke') {
+      const addrVal = e.args[0] !== undefined ? evalConst(e.args[0]) : null;
+      const byteVal = e.args[1] !== undefined ? evalConst(e.args[1]) : null;
+      if (addrVal !== null && byteVal !== null) {
+        emit(0xA9, byteVal & 0xFF);
+        emit(0x8D, addrVal & 0xFF, (addrVal >> 8) & 0xFF);
+      }
+      return;
+    }
+    // ── built-in: clrscr() ────────────────────────────────────────────────
+    if (e.name === 'clrscr') { genClrscr(); return; }
+
     const fn = cp.fns.get(e.name);
     if (!fn) throw new CodeGenError(`undefined function '${e.name}'`, 0, 0);
 
@@ -432,6 +500,23 @@ export function generate(cp: CheckedProgram): CodeBuffer {
     emitLabel(`fn_${name}`);
     genStmts(fn.decl.body);
     emit(0x60); // RTS
+  }
+
+  // ─── Data sections (placed at absolute addresses via padding) ──────────
+  for (const d of cp.program.decls) {
+    if (d.tag !== 'data') continue;
+    if (d.annotation.kind !== 'addr') continue;
+    const targetAddr = d.annotation.address;
+    const currentAddr = cp.loadAddr + bytes.length;
+    if (targetAddr >= currentAddr) {
+      while (cp.loadAddr + bytes.length < targetAddr) emit(0x00); // pad
+      for (const field of d.fields) {
+        for (const init of field.init) {
+          const v = evalConst(init);
+          emit(v !== null ? v & 0xFF : 0x00);
+        }
+      }
+    }
   }
 
   return { bytes, labels, fixups, loadAddr: cp.loadAddr };

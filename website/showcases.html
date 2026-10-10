@@ -10,6 +10,52 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Space+Grotesk:wght@300;400;500;600;700&family=Fira+Code:wght@400;500&family=VT323&display=swap">
   <link rel="stylesheet" href="css/style.css">
   <style>
+    /* Nyan Cat live-demo card */
+    .thumb-nyancat {
+      background: #000814;
+      position: relative;
+    }
+    .thumb-nyancat canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+    }
+    .thumb-nyancat::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent 0px, transparent 2px,
+        rgba(0,0,0,0.12) 2px, rgba(0,0,0,0.12) 3px
+      );
+      pointer-events: none;
+      z-index: 5;
+    }
+    .nc-overlay {
+      position: absolute;
+      inset: 0;
+      background: #000814;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 1.25rem;
+      font-family: var(--font-pixel);
+      font-size: 6px;
+      line-height: 2.2;
+      color: #6abfc6;
+      z-index: 10;
+      gap: 0;
+    }
+    .nc-overlay .nc-title   { font-size: 8px; color: #fff; }
+    .nc-overlay .nc-sub     { color: #887ecb; margin-top: 0.4em; }
+    .nc-overlay .nc-note    { font-size: 5px; color: #555; margin-top: 1em; line-height: 2; }
+    .nc-overlay .nc-note a  { color: #6abfc6; }
+
     /* thumb-specific backgrounds */
     .thumb-rainbow {
       background: linear-gradient(135deg,
@@ -126,9 +172,8 @@
     <p class="section-label">Demos &amp; Examples</p>
     <h1 class="section-title" style="font-size: clamp(2rem, 5vw, 3rem);">Showcases</h1>
     <p class="section-lead">
-      Real C64 programs running in f6502. Some are classic demos, some are
-      new creations written in C64Script. These are coming soon — the emulator
-      is ready, the programs are being written.
+      Real C64 programs running in f6502. The first showcase is live —
+      a Nyan Cat sprite demo written entirely in C64Script. More are on the way.
     </p>
     <div style="display:flex;gap:1rem;flex-wrap:wrap">
       <a class="btn btn-primary" href="index.html#demo">▶ Try the live demo</a>
@@ -139,6 +184,34 @@
   <!-- ── Showcase grid ─────────────────────────────────────────── -->
   <section class="section" style="padding-top: 0;">
     <div class="showcase-grid">
+
+      <!-- 0. Nyan Cat (LIVE) -->
+      <div class="showcase-card reveal">
+        <div class="showcase-thumb thumb-nyancat">
+          <canvas id="nc-canvas" width="384" height="272"
+                  tabindex="0" aria-label="Nyan Cat C64Script demo"></canvas>
+          <div class="nc-overlay" id="nc-overlay">
+            <div class="nc-title">NYAN CAT</div>
+            <div class="nc-sub">C64SCRIPT DEMO</div>
+            <div class="nc-note">
+              Load ROMs on the<br>
+              <a href="index.html#demo">live demo page</a> to run this.
+            </div>
+          </div>
+        </div>
+        <div class="showcase-body">
+          <h3>Nyan Cat</h3>
+          <p>Nyan Cat slides across a blue sky with rainbow border cycling. Splash screen shows project credits. The first program written in C64Script.</p>
+          <div class="tag-row">
+            <span class="tag tag-accent">C64Script</span>
+            <span class="tag tag-primary">Sprites</span>
+            <span class="tag tag-green">LIVE</span>
+          </div>
+          <a class="btn btn-outline" style="margin-top:1rem;font-size:0.78rem"
+             href="https://github.com/firatkucuk/f6502/blob/main/examples/nyancat.c64s"
+             target="_blank" rel="noopener">View C64Script source →</a>
+        </div>
+      </div>
 
       <!-- 1. Rainbow Border -->
       <div class="showcase-card reveal">
@@ -324,5 +397,56 @@
 </div><!-- /.page -->
 
 <script src="js/app.js"></script>
+<script src="dist/f6502.min.js"></script>
+<script>
+/* ── Nyan Cat live showcase ─────────────────────────────────────────────── */
+(function () {
+  const ROM_KEYS  = ['kernal', 'basic', 'chargen'];
+  const LS_PREFIX = 'f6502_rom_';
+
+  function loadRomFromStorage(name) {
+    try {
+      const b64 = localStorage.getItem(LS_PREFIX + name);
+      if (!b64) return null;
+      const bin = atob(b64);
+      const ab  = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) ab[i] = bin.charCodeAt(i);
+      return ab.buffer;
+    } catch (_) { return null; }
+  }
+
+  const canvas  = document.getElementById('nc-canvas');
+  const overlay = document.getElementById('nc-overlay');
+  if (!canvas) return;
+
+  const roms = {};
+  for (const k of ROM_KEYS) { const ab = loadRomFromStorage(k); if (ab) roms[k] = ab; }
+  if (!ROM_KEYS.every(k => roms[k])) { if (overlay) overlay.style.display = 'flex'; return; }
+
+  // ROMs cached — start the emulator and load nyancat.prg
+  if (overlay) overlay.style.display = 'none';
+  let player = null, paused = false;
+
+  async function start() {
+    if (!window.F6502) { setTimeout(start, 200); return; }
+    try {
+      const resp = await fetch('demos/nyancat.prg');
+      if (!resp.ok) throw new Error('Could not fetch demos/nyancat.prg');
+      const prg  = new File([await resp.arrayBuffer()], 'nyancat.prg');
+
+      player = await F6502.start({ canvas, roms, scale: 'fit', audio: false });
+      await player.load(prg);
+    } catch (err) {
+      console.error('[nyancat showcase]', err);
+      if (overlay) {
+        overlay.querySelector('.nc-note').innerHTML =
+          'Error: ' + err.message + '<br><a href="index.html#demo">Try main demo →</a>';
+        overlay.style.display = 'flex';
+      }
+    }
+  }
+  start();
+})();
+</script>
 </body>
 </html>
