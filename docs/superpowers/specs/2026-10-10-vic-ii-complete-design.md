@@ -104,9 +104,11 @@ Per sprite: `dma`, `display`, `mcBase`, `mc`, `expandFF`, a 24-bit data word, a 
 1. **Cycle 55:** if Y-expand is set, toggle `expandFF` (it is held at 1 while Y-expand is clear).
 2. **Cycles 55 and 56:** if the sprite is enabled, `Y == raster & $FF` and DMA is off, turn DMA on,
    clear `mcBase`, and if Y-expand is set clear `expandFF`.
-3. **Cycle 58:** `mc = mcBase`; if DMA is on and `Y == raster & $FF`, turn `display` on.
+3. **Cycle 58:** `mc = mcBase`; if DMA is off, `display` turns off; if DMA is on and
+   `Y == raster & $FF`, `display` turns on.
 4. **Cycles 15 / 16 of the next line:** if `expandFF` is set, `mcBase += 2` then `+= 1`; then if
-   `mcBase == 63`, DMA and display turn off.
+   `mcBase == 63`, DMA turns off. (`display` stays on until cycle 58, so the last sprite row, which
+   is drawn after cycle 16 of its line, is not clipped.)
 
 Consequences pinned by tests: a sprite first appears on raster line `Y + 1` and runs 21 lines (42
 with Y-expand).
