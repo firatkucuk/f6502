@@ -17,9 +17,11 @@
   "include": [
     "src/core",
     "src/machine",
+    "src/c64script",
     "test/core",
     "test/machine",
     "test/conformance",
+    "test/c64script",
     "tsup.config.ts",
     "vitest.config.ts"
   ]
