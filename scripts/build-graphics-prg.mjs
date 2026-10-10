@@ -80,17 +80,35 @@ export function buildGraphicsPrg() {
   fillPages(0x2000, 32, 0x1b); // bitmap: pairs 00 01 10 11 on every row
   fillPages(0x0400, 4, 0x1c); // video matrix: hi nibble 1 (white), lo nibble 12 (grey)
   fillPages(0xd800, 4, 0x05); // colour RAM: green
-  fillBytes(0x0c00, 63, 0xff); // sprite data: solid 24x21
+  fillBytes(0x0c00, 63, 0xff); // sprite data 0: solid 24x21
+  fillBytes(0x0c40, 63, 0x1b); // sprite data 1: multicolour pairs 00 01 10 11 on every byte
 
-  for (let n = 0; n < 8; n++) poke(0x07f8 + n, 0x30); // sprite data at $0C00 (pointer 0x30 * 64)
+  for (let n = 0; n < 8; n++) poke(0x07f8 + n, n === 2 || n === 6 ? 0x31 : 0x30);
 
-  poke(0xd000, 40); // sprite 0 X
-  poke(0xd001, 60); // sprite 0 Y
-  poke(0xd002, 48); // sprite 1 X
-  poke(0xd003, 64); // sprite 1 Y
-  poke(0xd027, 1); // sprite 0 colour: white
-  poke(0xd028, 2); // sprite 1 colour: red
-  poke(0xd015, 0x03); // enable sprites 0 and 1
+  // [X low byte, Y] per sprite; sprite 5 also needs X bit 8 ($D010) for X = 296.
+  const positions = [
+    [40, 60], // 0: hi-res, overlaps sprite 1
+    [48, 64], // 1: hi-res
+    [120, 60], // 2: multicolour
+    [180, 60], // 3: X-expanded
+    [250, 60], // 4: Y-expanded
+    [296 & 0xff, 100], // 5: 9th X bit, behind foreground
+    [200, 140], // 6: multicolour, X-expanded
+    [100, 180], // 7: plain
+  ];
+  positions.forEach(([x, y], n) => {
+    poke(0xd000 + 2 * n, x);
+    poke(0xd001 + 2 * n, y);
+  });
+  [1, 2, 5, 4, 8, 2, 13, 7].forEach((colour, n) => poke(0xd027 + n, colour));
+  poke(0xd025, 7); // multicolour 0
+  poke(0xd026, 3); // multicolour 1
+  poke(0xd010, 0x20); // X bit 8 of sprite 5
+  poke(0xd01b, 0x20); // sprite 5 behind foreground
+  poke(0xd01c, 0x44); // sprites 2 and 6 multicolour
+  poke(0xd01d, 0x48); // sprites 3 and 6 X-expanded
+  poke(0xd017, 0x10); // sprite 4 Y-expanded
+  poke(0xd015, 0xff); // enable all eight
 
   poke(0xd020, 0x00); // border black
   poke(0xd021, 0x06); // background blue
@@ -101,7 +119,16 @@ export function buildGraphicsPrg() {
   label('wait');
   b(0xad, 0x1e, 0xd0); // LDA $D01E (reading clears it)
   beq('wait');
-  poke(0xd020, 0x0e); // collision seen: border light blue
+  sta(0x0341); // keep the first sprite-sprite collision value (A still holds it)
+
+  label('late');
+  b(0xad, 0x12, 0xd0); // LDA $D012
+  b(0xc9, 0xd0); // CMP #$D0
+  b(0x90, 0); // BCC late (patched below)
+  fixups.push({ at: code.length - 1, name: 'late', kind: 'rel' });
+  b(0xad, 0x1f, 0xd0); // LDA $D01F: every sprite has overlapped the bitmap by now
+  sta(0x0340);
+  poke(0xd020, 0x0e); // done: border light blue
   label('spin');
   jmp('spin');
 
