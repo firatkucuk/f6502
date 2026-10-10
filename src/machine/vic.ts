@@ -1,6 +1,7 @@
 import type { IoChip } from './io';
 import { PALETTE } from './palette';
 import { renderGraphics } from './vic-graphics';
+import { SPRITE_BA } from './vic-schedule';
 import { Sprites } from './vic-sprites';
 
 export const FRAME_WIDTH = 384;
@@ -12,6 +13,8 @@ const FIRST_VISIBLE_CYCLE = 12;
 const LAST_VISIBLE_CYCLE = 59;
 const FIRST_G_CYCLE = 16;
 const LAST_G_CYCLE = 55;
+const FIRST_C_CYCLE = 15;
+const LAST_C_CYCLE = 54;
 const FIRST_VISIBLE_RASTER = 15;
 const LAST_VISIBLE_RASTER = 286;
 
@@ -25,20 +28,26 @@ export class VicII implements IoChip {
   frameCount = 0;
   raster = 0;
 
-  private cycle = 1;
+  /** BA during the cycle most recently processed: true holds the CPU on read cycles. */
+  baLow = false;
+
+  /** The cycle the next tick() processes. */
+  private cycle = 2;
+  private lineWrapPending = false;
+  private denSeen = false;
+  /** Cycle at which BA went low for the current badline, or -1. */
+  private baStart = -1;
   private readonly regs = new Uint8Array(0x40);
   private status = 0;
   private enable = 0;
   private matched = false;
-  private denLatch = false;
-  private badline = false;
   private displayState = false;
   private vcBase = 0;
   private vc = 0;
   private rc = 0;
   private vmli = 0;
-  private readonly chars = new Uint8Array(40);
-  private readonly colors = new Uint8Array(40);
+  private readonly chars = new Uint8Array(64);
+  private readonly colors = new Uint8Array(64);
   private readonly bgColors = new Uint8Array(4);
   private readonly gColor = new Uint8Array(8);
   private readonly gFg = new Uint8Array(8);
@@ -65,6 +74,7 @@ export class VicII implements IoChip {
       vc: this.vc,
       rc: this.rc,
       displayState: this.displayState,
+      cycle: this.cycle,
       sprites: {
         dma: Array.from(this.sprites.dma),
         display: Array.from(this.sprites.display),
@@ -78,12 +88,16 @@ export class VicII implements IoChip {
     this.status = 0;
     this.enable = 0;
     this.matched = false;
-    this.denLatch = false;
-    this.badline = false;
+    this.denSeen = false;
     this.displayState = false;
+    this.baStart = -1;
+    this.baLow = false;
+    this.lineWrapPending = false;
     this.vcBase = this.vc = this.rc = this.vmli = 0;
     this.raster = 0;
-    this.cycle = 1;
+    this.cycle = 2;
+    this.chars.fill(0);
+    this.colors.fill(0);
     this.prevColor.fill(0);
     this.prevFg.fill(0);
     this.spriteSpriteHits = 0;
@@ -163,63 +177,70 @@ export class VicII implements IoChip {
 
   tick(): void {
     const c = this.cycle;
-    if (c === 14) this.beginDisplayLine();
-    this.sprites.cycle(c, this.raster);
-    const visible = c >= FIRST_VISIBLE_CYCLE && c <= LAST_VISIBLE_CYCLE;
-    if (visible || this.sprites.active !== 0) this.outputCycle(c, visible);
-    if (c === 58) this.endDisplayLine();
-    if (c === CYCLES_PER_LINE) {
-      this.cycle = 1;
-      this.nextLine();
-    } else {
-      this.cycle = c + 1;
-    }
-  }
+    const regs = this.regs;
 
-  private nextLine(): void {
-    this.raster++;
-    if (this.raster >= LINES) {
+    // Line start: the raster counter increments in cycle 1; it wraps to 0 in cycle 2 of line 0.
+    if (c === 1) {
+      this.baStart = -1;
+      if (this.raster === LINES - 1) {
+        this.lineWrapPending = true;
+      } else {
+        this.raster++;
+        this.newRaster();
+      }
+    } else if (c === 2 && this.lineWrapPending) {
+      this.lineWrapPending = false;
       this.raster = 0;
       this.vcBase = 0;
       this.frameCount++;
+      this.newRaster();
     }
-    this.startLine();
+    if (this.raster === 0x30 && (regs[0x11]! & 0x10) !== 0) this.denSeen = true;
+
+    // Badline condition, evaluated every cycle.
+    const cond =
+      this.denSeen &&
+      this.raster >= 0x30 &&
+      this.raster <= 0xf7 &&
+      (this.raster & 7) === (regs[0x11]! & 7);
+    if (cond) {
+      this.displayState = true;
+      if (c >= 12 && c <= LAST_C_CYCLE && this.baStart < 0) this.baStart = c;
+    }
+    if (c === 14) {
+      this.vc = this.vcBase;
+      this.vmli = 0;
+      if (cond) this.rc = 0;
+    }
+
+    this.sprites.cycle(c, this.raster);
+    this.graphics(c);
+    const visible = c >= FIRST_VISIBLE_CYCLE && c <= LAST_VISIBLE_CYCLE;
+    if (visible || this.sprites.active !== 0) this.outputCycle(c, visible);
+
+    if (c === 58) {
+      if (this.rc === 7) {
+        this.displayState = cond;
+        this.vcBase = this.vc;
+      }
+      if (this.displayState) this.rc = (this.rc + 1) & 7;
+    }
+
+    // BA for this cycle: the CPU consults it before its access.
+    let ba = this.baStart >= 0 && c <= LAST_C_CYCLE;
+    if (!ba) ba = (SPRITE_BA[c]! & this.sprites.dmaMask()) !== 0;
+    this.baLow = ba;
+
+    this.cycle = c === CYCLES_PER_LINE ? 1 : c + 1;
   }
 
-  private startLine(): void {
-    this.sprites.newLine();
-    if (this.raster === 0x30) this.denLatch = (this.regs[0x11]! & 0x10) !== 0;
+  private newRaster(): void {
+    if (this.raster === 0x30) this.denSeen = (this.regs[0x11]! & 0x10) !== 0;
     this.checkRasterCompare();
   }
 
-  private checkRasterCompare(): void {
-    const compare = ((this.regs[0x11]! & 0x80) << 1) | this.regs[0x12]!;
-    const match = this.raster === compare;
-    if (match && !this.matched) this.status |= 0x01;
-    this.matched = match;
-  }
-
-  private beginDisplayLine(): void {
-    this.vc = this.vcBase;
-    this.vmli = 0;
-    const yscroll = this.regs[0x11]! & 7;
-    this.badline =
-      this.denLatch && this.raster >= 0x30 && this.raster <= 0xf7 && (this.raster & 7) === yscroll;
-    if (this.badline) {
-      this.displayState = true;
-      this.rc = 0;
-    }
-  }
-
-  private endDisplayLine(): void {
-    if (this.rc === 7) {
-      this.displayState = false;
-      this.vcBase = this.vc;
-    }
-    if (this.displayState) this.rc = (this.rc + 1) & 7;
-  }
-
-  private outputCycle(c: number, visible: boolean): void {
+  /** g-access (phi1, cycles 16-55) then c-access (phi2, cycles 15-54). */
+  private graphics(c: number): void {
     const regs = this.regs;
     const ecm = (regs[0x11]! & 0x40) !== 0;
     const mode = (ecm ? 4 : 0) | (regs[0x11]! & 0x20 ? 2 : 0) | (regs[0x16]! & 0x10 ? 1 : 0);
@@ -234,13 +255,8 @@ export class VicII implements IoChip {
       let code = 0;
       let nibble = 0;
       if (this.displayState) {
-        const vm = ((regs[0x18]! >> 4) & 0x0f) << 10;
-        if (this.badline) {
-          this.chars[this.vmli] = this.mem.readMem(vm + this.vc);
-          this.colors[this.vmli] = this.mem.readColor(this.vc & 0x3ff) & 0x0f;
-        }
-        code = this.chars[this.vmli]!;
-        nibble = this.colors[this.vmli]!;
+        code = this.chars[this.vmli & 63]!;
+        nibble = this.colors[this.vmli & 63]!;
         let addr: number;
         if (mode & 2) {
           addr = ((regs[0x18]! & 0x08) << 10) | (this.vc << 3) | this.rc;
@@ -250,7 +266,7 @@ export class VicII implements IoChip {
         }
         glyph = this.mem.readMem(addr);
         this.vc = (this.vc + 1) & 0x3ff;
-        this.vmli = (this.vmli + 1) % 40;
+        this.vmli = (this.vmli + 1) & 63;
       } else {
         glyph = this.mem.readMem(ecm ? 0x39ff : 0x3fff);
       }
@@ -259,6 +275,23 @@ export class VicII implements IoChip {
       this.gColor.fill(bg[0]!);
       this.gFg.fill(0);
     }
+
+    if (this.baStart >= 0 && c >= Math.max(FIRST_C_CYCLE, this.baStart + 3) && c <= LAST_C_CYCLE) {
+      const vm = ((regs[0x18]! >> 4) & 0x0f) << 10;
+      this.chars[this.vmli & 63] = this.mem.readMem(vm + this.vc);
+      this.colors[this.vmli & 63] = this.mem.readColor(this.vc & 0x3ff) & 0x0f;
+    }
+  }
+
+  private checkRasterCompare(): void {
+    const compare = ((this.regs[0x11]! & 0x80) << 1) | this.regs[0x12]!;
+    const match = this.raster === compare;
+    if (match && !this.matched) this.status |= 0x01;
+    this.matched = match;
+  }
+
+  private outputCycle(c: number, visible: boolean): void {
+    const regs = this.regs;
 
     const xs = regs[0x16]! & 7;
     for (let i = 0; i < 8; i++) {

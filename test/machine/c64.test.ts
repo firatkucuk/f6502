@@ -100,7 +100,8 @@ describe('C64 integration with a synthetic KERNAL', () => {
     c64.runFrame();
     const start = c64.cpu.cycles;
     for (let i = 0; i < 10; i++) c64.runFrame();
-    expect(c64.cpu.cycles - start).toBe(19_656 * 10);
+    // runFrame stops on an instruction boundary: within one instruction of exact.
+    expect(Math.abs(c64.cpu.cycles - start - 19_656 * 10)).toBeLessThanOrEqual(7);
   });
 
   it('screenText converts screen codes (1 -> A) and isReady is false without READY.', () => {

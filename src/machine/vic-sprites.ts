@@ -1,11 +1,11 @@
+import { SPRITE_P_CYCLE } from './vic-schedule';
+
 export interface SpriteMemory {
   readMem(addr14: number): number;
 }
 
-/** PAL pointer/data fetch cycle of each sprite. */
-const FETCH_CYCLE = [58, 60, 62, 1, 3, 5, 7, 9];
 const FETCH_AT = new Int8Array(64).fill(-1);
-FETCH_CYCLE.forEach((cycle, n) => {
+SPRITE_P_CYCLE.forEach((cycle, n) => {
   FETCH_AT[cycle] = n;
 });
 
@@ -41,6 +41,13 @@ export class Sprites {
     this.pos.fill(-1);
     this.active = 0;
     this.mask = 0;
+  }
+
+  /** Bit n set = sprite n's DMA is on. */
+  dmaMask(): number {
+    let m = 0;
+    for (let n = 0; n < 8; n++) if (this.dma[n]) m |= 1 << n;
+    return m;
   }
 
   /** Shifters do not run across lines. */
