@@ -2,6 +2,8 @@ import type { Bus, CpuHooks } from './bus';
 import { B, C, D, I, N, U, V, Z } from './flags';
 import { OPS, type Mode } from './opcodes';
 
+const MAX_STALL_CYCLES = 4096;
+
 export interface Registers {
   a: number;
   x: number;
@@ -42,12 +44,14 @@ export class MOS6502 {
   /** Whether the last indexed access crossed a page. */
   private crossed = false;
   private readonly onCycle: (() => void) | null;
+  private readonly rdy: (() => boolean) | null;
 
   constructor(
     private readonly bus: Bus,
     hooks: CpuHooks = {},
   ) {
     this.onCycle = hooks.onCycle ? hooks.onCycle.bind(hooks) : null;
+    this.rdy = hooks.rdy ? hooks.rdy.bind(hooks) : null;
   }
 
   // ---- public API -------------------------------------------------------
@@ -135,6 +139,9 @@ export class MOS6502 {
   }
 
   private read(addr: number): number {
+    if (this.rdy !== null) {
+      for (let idle = 0; idle < MAX_STALL_CYCLES && !this.rdy(); idle++) this.endCycle();
+    }
     const v = this.bus.read(addr & 0xffff) & 0xff;
     this.endCycle();
     return v;
