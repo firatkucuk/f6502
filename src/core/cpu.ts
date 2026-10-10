@@ -163,6 +163,84 @@ export class MOS6502 {
     return v;
   }
 
+  private adc(v: number): void {
+    const r = this.regs;
+    const a = r.a;
+    const c = r.p & C;
+    const bin = a + v + c;
+    if (r.p & D) {
+      let al = (a & 0x0f) + (v & 0x0f) + c;
+      if (al >= 0x0a) al = ((al + 0x06) & 0x0f) + 0x10;
+      const signed = (((a & 0xf0) << 24) >> 24) + (((v & 0xf0) << 24) >> 24) + al;
+      let s = (a & 0xf0) + (v & 0xf0) + al;
+      let p = r.p & ~(N | V | Z | C);
+      if ((bin & 0xff) === 0) p |= Z; // NMOS: Z from the binary sum
+      if (signed & 0x80) p |= N;
+      if (signed < -128 || signed > 127) p |= V;
+      if (s >= 0xa0) s += 0x60;
+      if (s >= 0x100) p |= C;
+      r.p = p;
+      r.a = s & 0xff;
+      return;
+    }
+    let p = r.p & ~(N | V | Z | C);
+    if (~(a ^ v) & (a ^ bin) & 0x80) p |= V;
+    if (bin > 0xff) p |= C;
+    r.p = p;
+    r.a = this.nz(bin & 0xff);
+  }
+
+  private sbc(v: number): void {
+    const r = this.regs;
+    const a = r.a;
+    const c = r.p & C;
+    const bin = a - v - (1 - c);
+    let p = r.p & ~(N | V | Z | C);
+    if ((a ^ v) & (a ^ bin) & 0x80) p |= V;
+    if (bin >= 0) p |= C;
+    if ((bin & 0xff) === 0) p |= Z;
+    if (bin & 0x80) p |= N;
+    if (r.p & D) {
+      let al = (a & 0x0f) - (v & 0x0f) + c - 1;
+      if (al < 0) al = ((al - 0x06) & 0x0f) - 0x10;
+      let t = (a & 0xf0) - (v & 0xf0) + al;
+      if (t < 0) t -= 0x60;
+      r.p = p;
+      r.a = t & 0xff;
+      return;
+    }
+    r.p = p;
+    r.a = bin & 0xff;
+  }
+
+  private compare(reg: number, v: number): void {
+    const r = this.regs;
+    r.p = (r.p & ~C) | (reg >= v ? C : 0);
+    this.nz((reg - v) & 0xff);
+  }
+
+  private asl(v: number): number {
+    this.regs.p = (this.regs.p & ~C) | (v >> 7);
+    return this.nz((v << 1) & 0xff);
+  }
+
+  private lsr(v: number): number {
+    this.regs.p = (this.regs.p & ~C) | (v & 1);
+    return this.nz(v >> 1);
+  }
+
+  private rol(v: number): number {
+    const c = this.regs.p & C;
+    this.regs.p = (this.regs.p & ~C) | (v >> 7);
+    return this.nz(((v << 1) | c) & 0xff);
+  }
+
+  private ror(v: number): number {
+    const c = this.regs.p & C;
+    this.regs.p = (this.regs.p & ~C) | (v & 1);
+    return this.nz((v >> 1) | (c << 7));
+  }
+
   // ---- addressing modes -------------------------------------------------
 
   /** Returns the effective address, performing the real bus accesses of the mode. */
@@ -246,6 +324,33 @@ export class MOS6502 {
       case 'LDY':
         r.y = this.nz(v);
         break;
+      case 'AND':
+        r.a = this.nz(r.a & v);
+        break;
+      case 'ORA':
+        r.a = this.nz(r.a | v);
+        break;
+      case 'EOR':
+        r.a = this.nz(r.a ^ v);
+        break;
+      case 'ADC':
+        this.adc(v);
+        break;
+      case 'SBC':
+        this.sbc(v);
+        break;
+      case 'CMP':
+        this.compare(r.a, v);
+        break;
+      case 'CPX':
+        this.compare(r.x, v);
+        break;
+      case 'CPY':
+        this.compare(r.y, v);
+        break;
+      case 'BIT':
+        r.p = (r.p & ~(N | V | Z)) | (v & (N | V)) | ((r.a & v) === 0 ? Z : 0);
+        break;
       case 'NOP':
         break;
       default:
@@ -270,8 +375,33 @@ export class MOS6502 {
     }
   }
 
-  private execRmw(m: string, _addr: number): void {
-    throw this.unimplemented(m);
+  private execRmw(m: string, addr: number): void {
+    const v = this.read(addr);
+    this.write(addr, v); // dummy write of the original value
+    let n: number;
+    switch (m) {
+      case 'ASL':
+        n = this.asl(v);
+        break;
+      case 'LSR':
+        n = this.lsr(v);
+        break;
+      case 'ROL':
+        n = this.rol(v);
+        break;
+      case 'ROR':
+        n = this.ror(v);
+        break;
+      case 'INC':
+        n = this.nz((v + 1) & 0xff);
+        break;
+      case 'DEC':
+        n = this.nz((v - 1) & 0xff);
+        break;
+      default:
+        throw this.unimplemented(m);
+    }
+    this.write(addr, n);
   }
 
   private execImplied(m: string): void {
@@ -318,6 +448,30 @@ export class MOS6502 {
         break;
       case 'CLV':
         r.p &= ~V;
+        break;
+      case 'INX':
+        r.x = this.nz((r.x + 1) & 0xff);
+        break;
+      case 'INY':
+        r.y = this.nz((r.y + 1) & 0xff);
+        break;
+      case 'DEX':
+        r.x = this.nz((r.x - 1) & 0xff);
+        break;
+      case 'DEY':
+        r.y = this.nz((r.y - 1) & 0xff);
+        break;
+      case 'ASL':
+        r.a = this.asl(r.a);
+        break;
+      case 'LSR':
+        r.a = this.lsr(r.a);
+        break;
+      case 'ROL':
+        r.a = this.rol(r.a);
+        break;
+      case 'ROR':
+        r.a = this.ror(r.a);
         break;
       default:
         throw this.unimplemented(m);
