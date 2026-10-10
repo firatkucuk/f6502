@@ -32,6 +32,17 @@ const SOURCES = {
     dest: 'singlestep',
     files: Array.from({ length: 256 }, (_, i) => `6502/v1/${hex(i)}.json`),
   },
+  openroms: {
+    repo: 'MEGA65/open-roms',
+    dest: 'openroms',
+    files: [
+      'bin/kernal_generic.rom',
+      'bin/basic_generic.rom',
+      'bin/chargen_openroms.rom',
+      'LICENSE',
+      'COPYING',
+    ],
+  },
 };
 
 const sha256 = (buf) => createHash('sha256').update(buf).digest('hex');
@@ -107,14 +118,30 @@ async function fetchSource(source, sha, expected) {
   return sums;
 }
 
-const pin = process.argv.includes('--pin');
-const manifest = {};
-if (!pin) Object.assign(manifest, JSON.parse(await readFile(MANIFEST, 'utf8')));
+const args = process.argv.slice(2);
+const pin = args.includes('--pin');
+const names = args.filter((a) => !a.startsWith('--'));
+const selected = names.length > 0 ? names : Object.keys(SOURCES);
+for (const n of selected) {
+  if (!SOURCES[n]) {
+    throw new Error(`unknown source '${n}' (known: ${Object.keys(SOURCES).join(', ')})`);
+  }
+}
 
-for (const [name, source] of Object.entries(SOURCES)) {
-  const sha = pin ? await headSha(source.repo) : manifest[name].sha;
+let manifest = {};
+try {
+  manifest = JSON.parse(await readFile(MANIFEST, 'utf8'));
+} catch {
+  if (!pin) throw new Error(`${MANIFEST} missing: run with --pin first`);
+}
+
+for (const name of selected) {
+  const source = SOURCES[name];
+  const entry = manifest[name];
+  if (!pin && !entry) throw new Error(`source '${name}' is not pinned: run with --pin ${name}`);
+  const sha = pin ? await headSha(source.repo) : entry.sha;
   console.log(`${name}: ${source.repo}@${sha}`);
-  const sums = await fetchSource(source, sha, pin ? null : manifest[name].files);
+  const sums = await fetchSource(source, sha, pin ? null : entry.files);
   if (pin) manifest[name] = { repo: source.repo, sha, files: sums };
 }
 

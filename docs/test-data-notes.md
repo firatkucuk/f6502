@@ -25,3 +25,15 @@ the manifest.
 - Each test gives initial/final CPU and RAM state and the per-cycle bus trace.
 - The README documents no unstable-opcode exceptions; any opcode skipped by the runner must
   be justified in `test/conformance/singlestep-skip.json`.
+
+## OpenROMs (MEGA65/open-roms)
+
+- Used for the C64 boot/typing/PRG conformance tests and as the default ROMs of the demo.
+- Pinned in `scripts/test-data.json`; fetched files: `bin/kernal_generic.rom` (8192 B),
+  `bin/basic_generic.rom` (8192 B), `bin/chargen_openroms.rom` (4096 B), plus `LICENSE`/`COPYING`.
+- Licence: GNU LGPL v3 or later (copyright Paul Gardner-Stephen 2019, Roman Standzikowski 2019-2021;
+  see the fetched `LICENSE`). Redistributing the binaries is permitted under the LGPL provided the
+  licence notice travels with them and the corresponding source is available (the pinned upstream
+  commit). The binaries are still **not vendored** in this repository; the demo-site phase must
+  include the notice and a link to the pinned source when it hosts them.
+- Use the generic KERNAL with the generic BASIC; the CHARGEN image is interchangeable.
