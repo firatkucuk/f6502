@@ -5,7 +5,11 @@ export interface RomSet {
 }
 
 export class RomError extends Error {
-  constructor(image: string, expected: number, actual: number) {
+  constructor(
+    readonly image: string,
+    readonly expected: number,
+    readonly actual: number,
+  ) {
     super(`${image} ROM must be ${expected} bytes, got ${actual}`);
     this.name = 'RomError';
   }

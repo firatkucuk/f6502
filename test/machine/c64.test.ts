@@ -135,6 +135,15 @@ describe('typing', () => {
     expect(typed(c64)).toBe('RUN\r');
   });
 
+  it('maps £ ↑ ← to their PETSCII codes and skips characters with no PETSCII equivalent', () => {
+    const c64 = newMachine();
+    c64.type('A£^_{|}~`\\B');
+    c64.runFrame();
+    expect(Array.from({ length: c64.peek(0xc6) }, (_, i) => c64.peek(0x0277 + i))).toEqual([
+      0x41, 0x5c, 0x5e, 0x5f, 0x42,
+    ]);
+  });
+
   it('queues more than the buffer holds and feeds it as it drains', () => {
     const c64 = newMachine();
     c64.type('A'.repeat(25));
@@ -245,8 +254,8 @@ describe('keyboard and RESTORE', () => {
     const c64 = newMachine();
     c64.runFrame();
     c64.keyDown('A');
-    c64.writeIo(0xdc02, 0xff); // DDRA: all outputs, as the KERNAL sets it
-    c64.writeIo(0xdc00, 0b1111_1101); // select column 1
+    c64.busWrite(0xdc02, 0xff); // DDRA: all outputs, as the KERNAL sets it
+    c64.busWrite(0xdc00, 0b1111_1101); // select column 1
     expect(c64.peek(0xdc01)).toBe(0b1111_1011);
     c64.keyUp('A');
     expect(c64.peek(0xdc01)).toBe(0xff);

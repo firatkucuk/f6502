@@ -5,7 +5,7 @@ import { KeyQueue } from './keyqueue';
 import { toBytes, type Source } from './loader';
 
 export class ReadyTimeoutError extends Error {
-  constructor(frames: number) {
+  constructor(readonly frames: number) {
     super(`the BASIC READY. prompt did not appear within ${frames} frames`);
     this.name = 'ReadyTimeoutError';
   }
@@ -20,6 +20,8 @@ export interface PlayerEnv {
   requestFrame(cb: (nowMs: number) => void): number;
   cancelFrame(id: number): void;
   listen(type: 'keydown' | 'keyup' | 'blur', handler: (e: PlayerKeyEvent) => void): () => void;
+  /** Called once by `Player.destroy()` to undo anything else the environment set up. */
+  dispose?(): void;
 }
 
 export type LoadOptions = LoadPrgOptions;
@@ -52,10 +54,10 @@ export class Player {
     this.mapper = new KeyMapper(this.keys);
     this.unlisten.push(
       env.listen('keydown', (e) => {
-        if (this.mapper.down(e)) e.preventDefault?.();
+        if (this.running && this.mapper.down(e)) e.preventDefault?.();
       }),
       env.listen('keyup', (e) => {
-        if (this.mapper.up(e)) e.preventDefault?.();
+        if (this.running && this.mapper.up(e)) e.preventDefault?.();
       }),
       env.listen('blur', () => {
         this.mapper.releaseAll();
@@ -75,6 +77,9 @@ export class Player {
     this.running = false;
     if (this.rafId !== 0) this.env.cancelFrame(this.rafId);
     this.rafId = 0;
+    // Drop any backlog and release held keys so nothing replays (or sticks) after resume().
+    this.mapper.releaseAll();
+    this.keys.flush();
   }
 
   reset(): void {
@@ -85,6 +90,10 @@ export class Player {
     this.c64.type(text);
   }
 
+  /**
+   * Loads a program. Waits (synchronously, up to `readyFrames` emulated frames) for READY. first, so
+   * the page can stall briefly if the machine is busy running something else.
+   */
   async load(source: Source, options: LoadOptions = {}): Promise<void> {
     const bytes = await toBytes(source);
     const ready = this.c64.runUntilReady(this.readyFrames);
@@ -99,6 +108,7 @@ export class Player {
     this.keys.flush();
     for (const off of this.unlisten) off();
     this.unlisten.length = 0;
+    this.env.dispose?.();
   }
 
   private schedule(): void {
@@ -158,7 +168,8 @@ export async function start(options: StartOptions): Promise<Player> {
     canvas.style.height = `${272 * scale}px`;
   }
   canvas.tabIndex = 0;
-  canvas.addEventListener('click', () => canvas.focus());
+  const focusOnClick = () => canvas.focus();
+  canvas.addEventListener('click', focusOnClick);
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('2D canvas context unavailable');
   const image = new ImageData(new Uint8ClampedArray(c64.frame.pixels.buffer), 384, 272);
@@ -177,6 +188,7 @@ export async function start(options: StartOptions): Promise<Player> {
       source.addEventListener(type, fn);
       return () => source.removeEventListener(type, fn);
     },
+    dispose: () => canvas.removeEventListener('click', focusOnClick),
   };
 
   const player = new Player(c64, env);

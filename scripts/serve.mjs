@@ -1,6 +1,6 @@
 // Dependency-free static file server for local development: `npm run example`.
 import { createServer } from 'node:http';
-import { readFile } from 'node:fs/promises';
+import { readFile, realpath } from 'node:fs/promises';
 import { extname, join, normalize, resolve } from 'node:path';
 
 const root = resolve(process.cwd());
@@ -19,7 +19,7 @@ createServer(async (req, res) => {
     const url = new URL(req.url ?? '/', 'http://localhost');
     let path = normalize(decodeURIComponent(url.pathname));
     if (path.endsWith('/')) path += 'index.html';
-    const file = resolve(join(root, path));
+    const file = await realpath(resolve(join(root, path)));
     if (!file.startsWith(root + '/') && file !== root) {
       res.writeHead(403).end('forbidden');
       return;

@@ -33,9 +33,13 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
-    }
+    },
+    "./f6502.min.js": "./dist/f6502.min.js"
   },
   "files": [
     "dist"
-  ]
+  ],
+  "sideEffects": false,
+  "unpkg": "./dist/f6502.min.js",
+  "jsdelivr": "./dist/f6502.min.js"
 }
