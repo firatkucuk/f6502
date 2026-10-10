@@ -79,6 +79,10 @@ describe('Player', () => {
     expect(prevented).toBe(1);
     player.c64.writeIo(0xdc02, 0xff);
     player.c64.writeIo(0xdc00, 0b1111_1101);
+    expect(player.c64.peek(0xdc01)).toBe(0xff); // queued: not applied until a frame runs
+    player.resume();
+    f.fire(0);
+    f.fire(40); // runs frames, pumping the key queue first
     expect(player.c64.peek(0xdc01)).toBe(0b1111_1011);
     f.listeners.get('blur')!({ key: '', code: '', shiftKey: false });
     expect(player.c64.peek(0xdc01)).toBe(0xff);
