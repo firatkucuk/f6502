@@ -117,6 +117,28 @@ describe('poll timing', () => {
   });
 });
 
+describe('poll timing: branches that were already pending', () => {
+  it('IRQ held across a taken, non-crossing branch-to-self is serviced right after the branch', () => {
+    const m = boot([0xa9, 0x01, 0x58, 0xd0, 0xfe]); // LDA #1 ; CLI ; loop: BNE loop
+    m.cpu.step(); // LDA
+    m.cpu.step(); // CLI
+    m.cpu.setIrq(true);
+    m.cpu.step(); // BNE taken (first instruction: IRQ becomes visible only now)
+    m.cpu.step(); // BNE taken again: the poll saw the IRQ before the branch started
+    m.cpu.step(); // interrupt sequence
+    expect(m.cpu.regs.pc).toBe(0x0300);
+  });
+
+  it('an NMI edge raised before a taken, non-crossing branch-to-self is not starved', () => {
+    const m = boot([0xd0, 0xfe]); // BNE * (Z=0, always taken)
+    m.cpu.step(); // branch executes once
+    m.cpu.setNmi(true); // edge arrives between instructions
+    m.cpu.step(); // branch again: pending NMI was sampled before its cycle 2
+    m.cpu.step(); // interrupt sequence
+    expect(m.cpu.regs.pc).toBe(0x0400);
+  });
+});
+
 describe('NMI hijack of BRK', () => {
   it('NMI arriving before the vector fetch hijacks BRK; B is still pushed as 1', () => {
     const m = machine([0x00, 0xea], {
