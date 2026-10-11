@@ -6,7 +6,7 @@ import {
   directoryProgram,
   matchName,
   openSource,
-} from '../../src/machine/container';
+} from '../../src/machine/sources';
 
 describe('matchName', () => {
   const m = (p: string, n: string) => matchName(petscii(p), petscii(n));

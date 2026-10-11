@@ -1,9 +1,9 @@
 import { C64, type LoadPrgOptions } from '../machine/c64';
-import { openSource } from '../machine/container';
+import { openSource } from '../machine/sources';
 import { createWorkletSink, AudioPump, type AudioSink } from './audio';
 import { FrameClock } from './clock';
-import { KeyMapper, type KeyEventLike } from './keymap';
-import { KeyQueue } from './keyqueue';
+import { KeyMapper, type KeyEventLike } from './key-map';
+import { KeyQueue } from './key-queue';
 import { toBytes, type Source } from './loader';
 
 export class ReadyTimeoutError extends Error {

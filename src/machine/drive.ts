@@ -1,4 +1,4 @@
-import { D64Source, directoryProgram, matchName, type FileSource } from './container';
+import { D64Source, directoryProgram, matchName, type FileSource } from './sources';
 import { DiskError, petscii, toText } from './d64';
 
 export interface DiskDrive {

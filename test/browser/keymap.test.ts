@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { KeyMapper, type KeyEventLike } from '../../src/browser/keymap';
+import { KeyMapper, type KeyEventLike } from '../../src/browser/key-map';
 import type { C64Key } from '../../src/machine/keyboard';
 
 function rig() {
