@@ -41,6 +41,13 @@ export const SHOWCASES = [
     hint: 'Press SPACE to start or jump. A, D or the left/right arrow keys move. Collect every gem to open the exit.',
   },
   {
+    id: 'turbo-sprint',
+    title: 'Turbo Sprint',
+    blurb:
+      'Race down the highway, dodge traffic and score every overtake. The cars get faster as your score climbs, so keep steering to stay in the race.',
+    hint: 'Press SPACE to start or restart. A, D or the left/right arrow keys steer. Dodge traffic and score by overtaking cars.',
+  },
+  {
     id: 'music-box',
     title: 'Music Box',
     blurb:
