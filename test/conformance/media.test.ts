@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { C64 } from '../../src/machine/c64';
 import { D64, petscii } from '../../src/machine/d64';
-import { D64Source } from '../../src/machine/container';
+import { D64Source } from '../../src/machine/sources';
 import { encodeKernalTap } from './tap-encoder';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
