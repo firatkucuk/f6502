@@ -180,3 +180,23 @@ describe('every row of the "not in the language yet" table is true', () => {
     if (kind === 'type') expect(ctor).toBe('TypeError');
   });
 });
+
+describe('the types table', () => {
+  const start = html.indexOf('<h2 class="section-title">Types and annotations</h2>');
+  const table = html.slice(start, html.indexOf('</table>', start));
+
+  it('keeps a range on one line', () => {
+    const ranges = [...table.matchAll(/<td[^>]*>([^<]*\d+ – \d+[^<]*)<\/td>/g)];
+    expect(ranges.length).toBeGreaterThanOrEqual(2);
+    for (const m of ranges) expect(m[0]).toMatch(/white-space:\s*nowrap/);
+  });
+
+  it('lists u8, u16 and bool', () => {
+    for (const t of ['u8', 'u16', 'bool']) expect(table).toContain(`<code>${t}</code>`);
+  });
+
+  it('describes u16 as it behaves today (arithmetic and comparison are compile errors)', () => {
+    expect(table).not.toMatch(/arithmetic on it is incomplete/);
+    expect(table).toMatch(/compile error/);
+  });
+});
