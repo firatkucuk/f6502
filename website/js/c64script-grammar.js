@@ -10,10 +10,13 @@ export const GRAMMAR = {
   hardware: { pattern: /\b(?:VIC2|SID|CIA1|CIA2)\b/, alias: 'property' },
   constant: {
     pattern:
-      /\bCOLOR_(?:BLACK|WHITE|RED|CYAN|PURPLE|GREEN|BLUE|YELLOW|ORANGE|BROWN|LIGHT_RED|DARK_GREY|MEDIUM_GREY|LIGHT_GREEN|LIGHT_BLUE|LIGHT_GREY)\b/,
+      /\b(?:SCREEN_RAM|COLOR_RAM|SPRITE_PTRS|COLOR_(?:BLACK|WHITE|RED|CYAN|PURPLE|GREEN|BLUE|YELLOW|ORANGE|BROWN|LIGHT_RED|DARK_GREY|MEDIUM_GREY|LIGHT_GREEN|LIGHT_BLUE|LIGHT_GREY))\b/,
     alias: 'boolean',
   },
-  builtin: { pattern: /\b(?:poke|puts|clrscr|lo|hi|screen|color)(?=\s*\()/, alias: 'function' },
+  builtin: {
+    pattern: /\b(?:poke|puts|clrscr|lo|hi|screen|color|spritePtr)(?=\s*\()/,
+    alias: 'function',
+  },
   instruction: {
     pattern:
       /\b(?:adc|and|asl|bcc|bcs|beq|bit|bmi|bne|bpl|brk|bvc|bvs|clc|cld|cli|clv|cmp|cpx|cpy|dec|dex|dey|eor|inc|inx|iny|jmp|jsr|lda|ldx|ldy|lsr|nop|ora|pha|php|pla|plp|rol|ror|rti|rts|sbc|sec|sed|sei|sta|stx|sty|tax|tay|tsx|txa|txs|tya)\b(?=[ \t]+[#$(\w{]|[ \t]*$)/im,
