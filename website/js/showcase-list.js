@@ -33,4 +33,12 @@ export const SHOWCASES = [
       'Shoot the marching block before it reaches your cannon. A, D or the arrow keys move, SPACE fires one bullet at a time. The invaders are solid characters, the score is drawn on the top row.',
     hint: 'Press SPACE to start. A, D or the arrow keys move the cannon.',
   },
+  {
+    id: 'music-box',
+    title: 'Music Box',
+    blurb:
+      'A four-bar tune on all three SID voices: a pulse lead, a triangle bass and a sawtooth arpeggio. The notes come from tables read with t[i], and each voice lights up its own lane.',
+    hint: 'Click the page or press a key to start the sound.',
+    sound: true,
+  },
 ];

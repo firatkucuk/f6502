@@ -361,6 +361,7 @@ describe('showcases are written in plain C64Script', () => {
     'flappy-bird',
     'rainbow-border',
     'space-invaders',
+    'music-box',
   ]) {
     it(`${id} has no inline assembly`, () => {
       expect(source(id)).not.toMatch(/\basm\b\s*(clobbers\s*\([^)]*\)\s*)?\{/);
@@ -558,5 +559,125 @@ describe('showcase: space-invaders', () => {
     const bottom = cells.filter((col) => cell(c, 22, col) === BLOCK);
     expect(bottom.length).toBeGreaterThan(0);
     for (const col of bottom) expect(colour(c, 22, col)).toBe(GREEN);
+  });
+});
+
+describe('showcase: music-box', () => {
+  // The program writes the SID registers. They are write-only on the bus, so the tests read the
+  // register file the chip keeps (after letting it catch up with the writes).
+  const FRAMES_PER_STEP = 7;
+  const SID_CLOCK = 985248;
+  /** The SID frequency register for the note `semitones` above F2 (the program's note table). */
+  const freq = (semitones: number) =>
+    Math.round((87.3071 * 2 ** (semitones / 12) * 16777216) / SID_CLOCK);
+  const sidReg = (c: C64, reg: number): number => {
+    c.sid.peek(0); // catch up with the queued writes
+    return (c.sid as unknown as { regs: Uint8Array }).regs[reg]!;
+  };
+  const voiceFreq = (c: C64, voice: number) =>
+    sidReg(c, voice * 7) | (sidReg(c, voice * 7 + 1) << 8);
+  const cell = (c: C64, row: number, col: number) => c.peek(0x0400 + row * 40 + col);
+  const colour = (c: C64, row: number, col: number) => c.peek(0xd800 + row * 40 + col) & 15;
+  const run = (c: C64, frames: number) => {
+    for (let i = 0; i < frames; i++) c.runFrame();
+  };
+  /** Boots, then runs to the first frame where the lead voice's gate goes on (a step begins). */
+  const atFirstStep = (): C64 => {
+    const c = boot(source('music-box'), 0);
+    for (let i = 0; i < 90 && (sidReg(c, 4) & 1) === 0; i++) c.runFrame();
+    return c;
+  };
+
+  it('compiles', () => {
+    expect(compile(source('music-box')).length).toBeGreaterThan(2);
+  });
+
+  it('draws the title and the lane labels', () => {
+    const c = boot(source('music-box'), 10);
+    const text = (row: number, col: number, len: number) =>
+      Array.from({ length: len }, (_, i) => cell(c, row, col + i));
+    // S I D, space, M U S I C: screen codes are the letter's place in the alphabet
+    expect(text(1, 13, 3)).toEqual([19, 9, 4]);
+    expect(cell(c, 5, 0)).toBe(12); // L of LEAD
+    expect(cell(c, 10, 0)).toBe(2); // B of BASS
+    expect(cell(c, 15, 0)).toBe(1); // A of ARP
+  });
+
+  it('sets the volume and the voices up', () => {
+    const c = atFirstStep();
+    expect(sidReg(c, 0x18) & 15).toBe(15);
+    expect(sidReg(c, 0x03)).toBe(0x08); // lead pulse width
+    expect(sidReg(c, 4) & 0xf0).toBe(0x40); // pulse wave
+    expect(sidReg(c, 11) & 0xf0).toBe(0x10); // bass: triangle
+    expect(sidReg(c, 18) & 0xf0).toBe(0x20); // arpeggio: sawtooth
+  });
+
+  it('plays the first chord on all three voices', () => {
+    const c = atFirstStep();
+    expect(voiceFreq(c, 0)).toBe(freq(35)); // lead: E5
+    expect(voiceFreq(c, 1)).toBe(freq(4)); // bass: A2
+    expect(voiceFreq(c, 2)).toBe(freq(16)); // arpeggio: A3
+    for (const ctrl of [4, 11, 18]) expect(sidReg(c, ctrl) & 1).toBe(1);
+  });
+
+  it('releases the notes before the next step', () => {
+    const c = atFirstStep();
+    run(c, 6);
+    for (const ctrl of [4, 11, 18]) expect(sidReg(c, ctrl) & 1).toBe(0);
+    run(c, FRAMES_PER_STEP - 6 + 1); // the next step starts; the arpeggio never rests
+    expect(sidReg(c, 18) & 1).toBe(1);
+  });
+
+  it('plays a tune: many different lead notes, and it repeats after 64 steps', () => {
+    const c = atFirstStep();
+    const first = voiceFreq(c, 0);
+    const seen = new Set<number>();
+    for (let i = 0; i < 64 * FRAMES_PER_STEP; i++) {
+      c.runFrame();
+      seen.add(voiceFreq(c, 0));
+    }
+    expect(seen.size).toBeGreaterThanOrEqual(5);
+    expect(voiceFreq(c, 0)).toBe(first);
+  });
+
+  it('lights the lead lane at the pitch of the note, and fades it', () => {
+    const c = atFirstStep();
+    run(c, 2); // the lead lane is drawn one frame after the notes start
+    expect(cell(c, 6, 35)).toBe(0xa0); // E5 is note 36: column 35
+    expect(colour(c, 6, 35)).toBe(1); // white while fresh
+    run(c, 4 * FRAMES_PER_STEP);
+    expect(colour(c, 6, 35)).toBe(11); // dark grey trail after a few steps
+    run(c, 3 * FRAMES_PER_STEP);
+    expect(cell(c, 6, 35)).toBe(0x20); // gone
+  });
+
+  it('starts with dark lanes even when RAM holds leftovers', () => {
+    const prg = compile(source('music-box'));
+    const load = prg[0]! | (prg[1]! << 8);
+    const c = new C64({
+      kernal: new Uint8Array(8192).fill(0xea),
+      basic: new Uint8Array(8192),
+      chargen: new Uint8Array(4096),
+    });
+    for (let i = 2; i < prg.length; i++) c.pokeRam(load + i - 2, prg[i]!);
+    for (let i = 0; i < 120; i++) c.pokeRam(0x2200 + i, 0xff); // the lane heat table
+    c.cpu.regs.pc = load;
+    run(c, 4); // past the set-up, before the first step has drawn anything
+    for (const row of [6, 11, 16]) {
+      const lit = Array.from({ length: 40 }, (_, col) => cell(c, row, col)).filter(
+        (v) => v === 0xa0,
+      );
+      expect(lit.length).toBeLessThanOrEqual(1);
+    }
+  });
+
+  it('moves the chord highlight along: Am, then F', () => {
+    const c = atFirstStep();
+    run(c, 2);
+    expect(colour(c, 21, 4)).toBe(1); // AM is white
+    expect(colour(c, 21, 14)).toBe(11);
+    run(c, 16 * FRAMES_PER_STEP + 2);
+    expect(colour(c, 21, 4)).toBe(11);
+    expect(colour(c, 21, 14)).toBe(1); // F is white
   });
 });

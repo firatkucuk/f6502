@@ -95,7 +95,9 @@ sequence, but the showcases are written without it.
 
 ### 2 — Register it
 
-Add `{ id, title, blurb }` to `website/js/showcase-list.js`.
+Add `{ id, title, blurb }` to `website/js/showcase-list.js`. A showcase that makes sound also gets
+`sound: true` (the page then starts Web Audio, which the browser only allows after a click or key
+press, so give it a `hint` that says so). `SID.v1…`, `SID.v2…` and `SID.v3…` name all three voices.
 
 ### 3 — Add a card with a screenshot
 
