@@ -42,7 +42,10 @@
     btn.className = 'copy-btn';
     btn.textContent = 'copy';
     btn.addEventListener('click', () => {
-      navigator.clipboard.writeText(pre.textContent || '').then(() => {
+      // The button (and Try-now link) sit inside the <pre>: copy the code, not their labels.
+      const clone = pre.cloneNode(true);
+      clone.querySelectorAll('.copy-btn, .try-now').forEach((el) => el.remove());
+      navigator.clipboard.writeText(clone.textContent || '').then(() => {
         btn.textContent = 'copied!';
         setTimeout(() => (btn.textContent = 'copy'), 1500);
       });

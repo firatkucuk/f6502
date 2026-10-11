@@ -512,8 +512,8 @@ ctx.<span class="token-fn">putImageData</span>(
     <code class="api-sig">c64.pokeRam(addr: number, value: number): void</code>
     <p class="api-desc">Write directly to RAM, bypassing the memory map and bank switching.</p>
 
-    <code class="api-sig">c64.peekRam(addr: number): number</code>
-    <p class="api-desc">Read directly from RAM.</p>
+    <code class="api-sig">c64.peek(addr: number): number</code>
+    <p class="api-desc">Read a byte as the CPU sees it (honours bank switching and I/O) without side effects.</p>
 
     <code class="api-sig">c64.reset(): void</code>
     <p class="api-desc">Hardware reset — equivalent to pressing the C64's reset button.</p>

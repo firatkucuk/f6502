@@ -9,6 +9,7 @@ function colorConst(name: string, value: number): VarDecl {
   return {
     tag: 'varDecl', name, type: { tag: 'u8' },
     annotation: { kind: 'none' },
+    isConst: true,
     init: { tag: 'intLit', value, line: 0 },
     line: 0,
   };

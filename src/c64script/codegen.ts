@@ -1,6 +1,8 @@
 import { CodeGenError } from './errors';
-import type { CheckedProgram } from './checker';
-import type { Expr, Stmt, VarDecl } from './ast';
+import { PROGRAM_SCOPE, foldConst, scopedName } from './checker';
+import type { CheckedProgram, ResolvedVar } from './checker';
+import { sizeOf } from './ast';
+import type { Expr, Stmt } from './ast';
 
 export type FixupKind =
   | { kind: 'branch8';   label: string }
@@ -26,6 +28,39 @@ export function generate(cp: CheckedProgram): CodeBuffer {
   const fixups: Fixup[] = [];
   let labelCounter = 0;
   const loopStack: LoopContext[] = [];
+  // Name of the function (or 'program') whose body is being generated: locals and parameters
+  // live under `<scope>::<name>` in cp.vars.
+  let scope = PROGRAM_SCOPE;
+  let inlineDepth = 0;
+
+  function lookup(name: string): ResolvedVar | undefined {
+    return cp.vars.get(scopedName(scope, name)) ?? cp.vars.get(name);
+  }
+
+  const COMPARE_OPS = new Set(['==', '!=', '<', '>', '<=', '>=']);
+
+  /** True when the expression has a 16-bit value (the code generator only does 8-bit math). */
+  function isU16(e: Expr): boolean {
+    switch (e.tag) {
+      case 'intLit':
+        return e.value > 0xff;
+      case 'ident': {
+        const v = lookup(e.name);
+        if (v === undefined) return false;
+        return v.isConst ? (v.constValue ?? 0) > 0xff : v.type.tag === 'u16';
+      }
+      case 'cast':
+        return e.toType.tag === 'u16';
+      case 'call':
+        return cp.fns.get(e.name)?.decl.ret.tag === 'u16';
+      case 'unary':
+        return isU16(e.rhs);
+      case 'binary':
+        return COMPARE_OPS.has(e.op) ? false : isU16(e.lhs) || isU16(e.rhs);
+      default:
+        return false;
+    }
+  }
 
   function emit(...bs: number[]): void {
     for (const b of bs) bytes.push(b & 0xFF);
@@ -44,38 +79,56 @@ export function generate(cp: CheckedProgram): CodeBuffer {
     for (let i = 0; i < n; i++) emit(0x00);
   }
 
-  function hwAddr(hwName: string, fieldName: string): number {
+  function hwAddr(hwName: string, fieldName: string, line = 0): number {
     const hw = cp.hardware.get(hwName);
-    if (!hw) throw new CodeGenError(`unknown hardware '${hwName}'`, 0, 0);
+    if (!hw) throw new CodeGenError(`unknown hardware '${hwName}'`, line, 0);
     const f = hw.fields.find(field => field.name === fieldName);
-    if (!f) throw new CodeGenError(`unknown field '${fieldName}' on '${hwName}'`, 0, 0);
+    if (!f) throw new CodeGenError(`unknown field '${fieldName}' on '${hwName}'`, line, 0);
     return hw.base + f.offset;
   }
 
   function genStore(lhs: Expr): void {
     if (lhs.tag === 'ident') {
-      const v = cp.vars.get(lhs.name);
+      const v = lookup(lhs.name);
       if (v && v.zpAddr !== null) {
         emit(0x85, v.zpAddr);
       } else if (v && v.absAddr !== null) {
         emit(0x8D, v.absAddr & 0xFF, (v.absAddr >> 8) & 0xFF);
+      } else {
+        throw new CodeGenError(`cannot assign to '${lhs.name}'`, lhs.line, 0);
       }
     } else if (lhs.tag === 'field' && lhs.obj.tag === 'ident') {
-      const addr = hwAddr(lhs.obj.name, lhs.field);
+      const addr = hwAddr(lhs.obj.name, lhs.field, lhs.line);
       emit(0x8D, addr & 0xFF, (addr >> 8) & 0xFF);
+    } else if (lhs.tag === 'index') {
+      throw new CodeGenError('array indexing is not supported yet', lhs.line, 0);
+    } else {
+      throw new CodeGenError('invalid assignment target', lhs.line, 0);
     }
   }
 
   function genIncDec(lhs: Expr, op: '++' | '--'): void {
     if (lhs.tag === 'ident') {
-      const v = cp.vars.get(lhs.name);
-      if (v && v.zpAddr !== null) {
+      const v = lookup(lhs.name);
+      if (v && v.type.tag === 'u16' && !v.isConst) {
+        if (v.zpAddr === null) {
+          throw new CodeGenError(`16-bit '${op}' needs a zero-page variable`, lhs.line, 0);
+        }
+        const z = v.zpAddr;
+        if (op === '++') {
+          emit(0xE6, z, 0xD0, 0x02, 0xE6, z + 1); // INC lo; BNE +2; INC hi
+        } else {
+          emit(0xA5, z, 0xD0, 0x02, 0xC6, z + 1, 0xC6, z); // LDA lo; BNE +2; DEC hi; DEC lo
+        }
+      } else if (v && v.zpAddr !== null) {
         emit(op === '++' ? 0xE6 : 0xC6, v.zpAddr);
       } else if (v && v.absAddr !== null) {
         emit(op === '++' ? 0xEE : 0xCE, v.absAddr & 0xFF, (v.absAddr >> 8) & 0xFF);
+      } else {
+        throw new CodeGenError(`cannot modify '${lhs.name}'`, lhs.line, 0);
       }
     } else if (lhs.tag === 'field' && lhs.obj.tag === 'ident') {
-      const addr = hwAddr(lhs.obj.name, lhs.field);
+      const addr = hwAddr(lhs.obj.name, lhs.field, lhs.line);
       // Never INC/DEC on hardware registers — use LDA/ADC(SBC)/STA instead
       emit(0xAD, addr & 0xFF, (addr >> 8) & 0xFF); // LDA abs
       if (op === '++') {
@@ -86,29 +139,14 @@ export function generate(cp: CheckedProgram): CodeBuffer {
         emit(0xE9, 0x01); // SBC #1
       }
       emit(0x8D, addr & 0xFF, (addr >> 8) & 0xFF); // STA abs
+    } else {
+      throw new CodeGenError(`cannot apply '${op}' here`, lhs.line, 0);
     }
   }
 
   // ─── Built-in: poke(addr: u16, val: u8) ────────────────────────────────
   function evalConst(e: Expr): number | null {
-    if (e.tag === 'intLit') return e.value;
-    if (e.tag === 'ident') {
-      const v = cp.vars.get(e.name);
-      return v?.constValue ?? null;
-    }
-    if (e.tag === 'binary') {
-      const l = evalConst(e.lhs), r = evalConst(e.rhs);
-      if (l === null || r === null) return null;
-      switch (e.op) {
-        case '+': return (l + r) & 0xFFFF;
-        case '-': return (l - r) & 0xFFFF;
-        case '*': return (l * r) & 0xFFFF;
-        case '&': return l & r;
-        case '|': return l | r;
-        case '^': return l ^ r;
-      }
-    }
-    return null;
+    return foldConst(e, lookup);
   }
 
   // ─── Built-in: clrscr() — clears screen RAM + color RAM ────────────────
@@ -158,6 +196,7 @@ export function generate(cp: CheckedProgram): CodeBuffer {
       if (addrVal === null) {
         throw new CodeGenError('poke() address must be a compile-time constant', e.line, 0);
       }
+      assertFits8(valueExpr, e.line, 'a byte');
       const byteVal = evalConst(valueExpr);
       if (byteVal !== null) emit(0xA9, byteVal & 0xFF);
       else genExpr(valueExpr);
@@ -167,18 +206,75 @@ export function generate(cp: CheckedProgram): CodeBuffer {
     // ── built-in: clrscr() ────────────────────────────────────────────────
     if (e.name === 'clrscr') { genClrscr(); return; }
 
+    // ── user function: bind the arguments to its parameter slots, then call ──
     const fn = cp.fns.get(e.name);
-    if (!fn) throw new CodeGenError(`undefined function '${e.name}'`, 0, 0);
+    if (!fn) throw new CodeGenError(`undefined function '${e.name}'`, e.line, 0);
 
-    const arg0 = e.args[0];
-    if (arg0 !== undefined) genExpr(arg0);
+    const params = fn.decl.params;
+    for (let i = 0; i < params.length; i++) {
+      const arg = e.args[i];
+      const param = params[i];
+      const slot = param ? cp.vars.get(scopedName(e.name, param.name)) : undefined;
+      if (arg === undefined || slot === undefined || slot.zpAddr === null) {
+        throw new CodeGenError(`cannot pass argument ${i + 1} to '${e.name}'`, e.line, 0);
+      }
+      assertFits8(arg, e.line, `parameter '${param?.name}' of '${e.name}'`);
+      genExpr(arg);
+      emit(0x85, slot.zpAddr); // STA param slot
+    }
 
     if (fn.isInline) {
+      const outer = scope;
+      scope = e.name;
+      inlineDepth++;
       genStmts(fn.decl.body);
+      inlineDepth--;
+      scope = outer;
     } else {
       emit(0x20); // JSR
       addFixup({ kind: 'abs16', label: `fn_${e.name}` }, 2);
     }
+  }
+
+  /** A value stored into an 8-bit target must be known to fit, or be narrowed explicitly. */
+  function assertFits8(value: Expr, line: number, what: string): void {
+    const c = evalConst(value);
+    if (c !== null) {
+      if (c > 0xff) throw new CodeGenError(`value ${c} does not fit in ${what}`, line, 0);
+      return;
+    }
+    if (isU16(value)) {
+      throw new CodeGenError(
+        `a 16-bit value cannot be stored in ${what}; use lo(...) or 'as u8'`,
+        line,
+        0,
+      );
+    }
+  }
+
+  /** Loads the low (or high) byte of a variable or constant argument of lo() / hi(). */
+  function genByteOf(arg: Expr, high: boolean, line: number): void {
+    const c = evalConst(arg);
+    if (c !== null) {
+      emit(0xA9, (high ? c >> 8 : c) & 0xFF);
+      return;
+    }
+    if (arg.tag === 'ident') {
+      const v = lookup(arg.name);
+      if (high && v && v.type.tag !== 'u16') {
+        throw new CodeGenError(`hi() needs a 16-bit value, but '${arg.name}' is ${v.type.tag}`, line, 0);
+      }
+      if (v && v.zpAddr !== null) {
+        emit(0xA5, v.zpAddr + (high ? 1 : 0));
+        return;
+      }
+      if (v && v.absAddr !== null) {
+        const a = v.absAddr + (high ? 1 : 0);
+        emit(0xAD, a & 0xFF, (a >> 8) & 0xFF);
+        return;
+      }
+    }
+    throw new CodeGenError(`${high ? 'hi' : 'lo'}() needs a variable or a constant`, line, 0);
   }
 
   function genExpr(e: Expr): void {
@@ -190,29 +286,43 @@ export function generate(cp: CheckedProgram): CodeBuffer {
         emit(0xA9, e.value ? 0x01 : 0x00);
         break;
       case 'ident': {
-        const v = cp.vars.get(e.name);
-        if (v && v.zpAddr !== null) {
+        const v = lookup(e.name);
+        if (v && v.isConst && v.constValue !== null) {
+          emit(0xA9, v.constValue & 0xFF);
+        } else if (v && v.zpAddr !== null) {
           emit(0xA5, v.zpAddr);
         } else if (v && v.absAddr !== null) {
           emit(0xAD, v.absAddr & 0xFF, (v.absAddr >> 8) & 0xFF);
-        } else if (v && v.constValue !== null) {
-          emit(0xA9, v.constValue & 0xFF);
+        } else {
+          throw new CodeGenError(`cannot read '${e.name}'`, e.line, 0);
         }
         break;
       }
-      case 'field':
-        if (e.obj.tag === 'ident') {
-          const addr = hwAddr(e.obj.name, e.field);
-          emit(0xAD, addr & 0xFF, (addr >> 8) & 0xFF);
+      case 'field': {
+        if (e.obj.tag !== 'ident') {
+          throw new CodeGenError('only hardware fields can be read (e.g. VIC2.borderColor)', e.line, 0);
         }
+        const addr = hwAddr(e.obj.name, e.field, e.line);
+        emit(0xAD, addr & 0xFF, (addr >> 8) & 0xFF);
         break;
+      }
       case 'unary':
+        if (e.op !== '!') {
+          throw new CodeGenError(`unary operator '${e.op}' is not supported yet`, e.line, 0);
+        }
         genExpr(e.rhs);
-        if (e.op === '!') emit(0x49, 0x01); // EOR #1 (bool flip)
+        // !x is 1 when x is 0, else 0 — for any u8, not just 0/1:
+        emit(0xC9, 0x01); // CMP #1   (carry set when x >= 1)
+        emit(0xA9, 0x00); // LDA #0
+        emit(0x2A);       // ROL A    (A = 1 when x was non-zero)
+        emit(0x49, 0x01); // EOR #1
         break;
-      case 'binary':
-        genBinary(e);
+      case 'binary': {
+        const folded = evalConst(e);
+        if (folded !== null) emit(0xA9, folded & 0xFF);
+        else genBinary(e);
         break;
+      }
       case 'cast':
         genExpr(e.expr);
         break;
@@ -220,82 +330,91 @@ export function generate(cp: CheckedProgram): CodeBuffer {
         genCall(e);
         break;
       case 'lo':
-        if (e.expr.tag === 'ident') {
-          const v = cp.vars.get(e.expr.name);
-          if (v && v.zpAddr !== null) emit(0xA5, v.zpAddr);
-        }
+        genByteOf(e.expr, false, e.line);
         break;
       case 'hi':
-        if (e.expr.tag === 'ident') {
-          const v = cp.vars.get(e.expr.name);
-          if (v && v.zpAddr !== null) emit(0xA5, v.zpAddr + 1);
-        }
+        genByteOf(e.expr, true, e.line);
         break;
       case 'index':
-        break;
+        throw new CodeGenError('array indexing is not supported yet', e.line, 0);
     }
   }
 
-  // Emit the RHS of an arithmetic/logic binary op, choosing imm/zp/abs mode
-  function genBinaryRhs(rhs: Expr, immOp: number, zpOp: number, absOp: number): void {
-    if (rhs.tag === 'intLit') {
-      emit(immOp, rhs.value & 0xFF);
-    } else if (rhs.tag === 'ident') {
-      const v = cp.vars.get(rhs.name);
+  const RHS_HINT = 'right-hand operand must be a literal, a variable or a hardware register ' +
+    '(assign the sub-expression to a variable first)';
+
+  /** Emits `<op> operand` for the right side of a binary operation, choosing imm/zp/abs mode. */
+  function genOperand(rhs: Expr, immOp: number, zpOp: number, absOp: number): void {
+    const c = evalConst(rhs);
+    if (c !== null) {
+      emit(immOp, c & 0xFF);
+      return;
+    }
+    if (rhs.tag === 'ident') {
+      const v = lookup(rhs.name);
       if (v && v.zpAddr !== null) {
         emit(zpOp, v.zpAddr);
-      } else if (v && v.absAddr !== null) {
+        return;
+      }
+      if (v && v.absAddr !== null) {
         emit(absOp, v.absAddr & 0xFF, (v.absAddr >> 8) & 0xFF);
-      } else if (v && v.constValue !== null) {
-        emit(immOp, v.constValue & 0xFF);
+        return;
       }
     }
+    if (rhs.tag === 'field' && rhs.obj.tag === 'ident') {
+      const addr = hwAddr(rhs.obj.name, rhs.field, rhs.line);
+      emit(absOp, addr & 0xFF, (addr >> 8) & 0xFF);
+      return;
+    }
+    throw new CodeGenError(RHS_HINT, rhs.line, 0);
   }
 
   function genBinary(e: Extract<Expr, { tag: 'binary' }>): void {
+    if (e.op === '&&' || e.op === '||') {
+      throw new CodeGenError(`'${e.op}' is not supported yet`, e.line, 0);
+    }
+    if (COMPARE_OPS.has(e.op)) {
+      throw new CodeGenError(
+        `comparison '${e.op}' can only be used as a condition (if / while / for)`,
+        e.line,
+        0,
+      );
+    }
+    if (!['+', '-', '&', '|', '^'].includes(e.op)) {
+      throw new CodeGenError(`operator '${e.op}' is not supported yet`, e.line, 0);
+    }
+    if (isU16(e.lhs) || isU16(e.rhs)) {
+      throw new CodeGenError('16-bit arithmetic is not supported yet', e.line, 0);
+    }
     switch (e.op) {
       case '+':
-        emit(0x18); // CLC
         genExpr(e.lhs);
-        genBinaryRhs(e.rhs, 0x69, 0x65, 0x6D); // ADC #imm, ADC zp, ADC abs
+        emit(0x18); // CLC (after the left side: it may itself have left a carry)
+        genOperand(e.rhs, 0x69, 0x65, 0x6D); // ADC #imm, ADC zp, ADC abs
         break;
       case '-':
-        emit(0x38); // SEC
         genExpr(e.lhs);
-        genBinaryRhs(e.rhs, 0xE9, 0xE5, 0xED); // SBC #imm, SBC zp, SBC abs
+        emit(0x38); // SEC
+        genOperand(e.rhs, 0xE9, 0xE5, 0xED); // SBC #imm, SBC zp, SBC abs
         break;
       case '&':
         genExpr(e.lhs);
-        genBinaryRhs(e.rhs, 0x29, 0x25, 0x2D); // AND #imm, AND zp, AND abs
+        genOperand(e.rhs, 0x29, 0x25, 0x2D); // AND #imm, AND zp, AND abs
         break;
       case '|':
         genExpr(e.lhs);
-        genBinaryRhs(e.rhs, 0x09, 0x05, 0x0D); // ORA #imm, ORA zp, ORA abs
+        genOperand(e.rhs, 0x09, 0x05, 0x0D); // ORA #imm, ORA zp, ORA abs
         break;
       case '^':
         genExpr(e.lhs);
-        genBinaryRhs(e.rhs, 0x49, 0x45, 0x4D); // EOR #imm, EOR zp, EOR abs
-        break;
-      default:
-        genExpr(e.lhs);
+        genOperand(e.rhs, 0x49, 0x45, 0x4D); // EOR #imm, EOR zp, EOR abs
         break;
     }
   }
 
   // Emit the CMP operand, choosing imm/zp/abs mode based on rhs type
   function genCmpRhs(rhs: Expr): void {
-    if (rhs.tag === 'intLit') {
-      emit(0xC9, rhs.value & 0xFF); // CMP #imm
-    } else if (rhs.tag === 'ident') {
-      const v = cp.vars.get(rhs.name);
-      if (v && v.zpAddr !== null) {
-        emit(0xC5, v.zpAddr); // CMP zp
-      } else if (v && v.absAddr !== null) {
-        emit(0xCD, v.absAddr & 0xFF, (v.absAddr >> 8) & 0xFF); // CMP abs
-      } else if (v && v.constValue !== null) {
-        emit(0xC9, v.constValue & 0xFF); // CMP #imm
-      }
-    }
+    genOperand(rhs, 0xC9, 0xC5, 0xCD); // CMP #imm, CMP zp, CMP abs
   }
 
   // Emit branch instruction(s) for a comparison operator.
@@ -350,34 +469,123 @@ export function generate(cp: CheckedProgram): CodeBuffer {
   }
 
   function genCondBranch(cond: Expr, label: string, invertForFalse: boolean): void {
-    if (cond.tag === 'binary') {
+    if (cond.tag === 'binary' && (cond.op === '&&' || cond.op === '||')) {
+      throw new CodeGenError(`'${cond.op}' is not supported yet`, cond.line, 0);
+    }
+    if (cond.tag === 'binary' && COMPARE_OPS.has(cond.op)) {
+      if (isU16(cond.lhs) || isU16(cond.rhs)) {
+        throw new CodeGenError('16-bit comparison is not supported yet', cond.line, 0);
+      }
       genExpr(cond.lhs);
       genCmpRhs(cond.rhs);
       emitCondJump(cond.op, label, invertForFalse);
     } else {
+      if (isU16(cond)) {
+        throw new CodeGenError('16-bit comparison is not supported yet', cond.line, 0);
+      }
+      // Any other value is true when it is non-zero. CMP #0 makes the flags reflect A even
+      // after a function call returned it.
       genExpr(cond);
+      emit(0xC9, 0x00);
       emit(invertForFalse ? 0xF0 : 0xD0);
       addFixup({ kind: 'branch8', label }, 1);
     }
   }
 
+  const COMPOUND_OPS: Record<string, string> = {
+    '+=': '+', '-=': '-', '&=': '&', '|=': '|', '^=': '^',
+  };
+
+  /** Stores `rhs` into the 16-bit variable `target` (low byte first), widening a u8 value. */
+  function genStore16(target: ResolvedVar, name: string, rhs: Expr, line: number): void {
+    const base = target.zpAddr ?? target.absAddr;
+    if (base === null) throw new CodeGenError(`cannot assign to '${name}'`, line, 0);
+    const store = (offset: number): void => {
+      if (target.zpAddr !== null) emit(0x85, target.zpAddr + offset);
+      else emit(0x8D, (base + offset) & 0xFF, ((base + offset) >> 8) & 0xFF);
+    };
+    let value = rhs;
+    while (value.tag === 'cast' && value.toType.tag === 'u16') value = value.expr;
+
+    const c = evalConst(value);
+    if (c !== null) {
+      emit(0xA9, c & 0xFF);
+      store(0);
+      emit(0xA9, (c >> 8) & 0xFF);
+      store(1);
+      return;
+    }
+    if (value.tag === 'ident') {
+      const src = lookup(value.name);
+      if (src && src.type.tag === 'u16' && !src.isConst) {
+        for (const offset of [0, 1]) {
+          if (src.zpAddr !== null) emit(0xA5, src.zpAddr + offset);
+          else if (src.absAddr !== null) {
+            const a = src.absAddr + offset;
+            emit(0xAD, a & 0xFF, (a >> 8) & 0xFF);
+          }
+          store(offset);
+        }
+        return;
+      }
+    }
+    if (isU16(value)) {
+      throw new CodeGenError('16-bit arithmetic is not supported yet', line, 0);
+    }
+    genExpr(value); // an 8-bit value: zero-extend
+    store(0);
+    emit(0xA9, 0x00);
+    store(1);
+  }
+
+  /** `lhs = rhs`, handling 16-bit targets. */
+  function genAssign(lhs: Expr, rhs: Expr, line: number): void {
+    if (lhs.tag === 'ident') {
+      const v = lookup(lhs.name);
+      if (v && v.type.tag === 'u16' && !v.isConst) {
+        genStore16(v, lhs.name, rhs, line);
+        return;
+      }
+    }
+    assertFits8(rhs, line, lhs.tag === 'ident' ? `'${lhs.name}'` : 'a byte register');
+    genExpr(rhs);
+    genStore(lhs);
+  }
+
   function genStmt(s: Stmt): void {
     switch (s.tag) {
-      case 'varDecl':
-        if (s.init) {
-          genExpr(s.init);
-          if (s.annotation.kind === 'zp') {
-            const v = cp.vars.get(s.name);
-            if (v && v.zpAddr !== null) emit(0x85, v.zpAddr);
-          } else if (s.annotation.kind === 'addr') {
-            const v = cp.vars.get(s.name);
-            if (v && v.absAddr !== null) emit(0x8D, v.absAddr & 0xFF, (v.absAddr >> 8) & 0xFF);
+      case 'varDecl': {
+        const v = lookup(s.name);
+        if (!v) throw new CodeGenError(`internal error: '${s.name}' was not declared`, s.line, 0);
+        if (v.isConst) break;
+        if (!s.init) {
+          // Declaration without a value: start at zero, like globals do.
+          if (v.zpAddr !== null) {
+            const size = sizeOf(v.type, cp.structs);
+            emit(0xA9, 0x00);
+            for (let i = 0; i < size; i++) emit(0x85, v.zpAddr + i);
           }
+          break;
         }
+        genAssign({ tag: 'ident', name: s.name, line: s.line }, s.init, s.line);
         break;
-      case 'assign':
-        if (s.op === '=') { genExpr(s.rhs); genStore(s.lhs); }
+      }
+      case 'assign': {
+        if (s.op === '=') {
+          genAssign(s.lhs, s.rhs, s.line);
+          break;
+        }
+        const binop = COMPOUND_OPS[s.op];
+        if (binop === undefined) {
+          throw new CodeGenError(`'${s.op}' is not supported yet`, s.line, 0);
+        }
+        genAssign(
+          s.lhs,
+          { tag: 'binary', op: binop, lhs: s.lhs, rhs: s.rhs, line: s.line },
+          s.line,
+        );
         break;
+      }
       case 'incDec':
         genIncDec(s.lhs, s.op);
         break;
@@ -385,6 +593,12 @@ export function generate(cp: CheckedProgram): CodeBuffer {
         genExpr(s.expr);
         break;
       case 'return':
+        if (inlineDepth > 0) {
+          throw new CodeGenError('return is not allowed in an @inline function', s.line, 0);
+        }
+        if (scope === PROGRAM_SCOPE) {
+          throw new CodeGenError('return is only valid inside a function', s.line, 0);
+        }
         if (s.value) genExpr(s.value);
         emit(0x60); // RTS
         break;
@@ -464,7 +678,7 @@ export function generate(cp: CheckedProgram): CodeBuffer {
         break;
       }
       case 'asm':
-        break;
+        throw new CodeGenError('asm {} blocks are not supported yet', s.line, 0);
     }
   }
 
@@ -472,23 +686,25 @@ export function generate(cp: CheckedProgram): CodeBuffer {
     for (const s of stmts) genStmt(s);
   }
 
-  // ─── ZP init: runs once before program_start ──────────────────────────
-  for (const [name, v] of cp.vars) {
-    if (v.zpAddr === null) continue;
-    let decl: VarDecl | undefined;
-    for (const d of cp.program.decls) {
-      if (d.tag === 'varDecl' && d.name === name) { decl = d; break; }
-    }
-    if (!decl?.init || decl.init.tag !== 'intLit') continue;
-    const val = decl.init.value;
-    emit(0xA9, val & 0xFF);
-    emit(0x85, v.zpAddr);
-    if (v.type.tag === 'u16' && val > 0xFF) {
-      emit(0xA9, (val >> 8) & 0xFF);
-      emit(0x85, v.zpAddr + 1);
-    } else if (v.type.tag === 'u16') {
-      emit(0xA9, 0x00);
-      emit(0x85, v.zpAddr + 1);
+  // ─── Global initialisation: runs once before program_start ─────────────
+  // Variables in zero page start at their initialiser, or 0; a global bound to a hardware
+  // address (@addr) is only written when it has an initialiser.
+  for (const v of cp.vars.values()) {
+    if (!v.isGlobal || v.isConst) continue;
+    if (v.zpAddr !== null) {
+      const size = sizeOf(v.type, cp.structs);
+      const value = v.initValue ?? 0;
+      for (let i = 0; i < size; i++) {
+        emit(0xA9, i === 0 ? value & 0xFF : i === 1 ? (value >> 8) & 0xFF : 0x00);
+        emit(0x85, v.zpAddr + i);
+      }
+    } else if (v.absAddr !== null && v.initValue !== null) {
+      const size = v.type.tag === 'u16' ? 2 : 1;
+      for (let i = 0; i < size; i++) {
+        const a = v.absAddr + i;
+        emit(0xA9, (v.initValue >> (8 * i)) & 0xFF);
+        emit(0x8D, a & 0xFF, (a >> 8) & 0xFF);
+      }
     }
   }
 
@@ -496,6 +712,7 @@ export function generate(cp: CheckedProgram): CodeBuffer {
   emitLabel('__program_start');
   emit(0xD8); // CLD — 6502 NMOS decimal mode must be off
 
+  scope = PROGRAM_SCOPE;
   for (const d of cp.program.decls) {
     if (d.tag === 'program') { genStmts(d.body); break; }
   }
@@ -507,23 +724,52 @@ export function generate(cp: CheckedProgram): CodeBuffer {
   for (const [name, fn] of cp.fns) {
     if (fn.isInline) continue;
     emitLabel(`fn_${name}`);
+    scope = name;
     genStmts(fn.decl.body);
     emit(0x60); // RTS
   }
+  scope = PROGRAM_SCOPE;
 
   // ─── Data sections (placed at absolute addresses via padding) ──────────
+  const hex4 = (n: number): string => `$${n.toString(16).toUpperCase().padStart(4, '0')}`;
+  const dataBlocks: Array<{ decl: Extract<(typeof cp.program.decls)[number], { tag: 'data' }>; addr: number }> = [];
   for (const d of cp.program.decls) {
     if (d.tag !== 'data') continue;
-    if (d.annotation.kind !== 'addr') continue;
-    const targetAddr = d.annotation.address;
+    if (d.annotation.kind !== 'addr') {
+      throw new CodeGenError('a data block needs an @addr(...) annotation', d.line, 0);
+    }
+    dataBlocks.push({ decl: d, addr: d.annotation.address });
+  }
+  dataBlocks.sort((a, b) => a.addr - b.addr);
+
+  for (const { decl, addr } of dataBlocks) {
     const currentAddr = cp.loadAddr + bytes.length;
-    if (targetAddr >= currentAddr) {
-      while (cp.loadAddr + bytes.length < targetAddr) emit(0x00); // pad
-      for (const field of d.fields) {
-        for (const init of field.init) {
-          const v = evalConst(init);
-          emit(v !== null ? v & 0xFF : 0x00);
+    if (addr < currentAddr) {
+      throw new CodeGenError(
+        `code reaches ${hex4(currentAddr)}, which overlaps the data block at ${hex4(addr)}; ` +
+          'move the data block higher',
+        decl.line,
+        0,
+      );
+    }
+    while (cp.loadAddr + bytes.length < addr) emit(0x00); // pad
+    for (const field of decl.fields) {
+      if (field.type.tag === 'array' && field.init.length !== field.type.size) {
+        throw new CodeGenError(
+          `data '${field.name}' has ${field.init.length} values but is declared with ${field.type.size}`,
+          decl.line,
+          0,
+        );
+      }
+      for (const init of field.init) {
+        const v = evalConst(init);
+        if (v === null) {
+          throw new CodeGenError(`data '${field.name}' values must be compile-time constants`, decl.line, 0);
         }
+        if (v > 0xff) {
+          throw new CodeGenError(`value ${v} does not fit in a byte (data '${field.name}')`, decl.line, 0);
+        }
+        emit(v);
       }
     }
   }
