@@ -10,7 +10,7 @@ SPRITE_P_CYCLE.forEach((cycle, n) => {
 });
 
 /** Eight sprite units: DMA bookkeeping (Bauer 3.8), fetch and per-pixel shifters. */
-export class Sprites {
+export class VicSprites {
   readonly dma = new Uint8Array(8);
   readonly display = new Uint8Array(8);
   readonly mcBase = new Uint8Array(8);

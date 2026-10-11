@@ -8,7 +8,7 @@ const DECAY = 1;
 const RELEASE = 2;
 
 /** One SID envelope generator: a 15-bit rate counter driving an 8-bit counter with an exponential stage. */
-export class Envelope {
+export class SidEnvelope {
   /** The 8-bit envelope value (what ENV3 reads). */
   counter = 0;
 
