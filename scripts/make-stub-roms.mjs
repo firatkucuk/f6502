@@ -26,77 +26,82 @@ mkdirSync(outDir, { recursive: true });
 //
 //   So the KERNAL must:
 //     0. Zero $00C6 so a reset never replays the previous program
-//     a. Write "READY." to screen (screen codes: R=18 E=5 A=1 D=4 Y=25 .=46)
-//        at row 5 col 0 = $04C8, matching screenCodeToChar() in c64.ts
+//     a. Show the classic C64 boot screen: light-blue border, blue background, cleared
+//        screen, light-blue text. "READY." goes at row 5 col 0 = $04C8 (screen codes:
+//        R=18 E=5 A=1 D=4 Y=25 .=46), matching screenCodeToChar() in c64.ts. This is
+//        what "Reboot" in the playground shows.
 //     b. Poll $00C6 (keyboard buffer count) until non-zero
-//     c. Clear the text screen, then JMP $0810 — by this point the PRG has been written to RAM
+//     c. Hand the program a clean screen (spaces, black text, black border and
+//        background), then JMP $0810 — by this point the PRG has been written to RAM
 //
 // $E000: RTI         — NMI/IRQ handler
-// $E001-: init + READY + wait loop + screen clear + JMP
+// $E001-: init + READY + wait loop + clean-up + JMP
 // $FFFA-$FFFF: hardware vectors
 {
   const kernal = new Uint8Array(8192).fill(0xEA); // NOP fill
   let p = 0;
 
+  /** Emits raw bytes at the current position. */
+  const put = (...bytes) => { for (const b of bytes) kernal[p++] = b; };
+
+  /**
+   * Fills a 1000-byte block with `value`. `firstPage` is the high byte of the block's base
+   * ($04 for screen RAM, $D8 for colour RAM). Three full pages go through STA page,X; the
+   * remaining 232 bytes use STA base-1,X with X = 232..1 and BNE (BPL would stop at X > 127).
+   */
+  const fill = (value, firstPage) => {
+    put(0xA9, value);                          // LDA #value
+    put(0xA2, 0x00);                           // LDX #0
+    const top = p;
+    for (let i = 0; i < 3; i++) put(0x9D, 0x00, firstPage + i); // STA page,X
+    put(0xE8);                                 // INX
+    put(0xD0, (top - (p + 2)) & 0xFF);         // BNE top
+    put(0xA2, 232);                            // LDX #232
+    const top2 = p;
+    put(0x9D, 0xFF, firstPage + 2);            // STA $xxFF,X  (covers the last 232 bytes)
+    put(0xCA);                                 // DEX
+    put(0xD0, (top2 - (p + 2)) & 0xFF);        // BNE top2
+  };
+
   // $E000: RTI (NMI/IRQ handler — just return)
-  kernal[p++] = 0x40;
+  put(0x40);
 
   // $E001: init
-  kernal[p++] = 0xA9; kernal[p++] = 0x2F; // LDA #$2F
-  kernal[p++] = 0x85; kernal[p++] = 0x00; // STA $00  (6510 port direction)
-  kernal[p++] = 0xA9; kernal[p++] = 0x37; // LDA #$37
-  kernal[p++] = 0x85; kernal[p++] = 0x01; // STA $01  (KERNAL+BASIC+IO enabled)
-  kernal[p++] = 0xA9; kernal[p++] = 0x1B; // LDA #$1B
-  kernal[p++] = 0x8D; kernal[p++] = 0x11; kernal[p++] = 0xD0; // STA $D011 (screen on)
-  kernal[p++] = 0xA9; kernal[p++] = 0x15; // LDA #$15
-  kernal[p++] = 0x8D; kernal[p++] = 0x18; kernal[p++] = 0xD0; // STA $D018 (screen at $0400)
-  // 40-column mode, as the real KERNAL sets it. The VIC resets to 38 columns, which hides most
-  // of the first character of every row.
-  kernal[p++] = 0xA9; kernal[p++] = 0xC8; // LDA #$C8
-  kernal[p++] = 0x8D; kernal[p++] = 0x16; kernal[p++] = 0xD0; // STA $D016
+  put(0xA9, 0x2F, 0x85, 0x00);                 // LDA #$2F ; STA $00  (6510 port direction)
+  put(0xA9, 0x37, 0x85, 0x01);                 // LDA #$37 ; STA $01  (KERNAL+BASIC+IO enabled)
+  put(0xA9, 0x1B, 0x8D, 0x11, 0xD0);           // LDA #$1B ; STA $D011 (screen on)
+  put(0xA9, 0x15, 0x8D, 0x18, 0xD0);           // LDA #$15 ; STA $D018 (screen at $0400)
+  // 40-column mode, as the real KERNAL sets it. The VIC resets to 38 columns, which hides
+  // most of the first character of every row.
+  put(0xA9, 0xC8, 0x8D, 0x16, 0xD0);           // LDA #$C8 ; STA $D016
 
-  // Empty the keyboard buffer. RAM survives a reset, so a stale non-zero $C6 would make the wait
-  // loop below fall straight through into whatever program the previous run left at $0810.
-  kernal[p++] = 0xA9; kernal[p++] = 0x00; // LDA #0
-  kernal[p++] = 0x85; kernal[p++] = 0xC6; // STA $C6
+  // Empty the keyboard buffer. RAM survives a reset, so a stale non-zero $C6 would make the
+  // wait loop below fall straight through into whatever program the previous run left.
+  put(0xA9, 0x00, 0x85, 0xC6);                 // LDA #0 ; STA $C6
 
-  // Write "READY." to screen RAM at $04C8 (row 5, col 0)
-  // Screen codes: R=18, E=5, A=1, D=4, Y=25, .=46
-  kernal[p++] = 0xA9; kernal[p++] = 18;   // LDA #18 (R)
-  kernal[p++] = 0x8D; kernal[p++] = 0xC8; kernal[p++] = 0x04; // STA $04C8
-  kernal[p++] = 0xA9; kernal[p++] = 5;    // LDA #5  (E)
-  kernal[p++] = 0x8D; kernal[p++] = 0xC9; kernal[p++] = 0x04; // STA $04C9
-  kernal[p++] = 0xA9; kernal[p++] = 1;    // LDA #1  (A)
-  kernal[p++] = 0x8D; kernal[p++] = 0xCA; kernal[p++] = 0x04; // STA $04CA
-  kernal[p++] = 0xA9; kernal[p++] = 4;    // LDA #4  (D)
-  kernal[p++] = 0x8D; kernal[p++] = 0xCB; kernal[p++] = 0x04; // STA $04CB
-  kernal[p++] = 0xA9; kernal[p++] = 25;   // LDA #25 (Y)
-  kernal[p++] = 0x8D; kernal[p++] = 0xCC; kernal[p++] = 0x04; // STA $04CC
-  kernal[p++] = 0xA9; kernal[p++] = 46;   // LDA #46 (.)
-  kernal[p++] = 0x8D; kernal[p++] = 0xCD; kernal[p++] = 0x04; // STA $04CD
+  // Classic C64 boot screen.
+  put(0xA9, 14, 0x8D, 0x20, 0xD0);             // LDA #14 ; STA $D020 (border: light blue)
+  put(0xA9, 6,  0x8D, 0x21, 0xD0);             // LDA #6  ; STA $D021 (background: blue)
+  fill(0x20, 0x04);                            // screen RAM: spaces
+  fill(14, 0xD8);                              // colour RAM: light blue
 
-  // Poll $00C6 (keyboard buffer count) — non-zero means applyPrg() has run
-  // and the PRG bytes are already at $0810.
-  const waitAddr = p; // remember loop top (relative to $E000)
-  kernal[p++] = 0xA5; kernal[p++] = 0xC6; // LDA $C6 (zero-page keyboard buffer count)
-  kernal[p++] = 0xF0; kernal[p++] = 0xFC; // BEQ waitAddr (back 4 bytes = loop)
+  // "READY." at screen RAM $04C8 (row 5, col 0). Screen codes: R=18 E=5 A=1 D=4 Y=25 .=46
+  const ready = [18, 5, 1, 4, 25, 46];
+  ready.forEach((code, i) => put(0xA9, code, 0x8D, 0xC8 + i, 0x04)); // LDA #code ; STA $04C8+i
 
-  // The boot text has done its job (player.load() saw it). Hand the program a clean screen, as
-  // the real KERNAL's screen init does, so "READY." does not sit under whatever it draws.
-  kernal[p++] = 0xA9; kernal[p++] = 0x20; // LDA #$20 (space)
-  kernal[p++] = 0xA2; kernal[p++] = 0x00; // LDX #0
-  kernal[p++] = 0x9D; kernal[p++] = 0x00; kernal[p++] = 0x04; // STA $0400,X
-  kernal[p++] = 0x9D; kernal[p++] = 0x00; kernal[p++] = 0x05; // STA $0500,X
-  kernal[p++] = 0x9D; kernal[p++] = 0x00; kernal[p++] = 0x06; // STA $0600,X
-  kernal[p++] = 0xE8;                                         // INX
-  kernal[p++] = 0xD0; kernal[p++] = 0xF4;                     // BNE -12 (back to STA $0400,X)
-  kernal[p++] = 0xA2; kernal[p++] = 232;                      // LDX #232
-  kernal[p++] = 0x9D; kernal[p++] = 0xFF; kernal[p++] = 0x06; // STA $06FF,X  ($0700-$07E7)
-  kernal[p++] = 0xCA;                                         // DEX
-  kernal[p++] = 0xD0; kernal[p++] = 0xFA;                     // BNE -6 (back to STA $06FF,X)
+  // Poll $00C6 (keyboard buffer count) — non-zero means applyPrg() has run and the PRG bytes
+  // are already at $0810.
+  put(0xA5, 0xC6);                             // LDA $C6
+  put(0xF0, 0xFC);                             // BEQ back to LDA $C6
+
+  // Hand the program a clean slate: blank screen, black text, black border and background.
+  fill(0x20, 0x04);
+  fill(0, 0xD8);
+  put(0xA9, 0x00, 0x8D, 0x20, 0xD0);           // LDA #0 ; STA $D020
+  put(0x8D, 0x21, 0xD0);                       // STA $D021
 
   // PRG is loaded — jump into it
-  kernal[p++] = 0x4C; kernal[p++] = 0x10; kernal[p++] = 0x08; // JMP $0810
+  put(0x4C, 0x10, 0x08);                       // JMP $0810
 
   // Hardware vectors at $FFFA-$FFFF (offset 0x1FFA from $E000)
   const VECS = 0x1FFA;

@@ -123,7 +123,9 @@ function setup() {
   });
   $('run-btn').addEventListener('click', () => run(true));
   $('reboot-btn').addEventListener('click', () => {
-    if (player) player.reset();
+    if (!player) return;
+    player.reset();
+    setStatus('Machine rebooted. Press Run to start your program again.');
   });
 }
 
