@@ -116,3 +116,21 @@ describe('showcase: sprite-dance', () => {
     expect(pos(run(10 + 128))).toEqual(a);
   });
 });
+
+describe('showcase thumbnails', () => {
+  const cards = readFileSync('website/showcases.html', 'utf8');
+
+  it('every live showcase card shows a screenshot that exists', async () => {
+    const { SHOWCASES } = await import('../../website/js/showcase-list.js');
+    for (const s of SHOWCASES) {
+      expect(cards).toContain(`src="img/showcases/${s.id}.png"`);
+      expect(() => readFileSync(`website/img/showcases/${s.id}.png`)).not.toThrow();
+    }
+  });
+
+  it('no trace of the removed Nyan Cat demo is left on the site or in CI', () => {
+    expect(cards).not.toMatch(/nyan/i);
+    expect(readFileSync('.github/workflows/pages.yml', 'utf8')).not.toMatch(/nyan/i);
+    expect(readFileSync('AGENTS.md', 'utf8')).not.toMatch(/nyan/i);
+  });
+});

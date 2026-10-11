@@ -10,75 +10,13 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Space+Grotesk:wght@300;400;500;600;700&family=Fira+Code:wght@400;500&family=VT323&display=swap">
   <link rel="stylesheet" href="css/style.css">
   <style>
-    /* Nyan Cat card — static CSS thumbnail */
-    .thumb-nyancat {
-      background: #000090;
-      position: relative;
-      overflow: hidden;
+    /* screenshots of the live showcases fill their thumbnail */
+    .showcase-thumb img {
+      position: absolute; inset: 0; width: 100%; height: 100%;
+      object-fit: cover; image-rendering: pixelated;
     }
-    .nc-stars {
-      position: absolute;
-      inset: 0;
-      background:
-        radial-gradient(circle 1.5px at 12% 18%, rgba(255,255,255,.8), transparent 3px),
-        radial-gradient(circle 1px  at 68% 12%, rgba(255,255,255,.7), transparent 2px),
-        radial-gradient(circle 1.5px at 82% 62%, rgba(255,255,255,.8), transparent 3px),
-        radial-gradient(circle 1px  at 28% 72%, rgba(255,255,255,.7), transparent 2px),
-        radial-gradient(circle 1.5px at 51% 83%, rgba(255,255,255,.8), transparent 3px),
-        radial-gradient(circle 1px  at 90% 30%, rgba(255,255,255,.7), transparent 2px),
-        radial-gradient(circle 1.5px at  5% 52%, rgba(255,255,255,.6), transparent 3px),
-        radial-gradient(circle 1px  at 44% 25%, rgba(255,255,255,.7), transparent 2px);
-    }
-    .nc-trail {
-      position: absolute;
-      left: 5%; right: 40%;
-      top: 44%; height: 16%;
-      background: linear-gradient(90deg,
-        #cc0000 0 17%, #cc5500 17% 33%, #cccc00 33% 50%,
-        #007700 50% 67%, #0000cc 67% 83%, #770099 83%);
-      border-radius: 0 2px 2px 0;
-      opacity: .85;
-    }
-    .nc-cat {
-      position: absolute;
-      width: 17%; height: 22%;
-      background: #c8c8c8;
-      border-radius: 2px 2px 3px 3px;
-      top: 37%; left: 38%;
-    }
-    .nc-cat::before, .nc-cat::after {
-      content: '';
-      position: absolute;
-      top: -28%; width: 28%; height: 30%;
-      background: #c8c8c8;
-      clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
-    }
-    .nc-cat::before { left: 5%; }
-    .nc-cat::after  { right: 5%; }
 
-    /* thumb-specific backgrounds */
-    .thumb-rainbow {
-      background: linear-gradient(135deg,
-        #9f4e44 0%, #a057a3 16%, #50459b 32%,
-        #6abfc6 48%, #5cab5e 64%, #c9d487 80%, #a1683c 100%);
-    }
-    .thumb-petscii {
-      background:
-        repeating-linear-gradient(0deg, transparent, transparent 7px, rgba(106,191,198,0.08) 7px, rgba(106,191,198,0.08) 8px),
-        repeating-linear-gradient(90deg, transparent, transparent 11px, rgba(106,191,198,0.08) 11px, rgba(106,191,198,0.08) 12px),
-        var(--c64-bg, #3030c8);
-      background-color: #101030;
-    }
-    .thumb-sprites {
-      background:
-        radial-gradient(circle at 25% 30%, #a057a3 0%, transparent 22%),
-        radial-gradient(circle at 70% 60%, #6abfc6 0%, transparent 18%),
-        radial-gradient(circle at 55% 20%, #c9d487 0%, transparent 14%),
-        radial-gradient(circle at 15% 70%, #9ae29b 0%, transparent 16%),
-        radial-gradient(circle at 80% 30%, #cb7e75 0%, transparent 20%),
-        radial-gradient(circle at 40% 80%, #887ecb 0%, transparent 18%),
-        #080918;
-    }
+    /* thumb-specific backgrounds for the programs that are still to come */
     .thumb-sid {
       background:
         repeating-linear-gradient(90deg,
@@ -173,8 +111,8 @@
     <p class="section-label">Demos &amp; Examples</p>
     <h1 class="section-title" style="font-size: clamp(2rem, 5vw, 3rem);">Showcases</h1>
     <p class="section-lead">
-      Real C64 programs running in f6502. The first showcase is live —
-      a Nyan Cat sprite demo written entirely in C64Script. More are on the way.
+      Real C64 programs running in f6502, each written in C64Script and compiled in your
+      browser when you open it. More are on the way.
     </p>
     <div style="display:flex;gap:1rem;flex-wrap:wrap">
       <a class="btn btn-primary" href="index.html#demo">▶ Try the live demo</a>
@@ -186,31 +124,11 @@
   <section class="section" style="padding-top: 0;">
     <div class="showcase-grid">
 
-      <!-- 0. Nyan Cat (LIVE) -->
-      <a class="showcase-card reveal" href="demos/nyancat.html"
-         style="display:block; text-decoration:none; color:inherit">
-        <div class="showcase-thumb thumb-nyancat">
-          <div class="nc-stars"></div>
-          <div class="nc-trail"></div>
-          <div class="nc-cat"></div>
-          <div class="showcase-thumb-crt"></div>
-          <span class="thumb-label" style="z-index:6">▶ OPEN DEMO</span>
-        </div>
-        <div class="showcase-body">
-          <h3>Nyan Cat</h3>
-          <p>Nyan Cat glides across a blue sky with a waving 6-stripe rainbow trail (red/<wbr>orange/<wbr>yellow/<wbr>green/<wbr>blue/<wbr>purple). Splash screen shows project credits. The first program written in C64Script.</p>
-          <div class="tag-row">
-            <span class="tag tag-accent">C64Script</span>
-            <span class="tag tag-primary">Sprites</span>
-            <span class="tag tag-green">LIVE</span>
-          </div>
-        </div>
-      </a>
-
       <!-- 1. Rainbow Border -->
       <a class="showcase-card reveal" href="showcase.html?id=rainbow-border"
          style="display:block; text-decoration:none; color:inherit">
-        <div class="showcase-thumb thumb-rainbow" style="position:relative;">
+        <div class="showcase-thumb" style="position:relative;">
+          <img src="img/showcases/rainbow-border.png" alt="Rainbow Border: the title text inside a coloured border" width="756" height="536" loading="lazy">
           <div class="showcase-thumb-crt"></div>
           <span class="thumb-label">▶ OPEN DEMO</span>
         </div>
@@ -228,7 +146,8 @@
       <!-- 2. Character Mode Art -->
       <a class="showcase-card reveal" href="showcase.html?id=character-art"
          style="display:block; text-decoration:none; color:inherit">
-        <div class="showcase-thumb thumb-petscii" style="position:relative;">
+        <div class="showcase-thumb" style="position:relative;">
+          <img src="img/showcases/character-art.png" alt="Character Mode Art: a sunset in horizontal colour bands" width="756" height="536" loading="lazy">
           <div class="showcase-thumb-crt"></div>
           <span class="thumb-label">▶ OPEN DEMO</span>
         </div>
@@ -246,7 +165,8 @@
       <!-- 3. Sprite Dance -->
       <a class="showcase-card reveal" href="showcase.html?id=sprite-dance"
          style="display:block; text-decoration:none; color:inherit">
-        <div class="showcase-thumb thumb-sprites" style="position:relative;">
+        <div class="showcase-thumb" style="position:relative;">
+          <img src="img/showcases/sprite-dance.png" alt="Sprite Dance: eight coloured balls on a ring" width="756" height="536" loading="lazy">
           <div class="showcase-thumb-crt"></div>
           <span class="thumb-label">▶ OPEN DEMO</span>
         </div>
