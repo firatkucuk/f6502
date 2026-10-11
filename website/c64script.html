@@ -131,7 +131,7 @@
       <span class="lang-feature-icon">🔁</span>
       <div class="lang-feature-body">
         <h4>Loops and conditionals</h4>
-        <p><code>while</code>, <code>for</code>, <code>loop</code> (infinite), <code>break</code>, <code>continue</code>. <code>if</code> / <code>elif</code> / <code>else</code> chains with full JMP-patching so every branch lands correctly.</p>
+        <p><code>while</code>, <code>for</code>, <code>loop</code> (infinite), <code>break</code>, <code>continue</code>. <code>if</code> / <code>else if</code> / <code>else</code> chains; a branch can skip a block of any size.</p>
       </div>
     </div>
 
@@ -235,6 +235,314 @@
   VIC2.bgColor0    = COLOR_LIGHT_BLUE; <span class="cm">// → LDA #14; STA $D021</span>
 
   <span class="kw">loop</span> {}  <span class="cm">// run forever</span>
+}</pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Program structure ──────────────────────────────────────────── -->
+  <section class="section" style="padding-top:0" id="program-structure">
+    <p class="section-label">Language guide</p>
+    <h2 class="section-title">Program structure</h2>
+    <p class="section-lead">A C64Script file is a list of declarations plus exactly one <code>program</code> block.</p>
+
+    <div class="table-wrap reveal">
+      <table>
+        <thead>
+          <tr><th>Top-level item</th><th>What it is</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>program @ 0x0810 { … }</code></td><td style="color:var(--text-muted)">Required, once. The address is where the code is loaded and started. The body runs top to bottom and then <strong>starts over</strong>; end it with <code>loop {}</code> to hold the final state.</td></tr>
+          <tr><td><code>let</code> / <code>const</code></td><td style="color:var(--text-muted)">Global variables and constants.</td></tr>
+          <tr><td><code>fn name(…): type { … }</code></td><td style="color:var(--text-muted)">Functions. They can be declared before or after the place they are used.</td></tr>
+          <tr><td><code>data @addr(0x0D40) { name: [u8; 63] = [ … ]; }</code></td><td style="color:var(--text-muted)">Bytes placed at a fixed address: sprite shapes, lookup tables. A block that would overlap the code is a compile error.</td></tr>
+          <tr><td><code>hardware NAME @ 0xD000 { field: u8 @ 0x20 }</code></td><td style="color:var(--text-muted)">A register block like <code>VIC2</code>. Put <code>readonly</code>, <code>writeonly</code> or <code>read_to_clear</code> before a field to restrict access.</td></tr>
+          <tr><td><code>struct</code></td><td style="color:var(--text-muted)">Reserved: it parses but cannot be used yet.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p style="color:var(--text-muted);font-size:0.9rem;margin:1.25rem 0 0">
+      Comments are <code>//</code> to the end of the line (there are no block comments).
+      Statements end with <code>;</code> and blocks use <code>{ }</code>.
+    </p>
+    <div class="terminal reveal" style="margin-top:1.5rem">
+      <div class="terminal-bar">
+        <span class="terminal-dot red"></span>
+        <span class="terminal-dot yellow"></span>
+        <span class="terminal-dot green"></span>
+        <span class="terminal-title">restarts.c64s</span>
+      </div>
+      <div class="terminal-body">
+        <pre data-try><span class="cm">// No loop {} at the end: the program starts over each time it</span>
+<span class="cm">// reaches the closing brace, so the border colour keeps changing.</span>
+<span class="kw">program</span> @ <span class="nu">0x0810</span> {
+  VIC2.borderColor = VIC2.borderColor + <span class="nu">1</span>;
+}</pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Variables and constants ──────────────────────────────────────────── -->
+  <section class="section" style="padding-top:0" id="variables-and-constants">
+    <p class="section-label">Language guide</p>
+    <h2 class="section-title">Variables and constants</h2>
+    <p class="section-lead">Variables live in zero page, constants live only in the code.</p>
+
+    <div class="table-wrap reveal">
+      <table>
+        <thead>
+          <tr><th>Declaration</th><th>Meaning</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>let x: u8 = 5;</code></td><td style="color:var(--text-muted)">A variable. It is placed in zero page for you and is 0 when no initial value is given. A global's initial value must be a constant expression.</td></tr>
+          <tr><td><code>let @zp x: u8;</code></td><td style="color:var(--text-muted)">The same, spelled out.</td></tr>
+          <tr><td><code>let @addr(0x0400) cell: u8;</code></td><td style="color:var(--text-muted)">A name for a fixed address: no storage is allocated. This is how hardware registers are declared.</td></tr>
+          <tr><td><code>const MAX: u8 = 200;</code></td><td style="color:var(--text-muted)">A compile-time constant: no memory, folded into the code, usable in other constants and in initialisers.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <h3 style="margin-top:2rem">Scope</h3>
+    <p style="color:var(--text-muted);font-size:0.9rem;margin-bottom:1rem">
+      A variable declared inside a function or the program block is visible from its declaration to
+      the end of that function. A name can be declared once per function: it may not shadow a global
+      or a name from an enclosing block, but sibling blocks (two <code>for (let i …)</code> loops)
+      can reuse a name and share one slot. A declaration runs every time control reaches it, so a
+      local without an initial value starts at 0 each time.
+    </p>
+    <p style="color:var(--text-muted);font-size:0.9rem;margin-bottom:1rem">
+      Zero page holds 246 bytes ($02–$F7) for all variables, parameters and locals together.
+      <code>u8</code> arithmetic wraps modulo 256, and a constant above 255 is an error for a
+      <code>u8</code>. Array, pointer and struct declarations are accepted but cannot be used yet
+      (indexing is a compile error; see <a href="#not-in-the-language-yet">what is not in the language yet</a>).
+    </p>
+    <div class="terminal reveal" style="margin-top:1.5rem">
+      <div class="terminal-bar">
+        <span class="terminal-dot red"></span>
+        <span class="terminal-dot yellow"></span>
+        <span class="terminal-dot green"></span>
+        <span class="terminal-title">variables.c64s</span>
+      </div>
+      <div class="terminal-body">
+        <pre data-try><span class="cm">// Constants fold at compile time; variables live in zero page.</span>
+<span class="kw">const</span> LIMIT: <span class="ty">u8</span> = <span class="nu">5</span> * <span class="nu">2</span>;
+<span class="kw">const</span> STEP: <span class="ty">u8</span> = <span class="nu">3</span>;
+
+<span class="kw">let</span> total: <span class="ty">u8</span> = <span class="nu">0</span>;
+
+<span class="kw">program</span> @ <span class="nu">0x0810</span> {
+  <span class="kw">let</span> n: <span class="ty">u8</span> = <span class="nu">0</span>;            <span class="cm">// starts at 0 each time this line runs</span>
+  <span class="kw">while</span> (n &lt; LIMIT) {
+    total += STEP;          <span class="cm">// u8: wraps past 255</span>
+    n++;
+  }
+  VIC2.borderColor = total &amp; <span class="nu">15</span>;
+  <span class="kw">loop</span> {}
+}</pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Literals and expressions ──────────────────────────────────────────── -->
+  <section class="section" style="padding-top:0" id="literals-and-expressions">
+    <p class="section-label">Language guide</p>
+    <h2 class="section-title">Literals and expressions</h2>
+    <p class="section-lead">Values are 8-bit. Anything wider needs <code>u16</code> and the rules in the types table.</p>
+
+    <h3>Literals</h3>
+    <div class="table-wrap reveal">
+      <table>
+        <thead>
+          <tr><th>Form</th><th>Examples</th><th>Notes</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Decimal</td><td style="color:var(--text-muted)"><code>42</code> <code>1_000</code></td><td style="color:var(--text-muted)">Underscores are ignored.</td></tr>
+          <tr><td>Hex</td><td style="color:var(--text-muted)"><code>0x2A</code> <code>$2A</code></td><td style="color:var(--text-muted)">Both spellings; <code>$</code> is also what assembler code uses.</td></tr>
+          <tr><td>Binary</td><td style="color:var(--text-muted)"><code>0b0010_1010</code></td><td style="color:var(--text-muted)"></td></tr>
+          <tr><td>Character</td><td style="color:var(--text-muted)"><code>'H'</code> <code>'\''</code></td><td style="color:var(--text-muted)">The C64 <strong>screen code</strong> of the character (A = 1 … Z = 26). Uppercase only; see Text and characters.</td></tr>
+          <tr><td>Boolean</td><td style="color:var(--text-muted)"><code>true</code> <code>false</code></td><td style="color:var(--text-muted)">The values 1 and 0 of type <code>bool</code>.</td></tr>
+          <tr><td>String</td><td style="color:var(--text-muted)"><code>"HELLO"</code></td><td style="color:var(--text-muted)">Only as the text of <code>puts()</code>.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <h3 style="margin-top:2rem">Operator precedence</h3>
+    <div class="table-wrap reveal">
+      <table>
+        <thead>
+          <tr><th>Binds</th><th>Operators</th><th>Notes</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Tightest</td><td style="color:var(--text-muted)"><code>as</code></td><td style="color:var(--text-muted)">Cast: <code>x as u8</code>, <code>x as u16</code>. Narrowing a <code>u16</code> into a <code>u8</code> needs <code>as u8</code> or <code>lo()</code>.</td></tr>
+          <tr><td></td><td style="color:var(--text-muted)"><code>*</code> <code>/</code> <code>%</code></td><td style="color:var(--text-muted)">Constants only; and only <code>*</code> folds today (no <code>/</code> or <code>%</code> even in constants).</td></tr>
+          <tr><td></td><td style="color:var(--text-muted)"><code>+</code> <code>-</code></td><td style="color:var(--text-muted)"></td></tr>
+          <tr><td></td><td style="color:var(--text-muted)"><code>&lt;&lt;</code> <code>&gt;&gt;</code></td><td style="color:var(--text-muted)">Constants only.</td></tr>
+          <tr><td></td><td style="color:var(--text-muted)"><code>&lt;</code> <code>&lt;=</code> <code>&gt;</code> <code>&gt;=</code></td><td style="color:var(--text-muted)">Unsigned. Only usable as a condition, not stored in a variable.</td></tr>
+          <tr><td></td><td style="color:var(--text-muted)"><code>==</code> <code>!=</code></td><td style="color:var(--text-muted)">Same.</td></tr>
+          <tr><td></td><td style="color:var(--text-muted)"><code>&amp;</code></td><td style="color:var(--text-muted)">Lower than comparisons, as in C: write <code>(a &amp; 1) == 0</code>.</td></tr>
+          <tr><td></td><td style="color:var(--text-muted)"><code>^</code></td><td style="color:var(--text-muted)"></td></tr>
+          <tr><td>Loosest</td><td style="color:var(--text-muted)"><code>|</code></td><td style="color:var(--text-muted)"></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p style="color:var(--text-muted);font-size:0.9rem;margin:1.25rem 0 0.25rem">
+      Prefix <code>!</code> is logical NOT (1 for 0, else 0) and parentheses group. The
+      assignment forms are <code>=</code>, <code>+=</code>, <code>-=</code>, <code>&amp;=</code>,
+      <code>|=</code> and <code>^=</code>; <code>x++</code> and <code>x--</code> are statements.
+    </p>
+    <div class="infobox" style="margin-top:1.25rem">
+      <strong>One rule to know.</strong> A value is computed in the accumulator, so the
+      <em>left</em> operand of <code>+ - &amp; | ^</code> and of a comparison can be any expression,
+      but the <em>right</em> operand must be a literal, a variable, a constant or a hardware
+      register. <code>(a + b) &amp; 6</code> works; <code>a + (b + 1)</code> is an error that
+      tells you to assign <code>b + 1</code> to a variable first.
+    </div>
+    <div class="terminal reveal" style="margin-top:1.5rem">
+      <div class="terminal-bar">
+        <span class="terminal-dot red"></span>
+        <span class="terminal-dot yellow"></span>
+        <span class="terminal-dot green"></span>
+        <span class="terminal-title">expressions.c64s</span>
+      </div>
+      <div class="terminal-body">
+        <pre data-try><span class="kw">let</span> a: <span class="ty">u8</span> = <span class="nu">6</span>;
+<span class="kw">let</span> b: <span class="ty">u8</span> = <span class="nu">3</span>;
+
+<span class="kw">program</span> @ <span class="nu">0x0810</span> {
+  <span class="kw">let</span> mask: <span class="ty">u8</span> = (a + b) &amp; <span class="nu">0b0111</span>;    <span class="cm">// left side may be any expression</span>
+  <span class="kw">let</span> step: <span class="ty">u8</span> = b + <span class="nu">1</span>;               <span class="cm">// right side: a variable or a literal</span>
+  VIC2.borderColor = (mask ^ step) | <span class="nu">0x08</span>;
+  VIC2.bgColor0 = !mask;              <span class="cm">// logical NOT: 1 only when mask is 0</span>
+  <span class="kw">loop</span> {}
+}</pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Control flow ──────────────────────────────────────────── -->
+  <section class="section" style="padding-top:0" id="control-flow">
+    <p class="section-label">Language guide</p>
+    <h2 class="section-title">Control flow</h2>
+    <p class="section-lead">Braces are always required, and a condition is a comparison or any value (non-zero is true).</p>
+
+    <div class="table-wrap reveal">
+      <table>
+        <thead>
+          <tr><th>Statement</th><th>What it does</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>if (c) { … } else if (c) { … } else { … }</code></td><td style="color:var(--text-muted)">Chains of any length. There is no <code>elif</code> and no brace-less form.</td></tr>
+          <tr><td><code>while (c) { … }</code></td><td style="color:var(--text-muted)">Repeats while the condition holds.</td></tr>
+          <tr><td><code>for (let i: u8 = 0; i &lt; n; i++) { … }</code></td><td style="color:var(--text-muted)">The first part declares or assigns; the step must be <code>i++</code> or <code>i--</code>; all three parts are required.</td></tr>
+          <tr><td><code>loop { … }</code></td><td style="color:var(--text-muted)">Forever, until a <code>break</code>. A program that should stop at a final state ends with <code>loop {}</code>.</td></tr>
+          <tr><td><code>break;</code> <code>continue;</code></td><td style="color:var(--text-muted)">Leave or restart the innermost loop. Outside a loop they are compile errors.</td></tr>
+          <tr><td><code>return;</code> <code>return value;</code></td><td style="color:var(--text-muted)">Leave the function (see Functions).</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p style="color:var(--text-muted);font-size:0.9rem;margin:1.25rem 0 0">
+      Comparisons are unsigned (<code>200 &gt; 100</code> is true, <code>255 &lt; 0</code> is false).
+      <code>&amp;&amp;</code> and <code>||</code> are not in the language yet: nest the
+      <code>if</code> statements, or use a flag variable.
+    </p>
+    <div class="terminal reveal" style="margin-top:1.5rem">
+      <div class="terminal-bar">
+        <span class="terminal-dot red"></span>
+        <span class="terminal-dot yellow"></span>
+        <span class="terminal-dot green"></span>
+        <span class="terminal-title">branching.c64s</span>
+      </div>
+      <div class="terminal-body">
+        <pre data-try><span class="kw">let</span> <span class="an">@zp</span> x: <span class="ty">u8</span> = <span class="nu">3</span>;
+
+<span class="kw">program</span> @ <span class="nu">0x0810</span> {
+  <span class="kw">if</span> (x == <span class="nu">1</span>) {
+    VIC2.borderColor = COLOR_RED;
+  } <span class="kw">else</span> <span class="kw">if</span> (x == <span class="nu">3</span>) {
+    VIC2.borderColor = COLOR_GREEN;
+  } <span class="kw">else</span> {
+    VIC2.borderColor = COLOR_BLUE;
+  }
+
+  <span class="cm">// two conditions: nest instead of &amp;&amp;</span>
+  <span class="kw">if</span> (x &gt; <span class="nu">1</span>) {
+    <span class="kw">if</span> (x &lt; <span class="nu">5</span>) {
+      VIC2.bgColor0 = COLOR_YELLOW;
+    }
+  }
+  <span class="kw">loop</span> {}
+}</pre>
+      </div>
+    </div>
+    <div class="terminal reveal" style="margin-top:1rem">
+      <div class="terminal-bar">
+        <span class="terminal-dot red"></span>
+        <span class="terminal-dot yellow"></span>
+        <span class="terminal-dot green"></span>
+        <span class="terminal-title">loops.c64s</span>
+      </div>
+      <div class="terminal-body">
+        <pre data-try><span class="kw">program</span> @ <span class="nu">0x0810</span> {
+  <span class="kw">let</span> n: <span class="ty">u8</span> = <span class="nu">0</span>;
+  <span class="kw">while</span> (n &lt; <span class="nu">5</span>) { n++; }
+
+  <span class="kw">for</span> (<span class="kw">let</span> i: <span class="ty">u8</span> = <span class="nu">0</span>; i &lt; <span class="nu">10</span>; i++) {
+    <span class="kw">if</span> (i == <span class="nu">3</span>) { <span class="kw">continue</span>; }      <span class="cm">// skip 3</span>
+    <span class="kw">if</span> (i == <span class="nu">8</span>) { <span class="kw">break</span>; }         <span class="cm">// stop at 8</span>
+    VIC2.borderColor = i;
+  }
+
+  <span class="kw">loop</span> {                           <span class="cm">// forever, until break</span>
+    n++;
+    <span class="kw">if</span> (n == <span class="nu">200</span>) { <span class="kw">break</span>; }
+  }
+  VIC2.bgColor0 = COLOR_BLUE;
+  <span class="kw">loop</span> {}
+}</pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Functions ──────────────────────────────────────────── -->
+  <section class="section" style="padding-top:0" id="functions">
+    <p class="section-label">Language guide</p>
+    <h2 class="section-title">Functions</h2>
+    <p class="section-lead">Parameters and return values are <code>u8</code> or <code>bool</code>; a function with no result returns <code>void</code>.</p>
+
+    <div class="table-wrap reveal">
+      <table>
+        <thead>
+          <tr><th>Feature</th><th>How it works</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Parameters</td><td style="color:var(--text-muted)">Each one gets a fixed zero-page slot. The arguments are evaluated left to right and stored there, then the function is called with <code>JSR</code>.</td></tr>
+          <tr><td>Return value</td><td style="color:var(--text-muted)"><code>return value;</code> puts it in the accumulator; a call can be used wherever an expression can.</td></tr>
+          <tr><td><code>@inline</code></td><td style="color:var(--text-muted)">The body is copied into each call site: no <code>JSR</code>, so a little faster and larger. An inline function cannot contain <code>return</code>.</td></tr>
+          <tr><td>Order</td><td style="color:var(--text-muted)">A function may be called before it is declared.</td></tr>
+          <tr><td>No recursion</td><td style="color:var(--text-muted)">There is no stack frame, so a function cannot call itself, directly or through another function. For the same reason <code>f(f(1))</code> is an error: put the inner call in a variable first.</td></tr>
+          <tr><td>From assembly</td><td style="color:var(--text-muted)"><code>jsr ${name}</code> calls a function from an <code>asm</code> block.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="terminal reveal" style="margin-top:1.5rem">
+      <div class="terminal-bar">
+        <span class="terminal-dot red"></span>
+        <span class="terminal-dot yellow"></span>
+        <span class="terminal-dot green"></span>
+        <span class="terminal-title">functions.c64s</span>
+      </div>
+      <div class="terminal-body">
+        <pre data-try><span class="kw">fn</span> clamp(v: <span class="ty">u8</span>, max: <span class="ty">u8</span>): <span class="ty">u8</span> {
+  <span class="kw">if</span> (v &gt; max) { <span class="kw">return</span> max; }
+  <span class="kw">return</span> v;
+}
+
+<span class="an">@inline</span> <span class="kw">fn</span> border(c: <span class="ty">u8</span>): <span class="ty">void</span> {
+  VIC2.borderColor = c;
+}
+
+<span class="kw">program</span> @ <span class="nu">0x0810</span> {
+  <span class="kw">let</span> level: <span class="ty">u8</span> = clamp(<span class="nu">200</span>, <span class="nu">15</span>);   <span class="cm">// 15</span>
+  border(level);
+  <span class="kw">loop</span> {}
 }</pre>
       </div>
     </div>
@@ -375,6 +683,10 @@
           <tr><td>Comparison</td><td>==  !=</td><td>Equality / inequality</td></tr>
           <tr><td>Comparison</td><td>&lt;  &lt;=</td><td>Unsigned less-than / less-than-or-equal</td></tr>
           <tr><td>Comparison</td><td>&gt;  &gt;=</td><td>Unsigned greater-than / greater-than-or-equal. Note: &gt; and &lt;= require two branch instructions on 6502.</td></tr>
+          <tr><td>Logical</td><td>!</td><td>NOT: 1 for 0, else 0 (works on any <code>u8</code>)</td></tr>
+          <tr><td>Cast</td><td>as</td><td><code>x as u8</code>, <code>x as u16</code></td></tr>
+          <tr><td>Assignment</td><td>=  +=  -=  &amp;=  |=  ^=</td><td>Compound forms expand to <code>x = x op y</code></td></tr>
+          <tr><td>Constants only</td><td>*  &lt;&lt;  &gt;&gt;</td><td>Fold at compile time; not available at run time</td></tr>
           <tr><td>Increment</td><td>++  --</td><td>On variables: INC/DEC zp. On hardware fields: LDA/CLC/ADC#1/STA (NMOS can't INC hardware registers safely).</td></tr>
         </tbody>
       </table>
@@ -733,6 +1045,34 @@
             <td><code>CodeGenError</code></td>
             <td style="color:var(--text-muted)">Call to undefined function, zero-page overflow</td>
           </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ── Not in the language yet ──────────────────────────────────────────── -->
+  <section class="section" style="padding-top:0" id="not-in-the-language-yet">
+    <p class="section-label">Reference</p>
+    <h2 class="section-title">Not in the language yet</h2>
+    <p class="section-lead">Every row below is checked by the test suite: this is exactly what the compiler does today.</p>
+
+    <div class="table-wrap reveal">
+      <table>
+        <thead>
+          <tr><th>You might write</th><th>The compiler says</th><th>Write instead</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>elif</code>, <code>if (c) stmt;</code></td><td style="color:var(--text-muted)">parse error (expected <code>(</code> / <code>{</code>)</td><td style="color:var(--text-muted)"><code>else if (c) { … }</code>, always with braces</td></tr>
+          <tr><td><code>a == 1 &amp;&amp; b == 2</code>, <code>||</code></td><td style="color:var(--text-muted)"><code>'&amp;&amp;' is not supported yet</code></td><td style="color:var(--text-muted)">nested <code>if</code> statements, or a flag variable</td></tr>
+          <tr><td><code>switch</code>, <code>do { } while</code>, <code>c ? a : b</code></td><td style="color:var(--text-muted)">parse error</td><td style="color:var(--text-muted)">an <code>if</code> / <code>else if</code> chain, or <code>while</code></td></tr>
+          <tr><td><code>a * b</code>, <code>a &lt;&lt; n</code>, <code>a % b</code> (runtime)</td><td style="color:var(--text-muted)"><code>operator '*' is not supported yet</code></td><td style="color:var(--text-muted)">repeated addition or <code>asm</code>; <code>*</code>, <code>&lt;&lt;</code>, <code>&gt;&gt;</code> work on constants</td></tr>
+          <tr><td><code>-a</code>, <code>~a</code></td><td style="color:var(--text-muted)"><code>unary operator '-' is not supported yet</code></td><td style="color:var(--text-muted)"><code>a ^ 0xFF</code> for the complement</td></tr>
+          <tr><td><code>const A: u8 = 8 / 2;</code></td><td style="color:var(--text-muted)">needs a compile-time constant initialiser</td><td style="color:var(--text-muted)">write the result</td></tr>
+          <tr><td><code>for (…; …; i += 2)</code>, <code>for (; …; …)</code></td><td style="color:var(--text-muted)">parse error</td><td style="color:var(--text-muted)">a <code>while</code> loop</td></tr>
+          <tr><td><code>buf[i]</code>, pointers, structs</td><td style="color:var(--text-muted)"><code>array indexing is not supported yet</code></td><td style="color:var(--text-muted)"><code>asm</code> with <code>,x</code> / <code>,y</code> addressing, or fixed addresses</td></tr>
+          <tr><td><code>w = w + 1</code> on a <code>u16</code></td><td style="color:var(--text-muted)"><code>16-bit arithmetic is not supported yet</code></td><td style="color:var(--text-muted)">use <code>u8</code>, or <code>asm</code></td></tr>
+          <tr><td><code>/* … */</code></td><td style="color:var(--text-muted)">parse error</td><td style="color:var(--text-muted)"><code>//</code></td></tr>
+          <tr><td><code>f(f(1))</code>, recursion</td><td style="color:var(--text-muted)"><code>argument of 'f' calls 'f'…</code> / <code>called from within itself</code></td><td style="color:var(--text-muted)">assign the inner call to a variable; use a loop</td></tr>
         </tbody>
       </table>
     </div>
