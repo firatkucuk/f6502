@@ -11,45 +11,57 @@
 //  Load:     kernal.bin + basic.bin + chargen.bin + nyancat.prg via f6502
 // ────────────────────────────────────────────────────────────────────────────
 
-// ── Sprite data: Nyan Cat, 24 × 21 px, single colour ──────────────────────
-//    Placed at $0D40 (sprite pointer = $0D40 / 64 = 53).
-//    Head/ears at left (x=2-7), pop-tart body rows 2-12,
-//    two 2×2 eye-holes at rows 4-5, legs at outer corners rows 13-14.
+// ── Sprite data: Nyan Cat, 24×21 px, single colour, 2 animation frames ───────
+//    Frame A (legs spread) at $0D40 (sprite pointer = 53).
+//    Frame B (legs tucked) at $0D80 (sprite pointer = 54).
+//    Head/ears on the RIGHT (cat faces right). Tail on left. Tart body center.
+//    2× X/Y expansion enabled — 48×42 px on screen.
+//
+//    row  0: ..............#.....#...  ear tips
+//    row  1: ..............##...##...  ear bases
+//    row  2: ..............#########.  head top (cols 14-22)
+//    row  3: ..............##.###.##.  head with 2 eye gaps (cols 16, 20)
+//    row  4: ..............#########.  full head
+//    row  5: ..............#########.  chin
+//    row  6: #.####################..  tail(col 0), tart body (cols 2-21)
+//    row  7: #.#.#.#.#.#.#.#.#.#.##..  sprinkle pattern
+//    …      alternating solid/sprinkle rows 8-13
+//    row 14: paws differ between Frame A (spread) and Frame B (tucked)
 data @addr(0x0D40) {
   cat: [u8; 63] = [
-    // 24×21 px monochrome.  Head/ears rows 0-5 (left), tart body rows 6-13, paws rows 14-15.
-    // row  0: ..##....##..............  ear tips
-    // row  1: .####...####............  ear bases
-    // row  2: .##########.............  head top
-    // row  3: ##.####.####............  head with dot eyes
-    // row  4: ###########.............  head bottom / chin
-    // row  5: .##########.............  neck / tart top join
-    // row  6: .##################.....  tart top border
-    // row  7: .#.#.#.#.#.#.#.#.#......  tart sprinkles
-    // row  8: .##################.....  tart solid
-    // row  9: .#.#.#.#.#.#.#.#.#......  tart sprinkles
-    // row 10: .##################.....  tart solid
-    // row 11: .#.#.#.#.#.#.#.#.#......  tart sprinkles
-    // row 12: .##################.....  tart solid
-    // row 13: .##################.....  tart bottom border
-    // row 14: .###...######...###.....  paws (FL + body + BR)
-    // row 15: ..##.............##.....  paw tips
-    0x30, 0xC0, 0x00,   // row  0
-    0x78, 0xF0, 0x00,   // row  1
-    0x7F, 0xE0, 0x00,   // row  2
-    0xDE, 0xF0, 0x00,   // row  3
-    0xFF, 0xE0, 0x00,   // row  4
-    0x7F, 0xE0, 0x00,   // row  5
-    0x7F, 0xFF, 0xE0,   // row  6
-    0x55, 0x55, 0x40,   // row  7
-    0x7F, 0xFF, 0xE0,   // row  8
-    0x55, 0x55, 0x40,   // row  9
-    0x7F, 0xFF, 0xE0,   // row 10
-    0x55, 0x55, 0x40,   // row 11
-    0x7F, 0xFF, 0xE0,   // row 12
-    0x7F, 0xFF, 0xE0,   // row 13
-    0x71, 0xF8, 0xE0,   // row 14
-    0x30, 0x00, 0x60,   // row 15
+    // Frame A — legs spread
+    // row  0: ..............#.....#...  ear tips
+    // row  1: ..............##...##...  ear bases
+    // row  2: ..............#########.  head top
+    // row  3: ..............##.###.##.  head with dot eyes
+    // row  4: ..............#########.  full head
+    // row  5: ..............#########.  chin
+    // row  6: #.####################..  tail + tart border
+    // row  7: #.#.#.#.#.#.#.#.#.#.##..  sprinkles
+    // row  8: #.####################..  solid
+    // row  9: #.#.#.#.#.#.#.#.#.#.##..  sprinkles
+    // row 10: #.####################..  solid
+    // row 11: #.#.#.#.#.#.#.#.#.#.##..  sprinkles
+    // row 12: #.####################..  solid
+    // row 13: #.####################..  tart bottom
+    // row 14: #.###..............###..  back+front paws spread
+    // row 15: ..###..............###..  paw bases
+    0x00, 0x02, 0x08,   // row  0
+    0x00, 0x03, 0x18,   // row  1
+    0x00, 0x03, 0xFE,   // row  2
+    0x00, 0x03, 0x76,   // row  3
+    0x00, 0x03, 0xFE,   // row  4
+    0x00, 0x03, 0xFE,   // row  5
+    0xBF, 0xFF, 0xFC,   // row  6
+    0xAA, 0xAA, 0xAC,   // row  7
+    0xBF, 0xFF, 0xFC,   // row  8
+    0xAA, 0xAA, 0xAC,   // row  9
+    0xBF, 0xFF, 0xFC,   // row 10
+    0xAA, 0xAA, 0xAC,   // row 11
+    0xBF, 0xFF, 0xFC,   // row 12
+    0xBF, 0xFF, 0xFC,   // row 13
+    0xB8, 0x00, 0x1C,   // row 14: legs spread
+    0x38, 0x00, 0x1C,   // row 15: paw bases
     0x00, 0x00, 0x00,   // rows 16-20: blank
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
@@ -68,6 +80,7 @@ let @zp col3:  u8 = 5;     // rainbow row 10 color (GREEN = 5)
 let @zp col4:  u8 = 14;    // rainbow row 11 color (LIGHT_BLUE=14)
 let @zp col5:  u8 = 4;     // rainbow row 12 color (PURPLE= 4)
 let @zp tmp:   u8 = 0;     // scratch for color rotation
+let @zp walk:  u8 = 0;     // walk phase toggle (0=frame A ptr53, 1=frame B ptr54)
 let @zp outer: u8 = 0;     // delay outer counter
 let @zp inner: u8 = 0;     // delay inner counter
 
@@ -162,12 +175,15 @@ program @0x0810 {
   VIC2.bgColor0    = BLUE;         // sky-blue background
   VIC2.borderColor = RED;          // initial border = top rainbow stripe
   VIC2.spriteEnable = 1;           // sprite 0 on
+  poke(0xD017, 1);                 // Y-expand sprite 0 ×2
+  poke(0xD01D, 1);                 // X-expand sprite 0 ×2
   VIC2.ctrl2       = 0x08;         // 38-col, no multicolour
   VIC2.sprite0color = LIGHT_GREY;  // cat body = light grey
-  VIC2.sprite0y     = 108;
+  VIC2.sprite0y     = 94;          // centered in rainbow band with 2× expansion
 
   catX  = 220;
   frame = 0;
+  walk  = 0;
 
   // Fill screen rows 7-12 with solid block chars ($A0) — rainbow trail
   // (Implemented as a loop in the compiled PRG; written inline here for clarity)
@@ -214,6 +230,10 @@ program @0x0810 {
 
       // Update color RAM for rows 7-12 (40 chars each, asm{} in real compiler)
       // In the compiled PRG each row is updated via an X-register loop.
+
+      // Toggle walking frame: walk ^= 1; poke($07F8, 53 + walk)
+      walk = walk ^ 1;
+      poke(0x07F8, 53 + walk);
     }
   }
 

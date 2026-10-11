@@ -91,10 +91,10 @@ export function buildNyanCatPrg() {
   const VIC_SPR0C  = 0xD027;
   const SPR_PTR0   = 0x07F8;
 
-  // Sprite data at $0D40  (pointer = $0D40 / 64 = 53)
-  // $0D00 is too tight after rainbow wave code; $0D40 gives headroom.
-  const SPRITE_ADDR = 0x0D40;
-  const SPRITE_PTR  = SPRITE_ADDR / 64;   // 53
+  // Sprite data: Frame A at $0D40 (ptr=53), Frame B at $0D80 (ptr=54)
+  const SPRITE_ADDR  = 0x0D40;
+  const SPRITE_PTR   = SPRITE_ADDR / 64;    // 53
+  const SPRITE_ADDR_B = 0x0D80;
 
   // ZP variables
   const ZP_CATX    = 0x02;
@@ -106,6 +106,7 @@ export function buildNyanCatPrg() {
   const ZP_COL4    = 0x08;   // rainbow row 11 color
   const ZP_COL5    = 0x09;   // rainbow row 12 color
   const ZP_TEMP    = 0x0A;   // scratch for rotation
+  const ZP_WALK    = 0x0B;   // walk phase toggle (0=frame A, 1=frame B)
 
   // Rainbow colors (Nyan Cat palette: red, orange, yellow, green, light-blue, purple)
   const RAINBOW = [RED, ORANGE, YELLOW, GREEN, LIGHT_BLUE, PURPLE];
@@ -113,6 +114,7 @@ export function buildNyanCatPrg() {
   // ── ZP initialisation (executes at load time, before program_start) ──────
   poke(ZP_CATX,  220);
   poke(ZP_FRAME, 0);
+  poke(ZP_WALK,  0);
   poke(ZP_COL0,  RAINBOW[0]);
   poke(ZP_COL1,  RAINBOW[1]);
   poke(ZP_COL2,  RAINBOW[2]);
@@ -198,9 +200,11 @@ export function buildNyanCatPrg() {
   poke(VIC_BG0,    BLUE);            // sky blue background
   poke(VIC_BORDER, RED);             // initial border = top stripe color
   poke(VIC_SPREN,  1);               // enable sprite 0
+  poke(0xD017,     1);               // sprite 0 Y-expand ×2
+  poke(0xD01D,     1);               // sprite 0 X-expand ×2
   poke(VIC_CTRL2,  0x08);            // 38-col, no multicolour
   poke(VIC_SPR0C,  LIGHT_GREY);      // sprite colour
-  poke(VIC_SPR0Y,  108);             // sprite Y (pixel)
+  poke(VIC_SPR0Y,  94);              // sprite Y: tart centered in rainbow band (with 2× expansion)
   poke(ZP_CATX,    220);             // reset catX
   poke(ZP_FRAME,   0);
 
@@ -314,6 +318,15 @@ export function buildNyanCatPrg() {
     bne(`wave_row${i}`);
   }
 
+  // Walking animation: toggle sprite frame A↔B every 6 display frames
+  ldaZp(ZP_WALK);
+  b(0x49, 1);               // EOR #1  (0→1, 1→0)
+  staZp(ZP_WALK);
+  b(0x29, 1);               // AND #1  (isolate bit 0)
+  clcOp();
+  b(0x69, SPRITE_PTR);      // ADC #53 → 53 (frame A) or 54 (frame B)
+  staAbs(SPR_PTR0);
+
   label('skip_wave');
   jmp('anim_loop');
 
@@ -336,44 +349,74 @@ export function buildNyanCatPrg() {
   }
   while (LOAD + code.length < SPRITE_ADDR) b(0x00);
 
-  // ── Nyan Cat sprite: 24×21 px monochrome, 63 bytes ───────────────────────
-  //   Each row = 3 bytes (MSB = leftmost pixel).
-  //   Head/ears rows 0-5 (left side), pop-tart body rows 6-13, paws rows 14-15.
+  // ── Frame A: legs spread (at $0D40, ptr=53) ──────────────────────────────
+  //   Head on RIGHT (cat faces right), tart body center, tail on left.
+  //   Each row = 3 bytes MSB-first (col 0 = bit 7 of byte 0).
   //
-  //   row  0: ..##....##..............  ear tips
-  //   row  1: .####...####............  ear bases
-  //   row  2: .##########.............  head top
-  //   row  3: ##.####.####............  head with dot eyes
-  //   row  4: ###########.............  head bottom / chin
-  //   row  5: .##########.............  neck / tart top join
-  //   row  6: .##################.....  tart top border
-  //   row  7: .#.#.#.#.#.#.#.#.#......  tart sprinkles
-  //   row  8: .##################.....  tart solid
-  //   row  9: .#.#.#.#.#.#.#.#.#......  tart sprinkles
-  //   row 10: .##################.....  tart solid
-  //   row 11: .#.#.#.#.#.#.#.#.#......  tart sprinkles
-  //   row 12: .##################.....  tart solid
-  //   row 13: .##################.....  tart bottom border
-  //   row 14: .###...######...###.....  paws (FL + body + BR)
-  //   row 15: ..##.............##.....  paw tips
+  //   row  0: ..............#.....#...  ear tips (cols 14, 20)
+  //   row  1: ..............##...##...  ear bases
+  //   row  2: ..............#########.  head top (cols 14-22)
+  //   row  3: ..............##.###.##.  head with 2 eye gaps (cols 16, 20)
+  //   row  4: ..............#########.  full head
+  //   row  5: ..............#########.  chin
+  //   row  6: #.####################..  tail(col 0), tart (cols 2-21)
+  //   row  7: #.#.#.#.#.#.#.#.#.##....  sprinkle tart + tail
+  //   row  8: #.####################..  solid tart + tail
+  //   row  9: #.#.#.#.#.#.#.#.#.##....  sprinkle
+  //   row 10: #.####################..  solid
+  //   row 11: #.#.#.#.#.#.#.#.#.##....  sprinkle
+  //   row 12: #.####################..  solid
+  //   row 13: #.####################..  tart bottom
+  //   row 14: #.###...............###.  tail, back paws(2-4), front paws(19-21)
+  //   row 15: ..###...............###.  paw bases
   //   rows 16-20: blank
   b(
-    0x30, 0xC0, 0x00,  // row  0
-    0x78, 0xF0, 0x00,  // row  1
-    0x7F, 0xE0, 0x00,  // row  2
-    0xDE, 0xF0, 0x00,  // row  3
-    0xFF, 0xE0, 0x00,  // row  4
-    0x7F, 0xE0, 0x00,  // row  5
-    0x7F, 0xFF, 0xE0,  // row  6
-    0x55, 0x55, 0x40,  // row  7
-    0x7F, 0xFF, 0xE0,  // row  8
-    0x55, 0x55, 0x40,  // row  9
-    0x7F, 0xFF, 0xE0,  // row 10
-    0x55, 0x55, 0x40,  // row 11
-    0x7F, 0xFF, 0xE0,  // row 12
-    0x7F, 0xFF, 0xE0,  // row 13
-    0x71, 0xF8, 0xE0,  // row 14
-    0x30, 0x00, 0x60,  // row 15
+    0x00, 0x02, 0x08,  // row  0
+    0x00, 0x03, 0x18,  // row  1
+    0x00, 0x03, 0xFE,  // row  2
+    0x00, 0x03, 0x76,  // row  3
+    0x00, 0x03, 0xFE,  // row  4
+    0x00, 0x03, 0xFE,  // row  5
+    0xBF, 0xFF, 0xFC,  // row  6
+    0xAA, 0xAA, 0xAC,  // row  7
+    0xBF, 0xFF, 0xFC,  // row  8
+    0xAA, 0xAA, 0xAC,  // row  9
+    0xBF, 0xFF, 0xFC,  // row 10
+    0xAA, 0xAA, 0xAC,  // row 11
+    0xBF, 0xFF, 0xFC,  // row 12
+    0xBF, 0xFF, 0xFC,  // row 13
+    0xB8, 0x00, 0x1C,  // row 14: legs spread
+    0x38, 0x00, 0x1C,  // row 15: paw bases
+    0x00, 0x00, 0x00,  // rows 16-20: blank
+    0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00,
+  );
+
+  // ── Frame B: legs tucked (at $0D80, ptr=54) ───────────────────────────────
+  //   Rows 0-13 identical to Frame A.  Rows 14-15 show legs tucked in.
+  //
+  //   row 14: #..##...............##..  paws pulled inward
+  //   row 15: ...##...............##..  paw bases
+  while (LOAD + code.length < SPRITE_ADDR_B) b(0x00);
+  b(
+    0x00, 0x02, 0x08,  // row  0 (same as A)
+    0x00, 0x03, 0x18,  // row  1
+    0x00, 0x03, 0xFE,  // row  2
+    0x00, 0x03, 0x76,  // row  3
+    0x00, 0x03, 0xFE,  // row  4
+    0x00, 0x03, 0xFE,  // row  5
+    0xBF, 0xFF, 0xFC,  // row  6
+    0xAA, 0xAA, 0xAC,  // row  7
+    0xBF, 0xFF, 0xFC,  // row  8
+    0xAA, 0xAA, 0xAC,  // row  9
+    0xBF, 0xFF, 0xFC,  // row 10
+    0xAA, 0xAA, 0xAC,  // row 11
+    0xBF, 0xFF, 0xFC,  // row 12
+    0xBF, 0xFF, 0xFC,  // row 13
+    0x98, 0x00, 0x0C,  // row 14: legs tucked
+    0x18, 0x00, 0x0C,  // row 15: paw bases
     0x00, 0x00, 0x00,  // rows 16-20: blank
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
