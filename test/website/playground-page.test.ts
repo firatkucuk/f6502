@@ -17,13 +17,37 @@ describe('playground highlight overlay', () => {
   });
 });
 
-// The copy button lives inside the <pre> it copies, next to the Try-now link. Copying must
-// return the code only, not the button labels ("copy", "▶ Try now").
-describe('copy button', () => {
+// Copy and Try-now are small icon buttons in the code block's title bar. They must never end up
+// in the copied text (the fallback for a <pre> outside a terminal floats inside it).
+describe('code block buttons', () => {
   const appJs = readFileSync('website/js/app.js', 'utf8');
+  const tryNow = readFileSync('website/js/try-now.js', 'utf8');
+  const css = readFileSync('website/css/style.css', 'utf8');
+  const index = readFileSync('website/index.html', 'utf8');
 
-  it('leaves its own label and the Try-now link out of the copied text', () => {
-    expect(appJs).toMatch(/\.copy-btn,\s*\.try-now/);
+  it('the copy button goes into the title bar and is left out of the copied text', () => {
+    expect(appJs).toMatch(/terminal-bar/);
+    expect(appJs).toMatch(/terminal-actions/);
+    expect(appJs).toMatch(/querySelectorAll\('\.terminal-actions'\)/);
+  });
+
+  it('the Try-now button joins the same group, and is left out of the encoded source', () => {
+    expect(tryNow).toMatch(/terminal-actions/);
+    expect(tryNow).toMatch(/\.terminal-actions/);
+  });
+
+  it('the home page slideshow has its Try-now button in the title bar', () => {
+    const bar = index.slice(
+      index.indexOf('slideshow.c64s') - 400,
+      index.indexOf('terminal-body slideshow-source'),
+    );
+    expect(bar).toMatch(/terminal-actions/);
+    expect(bar).toMatch(/id="slideshow-try"/);
+  });
+
+  it('styles the icon buttons', () => {
+    expect(css).toMatch(/\.terminal-actions\s*\{/);
+    expect(css).toMatch(/\.term-btn\s*\{/);
   });
 });
 
