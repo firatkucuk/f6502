@@ -131,6 +131,52 @@ program @ 0x0810 {
 `,
   },
   {
+    id: 'asm',
+    title: 'Inline assembly',
+    source: `// asm {} drops to raw 6502. \${name} brings in program variables and constants.
+let @zp shade: u8 = 0;
+
+program @ 0x0810 {
+  // Fill the screen with solid blocks once.
+  asm {
+    lda #$A0
+    ldx #0
+  fill:
+    sta \${screen(0, 0)},x
+    sta \${screen(0, 0) + 256},x
+    sta \${screen(0, 0) + 512},x
+    sta \${screen(0, 0) + 744},x
+    inx
+    bne fill
+  }
+
+  loop {
+    while (VIC2.rasterLine != 200) {}
+    while (VIC2.rasterLine == 200) {}
+
+    shade++;
+
+    // Four colour bands, each one step further along the palette.
+    asm {
+      ldx #0
+    paint:
+      lda \${shade}
+      sta \${color(0, 0)},x
+      clc
+      adc #1
+      sta \${color(0, 0) + 256},x
+      adc #1
+      sta \${color(0, 0) + 512},x
+      adc #1
+      sta \${color(0, 0) + 744},x
+      inx
+      bne paint
+    }
+  }
+}
+`,
+  },
+  {
     id: 'sprite',
     title: 'Moving sprite',
     source: `// A hollow-box sprite crossing the screen
