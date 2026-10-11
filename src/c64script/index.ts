@@ -5,12 +5,7 @@ import { generate } from './codegen';
 import { link } from './linker';
 import { writePrg } from './prg-writer';
 
-export interface CompileOpts {
-  /** Override load address (default taken from program block). */
-  loadAddr?: number;
-}
-
-export function compile(source: string, _opts?: CompileOpts): Uint8Array {
+export function compile(source: string): Uint8Array {
   const tokens = tokenize(source);
   const ast    = parse(tokens);
   const checked = check(ast);

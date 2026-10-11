@@ -8,5 +8,4 @@ export {
   ParseError,
   CodeGenError,
   C64ScriptTypeError,
-  type CompileOpts,
 } from './c64script';
