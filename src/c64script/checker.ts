@@ -41,11 +41,12 @@ export function scopedName(scope: string, name: string): string {
 }
 
 /** Built-in functions and how many arguments they take. */
-const BUILTIN_FNS: ReadonlyMap<string, number> = new Map([
-  ['poke', 2],
-  ['clrscr', 0],
-  ['screen', 2],
-  ['color', 2],
+const BUILTIN_FNS: ReadonlyMap<string, readonly [min: number, max: number]> = new Map([
+  ['poke', [2, 2]],
+  ['clrscr', [0, 0]],
+  ['screen', [2, 2]],
+  ['color', [2, 2]],
+  ['puts', [3, 4]],
 ]);
 
 /** Text screen geometry, for screen(row, col) and color(row, col). */
@@ -402,6 +403,36 @@ export function check(userProg: Program): CheckedProgram {
     }
   }
 
+  /** puts(row, col, "TEXT" [, colour]): the text and its place are checked at compile time. */
+  function checkPuts(e: Extract<Expr, { tag: 'call' }>, scope: string): void {
+    const [rowE, colE, textE, colourE] = e.args;
+    if (textE === undefined || textE.tag !== 'strLit') {
+      throw new TypeError('puts(): the third argument must be a string literal', e.line, 0);
+    }
+    for (const a of [rowE, colE, colourE]) {
+      if (a !== undefined) checkExpr(a, 'read', scope, null);
+    }
+    const lookup = (n: string) => resolveVar(scope, n);
+    const row = rowE !== undefined ? foldConst(rowE, lookup) : null;
+    const col = colE !== undefined ? foldConst(colE, lookup) : null;
+    if (row !== null && row >= SCREEN_ROWS) {
+      throw new TypeError(`puts(): row ${row} is out of range 0..${SCREEN_ROWS - 1}`, e.line, 0);
+    }
+    if (col !== null && col + textE.codes.length > SCREEN_COLS) {
+      throw new TypeError(
+        col >= SCREEN_COLS
+          ? `puts(): column ${col} is out of range 0..${SCREEN_COLS - 1}`
+          : `puts(): ${textE.codes.length} characters starting at column ${col} run past column ${SCREEN_COLS - 1}`,
+        e.line,
+        0,
+      );
+    }
+    const colour = colourE !== undefined ? foldConst(colourE, lookup) : null;
+    if (colour !== null && colour > 15) {
+      throw new TypeError(`puts(): colour ${colour} is out of range 0..15 (use COLOR_*)`, e.line, 0);
+    }
+  }
+
   /** `parent` is the call whose argument list contains `e`, when there is one. */
   function checkExpr(
     e: Expr,
@@ -452,16 +483,26 @@ export function check(userProg: Program): CheckedProgram {
       }
       case 'call': {
         const fn = fns.get(e.name);
-        const arity = fn !== undefined ? fn.decl.params.length : BUILTIN_FNS.get(e.name);
-        if (arity === undefined) {
+        const range =
+          fn !== undefined
+            ? ([fn.decl.params.length, fn.decl.params.length] as const)
+            : BUILTIN_FNS.get(e.name);
+        if (range === undefined) {
           throw new TypeError(`undefined function '${e.name}'`, e.line, 0);
         }
-        if (e.args.length !== arity) {
+        const [min, max] = range;
+        if (e.args.length < min || e.args.length > max) {
+          const expected =
+            min === max ? `${min} argument${min === 1 ? '' : 's'}` : `${min} or ${max} arguments`;
           throw new TypeError(
-            `function '${e.name}' expects ${arity} argument${arity === 1 ? '' : 's'}, got ${e.args.length}`,
+            `function '${e.name}' expects ${expected}, got ${e.args.length}`,
             e.line,
             0,
           );
+        }
+        if (e.name === 'puts' && fn === undefined) {
+          checkPuts(e, scope);
+          break;
         }
         if (fn !== undefined) {
           calls.get(scope)?.push({ to: e.name, line: e.line });
@@ -470,6 +511,12 @@ export function check(userProg: Program): CheckedProgram {
         for (const a of e.args) checkExpr(a, 'read', scope, fn !== undefined ? e.name : parent);
         break;
       }
+      case 'strLit':
+        throw new TypeError(
+          'string literals are only allowed as the third argument of puts()',
+          e.line,
+          0,
+        );
       case 'unary':
         checkExpr(e.rhs, 'read', scope, parent);
         break;
