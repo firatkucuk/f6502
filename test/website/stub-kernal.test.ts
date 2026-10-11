@@ -42,3 +42,56 @@ describe('stub KERNAL hands over a clean 40-column screen', () => {
     expect(c64.peek(0x07f8)).toBe(53);
   });
 });
+
+describe('stub KERNAL boot screen (what Reboot shows)', () => {
+  const colourRam = (c64: C64, addr: number): number => c64.peek(addr) & 0x0f;
+
+  function newMachine(): C64 {
+    const c64 = new C64({
+      kernal: rom('kernal.bin'),
+      basic: rom('basic.bin'),
+      chargen: rom('chargen.bin'),
+    });
+    expect(c64.runUntilReady(600)).toBe(true);
+    return c64;
+  }
+
+  it('is the classic light-blue-on-blue C64 screen with a visible READY.', () => {
+    const c64 = newMachine();
+    expect(c64.peek(0xd020) & 0x0f).toBe(14); // border: light blue
+    expect(c64.peek(0xd021) & 0x0f).toBe(6); // background: blue
+    for (let i = 0; i < 6; i++) expect(colourRam(c64, 0xd8c8 + i), `READY. cell ${i}`).toBe(14);
+    expect(c64.peek(0x04c8)).toBe(18); // R
+  });
+
+  it('comes back after a program has changed the colours and filled the screen', () => {
+    const c64 = newMachine();
+    c64.loadPrg(
+      compile(`program @ 0x0810 {
+        VIC2.borderColor = RED; VIC2.bgColor0 = GREEN;
+        poke(0x0400, 1); poke(0xD800, 5);
+        loop {}
+      }`),
+      { whenReady: false },
+    );
+    for (let i = 0; i < 5; i++) c64.runFrame();
+    expect(c64.peek(0xd020) & 0x0f).toBe(2); // the program is running
+
+    c64.reset();
+    expect(c64.runUntilReady(600)).toBe(true);
+    expect(c64.peek(0xd020) & 0x0f).toBe(14);
+    expect(c64.peek(0xd021) & 0x0f).toBe(6);
+    expect(c64.peek(0x0400)).toBe(0x20); // the old text is gone
+    expect(colourRam(c64, 0xd800)).toBe(14);
+  });
+
+  it('still hands a program black border, black background and black colour RAM', () => {
+    const c64 = newMachine();
+    c64.loadPrg(compile('program @ 0x0810 { loop {} }'), { whenReady: false });
+    for (let i = 0; i < 5; i++) c64.runFrame();
+    expect(c64.peek(0xd020) & 0x0f).toBe(0);
+    expect(c64.peek(0xd021) & 0x0f).toBe(0);
+    expect(colourRam(c64, 0xd800)).toBe(0);
+    expect(colourRam(c64, 0xdbe7)).toBe(0);
+  });
+});
