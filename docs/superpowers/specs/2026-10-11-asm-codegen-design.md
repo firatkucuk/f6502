@@ -67,7 +67,15 @@ The braces hold an ordinary C64Script expression, resolved in the enclosing scop
 | a function name (non-inline) | its entry address (`jsr ${f}` / `jmp ${f}`) |
 
 `#${variable}` is an error (ambiguous: use `lo(${variable})`). `#${const}` is the value.
-Writing to a constant (`sta ${MAX}`) is an error.
+
+Stores to a named **`u8`/`bool` constant** (`sta ${MAX}`, `inc ${MAX}`) are an error: it is a data
+value, so the address it would name is almost certainly a mistake. A **`u16` constant** or any
+constant expression is an address and may be stored to (`sta ${TABLE},x`,
+`sta ${screen(0, 0)},x`). Storing *through* a pointer (`sta (${PTR}),y`) is always allowed.
+
+A name is either a variable or a function; declaring both is an error, so `f` and `${f}` always
+agree. Only `jsr`/`jmp` count as calls (for recursion detection): `lda #lo(${f})` merely takes
+the address.
 
 ### Addressing mode
 Chosen from the operand syntax and the folded value:

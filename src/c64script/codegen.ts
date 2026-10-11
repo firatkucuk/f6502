@@ -762,7 +762,14 @@ export function generate(cp: CheckedProgram): CodeBuffer {
         );
       }
       const kind = OPS[opcode]!.kind;
-      if (resolved.fromConst && mode !== 'imm' && (kind === 'write' || kind === 'rmw')) {
+      // `sta (${PTR}),y` stores THROUGH the pointer, not to the constant itself.
+      const throughPointer = mode === 'izx' || mode === 'izy';
+      if (
+        resolved.fromConst &&
+        mode !== 'imm' &&
+        !throughPointer &&
+        (kind === 'write' || kind === 'rmw')
+      ) {
         throw new CodeGenError(
           `cannot write to constant: '${item.mnemonic}' stores to it`,
           line,

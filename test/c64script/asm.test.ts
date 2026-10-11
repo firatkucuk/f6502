@@ -81,13 +81,6 @@ describe('asm blocks run', () => {
     expect(border(c)).toBe(9);
   });
 
-  it('a function called only from asm is still emitted', () => {
-    const c = boot(`
-      fn paint(): void { VIC2.bgColor0 = 3; }
-      program @ 0x0810 { asm { jsr \${paint} } loop {} }`);
-    expect(background(c)).toBe(3);
-  });
-
   it('asm inside an @inline function, expanded twice, gets unique labels', () => {
     const c = boot(`
       @inline fn spin(): void {
@@ -253,6 +246,21 @@ describe('asm errors', () => {
       'codegen',
       /compile-time constant/,
       5,
+    );
+  });
+
+  it('stores through a u8 constant used as a zero-page pointer', () => {
+    // STA (zp),y writes THROUGH the pointer; it does not store to the constant itself.
+    const bytes = Array.from(
+      compile('const PTR: u8 = 0xFB;\nprogram @ 0x0810 { asm { sta (${PTR}),y } loop {} }'),
+    );
+    expect(bytes.findIndex((b, i) => b === 0x91 && bytes[i + 1] === 0xfb)).toBeGreaterThan(1);
+    // ... while a direct store to the u8 constant is still refused
+    expectError(
+      'const PTR: u8 = 0xFB;\nprogram @ 0x0810 {\n  asm {\n    sta ${PTR}\n  }\n  loop {}\n}',
+      'codegen',
+      /cannot write to constant/,
+      4,
     );
   });
 

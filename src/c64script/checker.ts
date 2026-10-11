@@ -183,6 +183,9 @@ export function check(userProg: Program): CheckedProgram {
   /** Registers a variable (global when `scope` is null, otherwise local to that scope). */
   function declare(d: VarDecl, scope: string | null): void {
     const key = scope === null ? d.name : scopedName(scope, d.name);
+    if (scope !== null && fns.has(d.name)) {
+      throw new TypeError(`'${d.name}' is already defined as a function`, d.line, 0);
+    }
     const lookup = (n: string) => resolveVar(scope, n);
     const ann = d.annotation;
     const isInt = d.type.tag === 'u8' || d.type.tag === 'bool';
@@ -276,10 +279,19 @@ export function check(userProg: Program): CheckedProgram {
   }
 
   // Pass 2: globals, function signatures, the program block
+  // A name is either a variable or a function: `${f}` and `f` would otherwise disagree.
   for (const d of allDecls) {
-    if (d.tag === 'varDecl') declare(d, null);
+    if (d.tag === 'varDecl') {
+      if (fns.has(d.name)) {
+        throw new TypeError(`'${d.name}' is already defined as a function`, d.line, 0);
+      }
+      declare(d, null);
+    }
 
     if (d.tag === 'fn') {
+      if (vars.has(d.name)) {
+        throw new TypeError(`'${d.name}' is already defined as a variable`, d.line, 0);
+      }
       if (fns.has(d.name) || BUILTIN_FNS.has(d.name)) {
         throw new TypeError(`function '${d.name}' already defined`, d.line, 0);
       }
@@ -467,12 +479,13 @@ export function check(userProg: Program): CheckedProgram {
         );
       }
     }
-    const visit = (e: AsmExpr): void => {
+    const visit = (e: AsmExpr, transfersControl: boolean): void => {
       switch (e.tag) {
         case 'sym': {
           const ex = e.expr;
           if (ex.tag === 'ident' && fns.has(ex.name)) {
-            calls.get(scope)?.push({ to: ex.name, line: e.line });
+            // Only jsr/jmp run the function; `lda #lo(${f})` just takes its address.
+            if (transfersControl) calls.get(scope)?.push({ to: ex.name, line: e.line });
             return;
           }
           checkExpr(ex, 'read', scope, null);
@@ -480,17 +493,19 @@ export function check(userProg: Program): CheckedProgram {
         }
         case 'lo':
         case 'hi':
-          visit(e.arg);
+          visit(e.arg, false);
           return;
         case 'add':
-          visit(e.lhs);
+          visit(e.lhs, transfersControl);
           return;
         default:
           return;
       }
     };
     for (const item of s.items) {
-      if (item.kind === 'instr' && 'value' in item.operand) visit(item.operand.value);
+      if (item.kind === 'instr' && 'value' in item.operand) {
+        visit(item.operand.value, item.mnemonic === 'JSR' || item.mnemonic === 'JMP');
+      }
     }
   }
 

@@ -13,12 +13,9 @@ describe('asm checks', () => {
   });
 
   it('accepts A, X, Y and flags in any case', () => {
-    // codegen is not wired yet in this task's first commit; only the checker must not object
-    try {
-      compile('program @ 0x0810 { asm clobbers(a, X, y, FLAGS) { nop } loop {} }');
-    } catch (err) {
-      expect((err as Error).message).not.toMatch(/unknown register/);
-    }
+    expect(() =>
+      compile('program @ 0x0810 { asm clobbers(a, X, y, FLAGS) { nop } loop {} }'),
+    ).not.toThrow();
   });
 
   it('rejects an undefined name inside ${…}', () => {
@@ -35,6 +32,44 @@ describe('asm checks', () => {
       'fn f(): void {\n  asm {\n    jsr ${f}\n  }\n}\nprogram @ 0x0810 { f(); loop {} }',
       'type',
       /recurs|called from within itself/,
+      3,
+    );
+  });
+
+  it("taking a function's address is not a call (no false recursion error)", () => {
+    expect(() =>
+      compile(
+        'fn f(): void { asm { lda #lo(${f}) sta $D020 } }\nprogram @ 0x0810 { f(); loop {} }',
+      ),
+    ).not.toThrow();
+  });
+
+  it('jmp ${f} inside f is still recursion', () => {
+    expectError(
+      'fn f(): void {\n  asm {\n    jmp ${f}\n  }\n}\nprogram @ 0x0810 { f(); loop {} }',
+      'type',
+      /called from within itself/,
+      3,
+    );
+  });
+
+  it('a variable and a function may not share a name', () => {
+    expectError(
+      'let @zp f: u8 = 1;\nfn f(): void { }\nprogram @ 0x0810 { loop {} }',
+      'type',
+      /'f' is already defined as a variable/,
+      2,
+    );
+    expectError(
+      'fn f(): void { }\nlet @zp f: u8 = 1;\nprogram @ 0x0810 { loop {} }',
+      'type',
+      /'f' is already defined as a function/,
+      2,
+    );
+    expectError(
+      'fn f(): void { }\nprogram @ 0x0810 {\n  let f: u8 = 1;\n  loop {}\n}',
+      'type',
+      /'f' is already defined as a function/,
       3,
     );
   });
