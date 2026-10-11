@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Nyan Cat — f6502 Showcase</title>
-  <meta name="description" content="Nyan Cat C64Script demo — a 24×21 sprite, rainbow border cycling, and a splash screen, all compiled from C64Script to 6502 machine code.">
+  <meta name="description" content="A terminal-inspired Nyan Cat scene for the C64: navy sky, a pink cat sprite, a cycling rainbow trail, and a terminal-style caption.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Space+Grotesk:wght@300;400;500;600;700&family=Fira+Code:wght@400;500&family=VT323&display=swap">
@@ -164,12 +164,12 @@
   <!-- ── Hero ─────────────────────────────────────────────────────── -->
   <div class="demo-hero">
     <a class="back-link" href="../showcases.html">← Showcases</a>
-    <p class="section-label">C64Script Demo</p>
+    <p class="section-label">6502 Showcase</p>
     <h1 class="section-title" style="font-size: clamp(1.8rem, 4vw, 2.8rem);">Nyan Cat</h1>
     <p class="section-lead" style="max-width: 58ch">
-      The first program written in C64Script. A 24×21 VIC-II sprite slides across a blue
-      sky with rainbow border cycling, a PETSCII starfield, and a splash screen showing
-      project credits — compiled directly to 6502 machine code.
+      A terminal-inspired C64 take on Nyan Cat: a navy sky, a pink pixel cat, a six-band
+      rainbow trail, scattered stars, and the familiar terminal caption. The scene runs
+      as 6502 machine code in the f6502 emulator.
     </p>
     <div class="tag-row" style="margin-top: 1rem">
       <span class="tag tag-accent">C64Script</span>
@@ -202,20 +202,21 @@
     </div>
   </div>
 
-  <!-- ── C64Script source ───────────────────────────────────────────── -->
+  <!-- ── Source sketch ───────────────────────────────────────────────── -->
   <section class="section" style="padding-top: 1rem">
-    <div class="divider"><span class="divider-label">C64Script Source</span></div>
+    <div class="divider"><span class="divider-label">C64Script Source Sketch</span></div>
 
     <div class="source-wrap reveal" style="margin-top: 2rem">
       <div class="source-header">
-        <span class="source-filename">examples/nyancat.c64s</span>
+        <span class="source-filename">scripts/build-nyancat-prg.mjs · live demo builder</span>
         <a class="btn btn-outline" style="font-size:0.75rem;padding:0.3rem 0.8rem;flex-shrink:0"
-           href="https://github.com/firatkucuk/f6502/blob/main/examples/nyancat.c64s"
+           href="https://github.com/firatkucuk/f6502/blob/main/scripts/build-nyancat-prg.mjs"
            target="_blank" rel="noopener">View on GitHub →</a>
       </div>
       <div class="source-scroll">
 <pre><code class="language-c64script">// ────────────────────────────────────────────────────────────────────────────
-//  Nyan Cat demo — f6502 showcase
+//  Nyan Cat C64Script concept source — the live PRG is built by
+//  scripts/build-nyancat-prg.mjs (linked above).
 //  Written in C64Script (compiled to 6502 machine code).
 //
 //  Splash screen:  F6502 / Apache 2.0 Licence / Built by Firat Kucuk
@@ -657,6 +658,7 @@ Prism.highlightAll();
   if (romLoader) romLoader.style.display = 'flex';
 
   let player = null;
+  let bundleChecks = 0;
 
   async function fetchBin(name) {
     const resp = await fetch(name);
@@ -665,7 +667,15 @@ Prism.highlightAll();
   }
 
   async function start() {
-    if (!window.F6502) { setTimeout(start, 200); return; }
+    if (!window.F6502) {
+      bundleChecks++;
+      if (bundleChecks >= 25) {
+        if (loaderMsg) loaderMsg.textContent = 'Emulator bundle missing. Run npm run build, then reload.';
+        return;
+      }
+      setTimeout(start, 200);
+      return;
+    }
     try {
       const [kernal, basic, chargen, prgBuf] = await Promise.all([
         fetchBin('kernal.bin'),

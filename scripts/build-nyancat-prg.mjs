@@ -2,13 +2,13 @@
 // Pure Node.js; no npm dependencies.  Run: node scripts/build-nyancat-prg.mjs
 //
 // Corresponds to examples/nyancat.c64s (the C64Script source equivalent).
-// Load address: $0810.  Sprite data at $0D00 (pointer value 52 = $0D00/64).
+// Load address: $0810. Sprite frames are placed after the emitted code at aligned slots.
 //
 // Program structure
 //   [ZP init]          initialize zero-page variables
-//   program_start:     CLD, splash screen, animation loop
-//   delay subroutine   256×256 busy-wait (~0.33 s at 1 MHz)
-//   [pad to $0D00]     zero-fill to align sprite data
+//   program_start:     CLD, terminal-style Nyan Cat scene and animation loop
+//   animation loop     raster-synchronised rainbow and sprite frames
+//   [pad to $0E00]     zero-fill to align sprite data
 //   [sprite data]      Nyan Cat 24×21 monochrome, 63 bytes
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -79,6 +79,7 @@ export function buildNyanCatPrg() {
   const ORANGE     = 8;
   const LIGHT_BLUE = 14;
   const LIGHT_GREY = 15;
+  const LIGHT_RED  = 10;
 
   // VIC-II registers
   const VIC_SPR0X  = 0xD000;
@@ -90,14 +91,14 @@ export function buildNyanCatPrg() {
   const VIC_BG0    = 0xD021;
   const VIC_SPR0C  = 0xD027;
   const SPR_PTR0   = 0x07F8;
+  const SPR_PTR1   = 0x07F9;
 
   // Sprite data: Frame A at $0D40 (ptr=53), Frame B at $0D80 (ptr=54)
-  const SPRITE_ADDR  = 0x0D40;
-  const SPRITE_PTR   = SPRITE_ADDR / 64;    // 53
-  const SPRITE_ADDR_B = 0x0D80;
+  const SPRITE_ADDR  = 0x0E00;
+  const SPRITE_PTR   = SPRITE_ADDR / 64;    // 56
+  const SPRITE_ADDR_B = 0x0E40;
 
   // ZP variables
-  const ZP_CATX    = 0x02;
   const ZP_FRAME   = 0x03;   // wave phase timer (0-5, wraps every 6 frames)
   const ZP_COL0    = 0x04;   // rainbow row 7 color
   const ZP_COL1    = 0x05;   // rainbow row 8 color
@@ -112,7 +113,6 @@ export function buildNyanCatPrg() {
   const RAINBOW = [RED, ORANGE, YELLOW, GREEN, LIGHT_BLUE, PURPLE];
 
   // ── ZP initialisation (executes at load time, before program_start) ──────
-  poke(ZP_CATX,  220);
   poke(ZP_FRAME, 0);
   poke(ZP_WALK,  0);
   poke(ZP_COL0,  RAINBOW[0]);
@@ -128,7 +128,8 @@ export function buildNyanCatPrg() {
   label('program_start');
   cld();                              // clear decimal mode
 
-  poke(SPR_PTR0, SPRITE_PTR);        // sprite 0 data → $0D00
+  poke(SPR_PTR0, SPRITE_PTR);        // gray head and paws
+  poke(SPR_PTR1, SPRITE_PTR + 1);    // pink tart body
 
   // ── clrscr: fill screen RAM $0400-$07E7 with spaces ─────────────────────
   lda(0x20);  ldx(0);                // LDA #' ', LDX #0
@@ -158,58 +159,26 @@ export function buildNyanCatPrg() {
   dex();
   bpl('col_loop2');
 
-  // ── VIC-II splash config ─────────────────────────────────────────────────
-  poke(VIC_BG0,    BLACK);
-  poke(VIC_BORDER, BLACK);
-  poke(VIC_SPREN,  0);               // sprites off during splash
-
-  // ── "F6502" centred on row 10  (5 chars → col 17)  addr $05A1 ────────────
-  const F6502     = str('F6502');
-  const F6502_SCR = scr(10, 17);
-  const F6502_CLR = clr(10, 17);
-  for (let i = 0; i < F6502.length; i++) poke(F6502_SCR + i, F6502[i]);
-  for (let i = 0; i < F6502.length; i++) poke(F6502_CLR + i, LIGHT_BLUE);
-
-  // ── "APACHE 2.0 LICENCE" centred on row 12 (18 chars → col 11) ───────────
-  const APACHE     = str('APACHE 2.0 LICENCE');
-  const APACHE_SCR = scr(12, 11);
-  const APACHE_CLR = clr(12, 11);
-  for (let i = 0; i < APACHE.length; i++) poke(APACHE_SCR + i, APACHE[i]);
-  for (let i = 0; i < APACHE.length; i++) poke(APACHE_CLR + i, LIGHT_BLUE);
-
-  // ── "BUILT BY FIRAT KUCUK" centred on row 14 (20 chars → col 10) ─────────
-  const BUILT     = str('BUILT BY FIRAT KUCUK');
-  const BUILT_SCR = scr(14, 10);
-  const BUILT_CLR = clr(14, 10);
-  for (let i = 0; i < BUILT.length; i++) poke(BUILT_SCR + i, BUILT[i]);
-  for (let i = 0; i < BUILT.length; i++) poke(BUILT_CLR + i, YELLOW);
-
-  // ── Hold splash ~1.6 s (5 × delay ≈ 5 × 0.33 s) ─────────────────────────
-  for (let i = 0; i < 5; i++) jsr('delay');
-
-  // ── Fade out: reset all splash colours to black ───────────────────────────
-  for (let i = 0; i < F6502.length; i++)  poke(F6502_CLR + i,  BLACK);
-  for (let i = 0; i < APACHE.length; i++) poke(APACHE_CLR + i, BLACK);
-  for (let i = 0; i < BUILT.length; i++)  poke(BUILT_CLR + i,  BLACK);
-  jsr('delay');                      // brief pause after fade
-
   // ════════════════════════════════════════════════════════════════════════════
   //  Nyan Cat animation
   // ════════════════════════════════════════════════════════════════════════════
 
-  poke(VIC_BG0,    BLUE);            // sky blue background
+  poke(VIC_BG0,    BLUE);            // deep C64 blue terminal background
   poke(VIC_BORDER, RED);             // initial border = top stripe color
-  poke(VIC_SPREN,  1);               // enable sprite 0
-  poke(0xD017,     1);               // sprite 0 Y-expand ×2
-  poke(0xD01D,     1);               // sprite 0 X-expand ×2
+  poke(VIC_SPREN,  3);               // enable both cat layers
+  poke(0xD017,     3);               // expand both sprites vertically
+  poke(0xD01D,     3);               // expand both sprites horizontally
   poke(VIC_CTRL2,  0x08);            // 38-col, no multicolour
-  poke(VIC_SPR0C,  LIGHT_GREY);      // sprite colour
+  poke(VIC_SPR0C,  LIGHT_GREY);      // gray cat face and paws
+  poke(0xD028,     LIGHT_RED);       // pink pop-tart body
   poke(VIC_SPR0Y,  94);              // sprite Y: tart centered in rainbow band (with 2× expansion)
-  poke(ZP_CATX,    220);             // reset catX
+  poke(VIC_SPR0X,  220);             // hold cat on the right side of the frame
+  poke(0xD002,     220);             // align sprite 1 with sprite 0
+  poke(0xD003,     94);
   poke(ZP_FRAME,   0);
 
-  // ── Fill screen rows 7-12 with solid block chars ($A0) for rainbow trail ──
-  //    Rows 7-12 = screen Y ≈ 106-145, overlapping cat body at Y=100
+  // ── Fill a compact 18-column rainbow trail, like the terminal reference ──
+  //    Rows 7-12 form six bold horizontal bands entering from the left.
   lda(0xA0); ldx(0);
   label('rainbow_fill');
   b(0x9D, lo(scr(7,0)),  hi(scr(7,0)));
@@ -219,7 +188,7 @@ export function buildNyanCatPrg() {
   b(0x9D, lo(scr(11,0)), hi(scr(11,0)));
   b(0x9D, lo(scr(12,0)), hi(scr(12,0)));
   inx();
-  b(0xE0, 40);                       // CPX #40
+  b(0xE0, 18);                       // CPX #18: leave navy sky around the trail
   bne('rainbow_fill');
 
   // ── Initialize color RAM for rainbow rows 7-12 from ZP_COL0-5 ─────────────
@@ -232,7 +201,7 @@ export function buildNyanCatPrg() {
     label(`clr_init${i}`);
     b(0x9D, lo(CLR_ROWS[i]), hi(CLR_ROWS[i]));
     inx();
-    b(0xE0, 40);
+    b(0xE0, 18);
     bne(`clr_init${i}`);
   }
 
@@ -252,11 +221,17 @@ export function buildNyanCatPrg() {
     [18, 20],
     [20, 3], [20, 28],
     [22, 14],
-    [24, 22],
   ];
   for (const [r, c] of starPositions) {
     poke(scr(r, c), STAR);
     poke(clr(r, c), WHITE);
+  }
+
+  // Terminal-style caption at the foot of the frame, as in klange/nyancat.
+  const STATUS = str('NYANED FOR 3 SECONDS');
+  for (let i = 0; i < STATUS.length; i++) {
+    poke(scr(24, 10) + i, STATUS[i]);
+    poke(clr(24, 10) + i, WHITE);
   }
 
   // ── Main animation loop ───────────────────────────────────────────────────
@@ -271,16 +246,6 @@ export function buildNyanCatPrg() {
   b(0xAD, 0x12, 0xD0);
   b(0xC9, 200);
   beq('wait2');
-
-  // Update sprite X from ZP variable
-  ldaZp(ZP_CATX);
-  staAbs(VIC_SPR0X);
-
-  // catX -= 2  (wraps 0→254, sprite rolls right-to-left continuously)
-  ldaZp(ZP_CATX);
-  secOp();
-  b(0xE9, 2);                        // SBC #2
-  staZp(ZP_CATX);
 
   // Every 6 frames: rotate rainbow stripes and update border + color RAM
   ldaZp(ZP_FRAME);
@@ -307,49 +272,37 @@ export function buildNyanCatPrg() {
   ldaZp(ZP_COL0);
   staAbs(VIC_BORDER);
 
-  // Update color RAM for rainbow rows 7-12 (40 chars each)
+  // Update only the visible rainbow trail (18 columns on each row).
   for (let i = 0; i < 6; i++) {
     ldaZp(ZP_COL0 + i);
     ldx(0);
     label(`wave_row${i}`);
     b(0x9D, lo(CLR_ROWS[i]), hi(CLR_ROWS[i]));
     inx();
-    b(0xE0, 40);                     // CPX #40
+    b(0xE0, 18);                     // CPX #18
     bne(`wave_row${i}`);
   }
 
-  // Walking animation: toggle sprite frame A↔B every 6 display frames
+  // Walking animation: toggle the pink body frame every 6 display frames
   ldaZp(ZP_WALK);
   b(0x49, 1);               // EOR #1  (0→1, 1→0)
   staZp(ZP_WALK);
   b(0x29, 1);               // AND #1  (isolate bit 0)
   clcOp();
-  b(0x69, SPRITE_PTR);      // ADC #53 → 53 (frame A) or 54 (frame B)
-  staAbs(SPR_PTR0);
+  b(0x69, SPRITE_PTR + 1);  // ADC #57 → 57 (frame A) or 58 (frame B)
+  staAbs(SPR_PTR1);
 
   label('skip_wave');
   jmp('anim_loop');
 
-  // ── Delay subroutine: 256×256 inner iterations ≈ 0.33 s at 1 MHz ─────────
-  label('delay');
-  ldx(0);                            // 256 outer iterations
-  label('delay_outer');
-  ldy(0);                            // 256 inner iterations
-  label('delay_inner');
-  dey();
-  bne('delay_inner');
-  dex();
-  bne('delay_outer');
-  rts();
-
-  // ── Pad to sprite data address $0D00 ─────────────────────────────────────
+  // ── Pad to the first 64-byte-aligned sprite slot ─────────────────────────
   const codeEnd = LOAD + code.length;
   if (codeEnd > SPRITE_ADDR) {
     throw new Error(`Code overflow: code ends at $${codeEnd.toString(16).toUpperCase()}, sprite at $${SPRITE_ADDR.toString(16).toUpperCase()}`);
   }
   while (LOAD + code.length < SPRITE_ADDR) b(0x00);
 
-  // ── Frame A: legs spread (at $0D40, ptr=53) ──────────────────────────────
+  // ── Frame A: legs spread (at $0E00, ptr=56) ──────────────────────────────
   //   Head on RIGHT (cat faces right), tart body center, tail on left.
   //   Each row = 3 bytes MSB-first (col 0 = bit 7 of byte 0).
   //
@@ -394,7 +347,7 @@ export function buildNyanCatPrg() {
     0x00, 0x00, 0x00,
   );
 
-  // ── Frame B: legs tucked (at $0D80, ptr=54) ───────────────────────────────
+  // ── Frame B: legs tucked (at $0E40, ptr=57) ───────────────────────────────
   //   Rows 0-13 identical to Frame A.  Rows 14-15 show legs tucked in.
   //
   //   row 14: #..##...............##..  paws pulled inward
@@ -423,6 +376,16 @@ export function buildNyanCatPrg() {
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
   );
+
+  // Split the monochrome frames into gray head/paws and a pink tart body.
+  const headOffset = SPRITE_ADDR - LOAD;
+  const bodyOffset = SPRITE_ADDR_B - LOAD;
+  for (let row = 6; row <= 13; row++) {
+    for (let byte = 0; byte < 3; byte++) code[headOffset + row * 3 + byte] = 0;
+  }
+  for (const row of [0, 1, 2, 3, 4, 5, 14, 15]) {
+    for (let byte = 0; byte < 3; byte++) code[bodyOffset + row * 3 + byte] = 0;
+  }
 
   // ── Resolve fixups ────────────────────────────────────────────────────────
   for (const f of fixups) {
