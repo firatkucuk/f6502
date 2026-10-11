@@ -45,7 +45,7 @@ describe('AudioPump', () => {
 
   it('keeps draining while the sid has more than one buffer of samples', () => {
     const f = fakeSink();
-    const many = new Array(5000).fill(0.5);
+    const many = new Array<number>(5000).fill(0.5);
     const pump = new AudioPump(fakeSid(many), f.sink);
     expect(pump.pump()).toBe(5000);
   });

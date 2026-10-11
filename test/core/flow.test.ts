@@ -20,7 +20,7 @@ describe('branches', () => {
     m.bus.trace = [];
     expect(m.cpu.step()).toBe(4);
     expect(m.cpu.regs.pc).toBe(0x0371);
-    expect(m.bus.trace![3]![0]).toBe(0x0271); // (pc&0xff00)|(new&0xff)
+    expect(m.bus.trace[3]![0]).toBe(0x0271); // (pc&0xff00)|(new&0xff)
   });
 
   it('backward branch', () => {

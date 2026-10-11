@@ -10,15 +10,15 @@ This file tells AI agents everything they need to know to work on this repo, and
 
 Key sub-systems:
 
-| Layer | Location | Purpose |
-|---|---|---|
-| Core 6502 CPU | `src/core/` | Cycle-accurate ALU, flags, opcodes |
-| C64 machine | `src/machine/` | VIC-II, SID, CIA, memory banking, disk/tape |
-| Browser player | `src/browser/player.ts` | `start()` + `player.load()` public API |
-| C64Script compiler | `src/c64script/` | TypeScript-like language → 6502 PRG |
-| Demo builder | `scripts/build-*.mjs` | Pure Node.js assembler helpers |
-| Stub ROMs | `scripts/make-stub-roms.mjs` | Legal KERNAL/BASIC/CHARGEN replacements |
-| Website | `website/` | Static HTML pages + demos |
+| Layer              | Location                     | Purpose                                     |
+| ------------------ | ---------------------------- | ------------------------------------------- |
+| Core 6502 CPU      | `src/core/`                  | Cycle-accurate ALU, flags, opcodes          |
+| C64 machine        | `src/machine/`               | VIC-II, SID, CIA, memory banking, disk/tape |
+| Browser player     | `src/browser/player.ts`      | `start()` + `player.load()` public API      |
+| C64Script compiler | `src/c64script/`             | TypeScript-like language → 6502 PRG         |
+| Demo builder       | `scripts/build-*.mjs`        | Pure Node.js assembler helpers              |
+| Stub ROMs          | `scripts/make-stub-roms.mjs` | Legal KERNAL/BASIC/CHARGEN replacements     |
+| Website            | `website/`                   | Static HTML pages + demos                   |
 
 ---
 
@@ -121,14 +121,14 @@ codes, colours, sprite registers, and anything that should move between frames.
 - 24 px wide × 21 px tall, monochrome = 63 bytes (3 bytes per row × 21 rows), padded to 64.
 - Must be 64-byte aligned inside VIC bank 0 (below `$4000`). `$0D40` is the first slot after a
   typical program. The pointer value is `address / 64`: use `spritePtr(address)`.
-- Pointer table `$07F8`..`$07FF` (constant `SPRITE_PTRS`; sprite *n* is `SPRITE_PTRS + n`).
+- Pointer table `$07F8`..`$07FF` (constant `SPRITE_PTRS`; sprite _n_ is `SPRITE_PTRS + n`).
 - Each row is 3 bytes, most significant bit first: bit 7 of byte 0 is the leftmost pixel.
 
-| Column | Byte / bits |
-|---|---|
-| 0–7 | byte 0, bits 7–0 |
-| 8–15 | byte 1, bits 7–0 |
-| 16–23 | byte 2, bits 7–0 |
+| Column | Byte / bits      |
+| ------ | ---------------- |
+| 0–7    | byte 0, bits 7–0 |
+| 8–15   | byte 1, bits 7–0 |
+| 16–23  | byte 2, bits 7–0 |
 
 Visible sprite coordinates: x 24..255 (without the MSB register), y 50..229.
 `VIC2.sprite0x` … `VIC2.sprite7y` and `VIC2.sprite0color` … `VIC2.sprite7color` are declared;
@@ -155,43 +155,43 @@ while (VIC2.rasterLine == 200) {}
 
 ## C64 colour palette (0-15)
 
-| # | Name | # | Name |
-|---|---|---|---|
-| 0 | BLACK | 8 | ORANGE |
-| 1 | WHITE | 9 | BROWN |
-| 2 | RED | 10 | LIGHT_RED |
-| 3 | CYAN | 11 | DARK_GREY |
-| 4 | PURPLE | 12 | GREY |
-| 5 | GREEN | 13 | LIGHT_GREEN |
-| 6 | BLUE | 14 | LIGHT_BLUE |
-| 7 | YELLOW | 15 | LIGHT_GREY |
+| #   | Name   | #   | Name        |
+| --- | ------ | --- | ----------- |
+| 0   | BLACK  | 8   | ORANGE      |
+| 1   | WHITE  | 9   | BROWN       |
+| 2   | RED    | 10  | LIGHT_RED   |
+| 3   | CYAN   | 11  | DARK_GREY   |
+| 4   | PURPLE | 12  | GREY        |
+| 5   | GREEN  | 13  | LIGHT_GREEN |
+| 6   | BLUE   | 14  | LIGHT_BLUE  |
+| 7   | YELLOW | 15  | LIGHT_GREY  |
 
 ---
 
 ## Common pitfalls
 
-| Symptom | Cause | Fix |
-|---|---|---|
-| `BASIC READY. prompt did not appear within 600 frames` | Stub KERNAL doesn't write "READY." to screen RAM, or `$D018` not set to `$15` | Check `make-stub-roms.mjs`: init must set `$D018=$15` before writing READY. at `$04C8` |
-| `code reaches $XXXX, which overlaps the data block at $0D40` | The program grew past a `data @addr(…)` block | Move the data block to a higher 64-byte boundary |
-| Screen stays black | `$D011` not set (screen off) or `$D018` wrong | KERNAL init sets `$D011=$1B` and `$D018=$15` |
-| Sprite not visible | Its `VIC2.spriteEnable` bit is clear, or Y is off-screen | `VIC2.spriteEnable = 1` and check the Y value (visible: 50..229) |
-| Animation doesn't change | Second frame at the wrong address | The pointer is `spritePtr(address)`; the address must be a multiple of 64 |
-| Text looks garbled | Wrong screen codes | A=1, B=2 … Z=26; digits: '0'=0x30, '1'=0x31 … |
-| `asm`: branch to 'x' is out of range | An assembly branch spans more than 127 bytes | Shorten the loop, or branch over a `jmp` |
+| Symptom                                                      | Cause                                                                         | Fix                                                                                    |
+| ------------------------------------------------------------ | ----------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| `BASIC READY. prompt did not appear within 600 frames`       | Stub KERNAL doesn't write "READY." to screen RAM, or `$D018` not set to `$15` | Check `make-stub-roms.mjs`: init must set `$D018=$15` before writing READY. at `$04C8` |
+| `code reaches $XXXX, which overlaps the data block at $0D40` | The program grew past a `data @addr(…)` block                                 | Move the data block to a higher 64-byte boundary                                       |
+| Screen stays black                                           | `$D011` not set (screen off) or `$D018` wrong                                 | KERNAL init sets `$D011=$1B` and `$D018=$15`                                           |
+| Sprite not visible                                           | Its `VIC2.spriteEnable` bit is clear, or Y is off-screen                      | `VIC2.spriteEnable = 1` and check the Y value (visible: 50..229)                       |
+| Animation doesn't change                                     | Second frame at the wrong address                                             | The pointer is `spritePtr(address)`; the address must be a multiple of 64              |
+| Text looks garbled                                           | Wrong screen codes                                                            | A=1, B=2 … Z=26; digits: '0'=0x30, '1'=0x31 …                                          |
+| `asm`: branch to 'x' is out of range                         | An assembly branch spans more than 127 bytes                                  | Shorten the loop, or branch over a `jmp`                                               |
 
 ---
 
 ## Key source files for agents
 
-| File | What to read it for |
-|---|---|
-| `website/showcases/*.c64s` | The showcase programs; start from `rainbow-border.c64s` |
-| `website/js/showcase.js`, `showcase-list.js` | The page that fetches, compiles and runs a showcase; the list of ids |
-| `src/c64script/` | The compiler (lexer, parser, checker, codegen, linker) |
-| `scripts/make-stub-roms.mjs` | KERNAL boot sequence, `$D018` setup, READY. handshake |
-| `src/browser/player.ts` | `start()` + `player.load()` API, `runUntilReady`, `isReady`, `screenText` |
-| `src/machine/c64.ts` | `screenCodeToChar`, `pumpTypeQueue`, `applyPrg`, memory banking |
-| `website/showcase.html` | The showcase page template |
-| `website/showcases.html` | Showcase grid — add cards here |
-| `.github/workflows/pages.yml` | CI build + deploy pipeline |
+| File                                         | What to read it for                                                       |
+| -------------------------------------------- | ------------------------------------------------------------------------- |
+| `website/showcases/*.c64s`                   | The showcase programs; start from `rainbow-border.c64s`                   |
+| `website/js/showcase.js`, `showcase-list.js` | The page that fetches, compiles and runs a showcase; the list of ids      |
+| `src/c64script/`                             | The compiler (lexer, parser, checker, codegen, linker)                    |
+| `scripts/make-stub-roms.mjs`                 | KERNAL boot sequence, `$D018` setup, READY. handshake                     |
+| `src/browser/player.ts`                      | `start()` + `player.load()` API, `runUntilReady`, `isReady`, `screenText` |
+| `src/machine/c64.ts`                         | `screenCodeToChar`, `pumpTypeQueue`, `applyPrg`, memory banking           |
+| `website/showcase.html`                      | The showcase page template                                                |
+| `website/showcases.html`                     | Showcase grid — add cards here                                            |
+| `.github/workflows/pages.yml`                | CI build + deploy pipeline                                                |

@@ -45,7 +45,7 @@ describe('CpuHooks.rdy', () => {
     bus.trace = [];
     expect(cpu.step()).toBe(3); // opcode(8), operand(9), write(10): the write is not held
     expect(bus.mem[0x10]).toBe(0x77);
-    expect(bus.trace![2]).toEqual([0x0010, 0x77, 'write']);
+    expect(bus.trace[2]).toEqual([0x0010, 0x77, 'write']);
     expect(cpu.step()).toBe(4); // two idle cycles (10, 11) + opcode + operand
     expect(cpu.regs.a).toBe(0x01);
   });

@@ -1,4 +1,4 @@
-import { CYCLES_PER_FRAME } from '../machine/c64';
+import { CYCLES_PER_FRAME } from '../machine/vic';
 
 const CYCLES_PER_SECOND = 985_248;
 const MAX_FRAMES_PER_TICK = 5;

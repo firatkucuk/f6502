@@ -21,7 +21,7 @@ function sprite(
 ) {
   const ptr = o.ptr ?? 0x40 + n;
   w.ram[0x07f8 + n] = ptr;
-  const rows = o.rows ?? new Array(63).fill(0xff);
+  const rows = o.rows ?? new Array<number>(63).fill(0xff);
   rows.forEach((b, i) => (w.ram[ptr * 64 + i] = b));
   w.vic.write(2 * n, o.x & 0xff);
   w.vic.write(1 + 2 * n, o.y);
@@ -124,7 +124,12 @@ describe('collisions and IRQ', () => {
     w.ram[0x0400] = 1;
     w.color[0] = 5;
     w.ram[0x0808] = 0xf0;
-    sprite(w, 0, { x: 24, y: 50, colour: 2, rows: [0xff, 0xff, 0xff, ...new Array(60).fill(0)] });
+    sprite(w, 0, {
+      x: 24,
+      y: 50,
+      colour: 2,
+      rows: [0xff, 0xff, 0xff, ...new Array<number>(60).fill(0)],
+    });
     w.vic.write(0x1b, 0x01);
     w.vic.write(0x1a, 0x02);
     runFrames(w.vic, 2);

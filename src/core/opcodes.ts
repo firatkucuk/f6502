@@ -13,12 +13,12 @@ export type Mode =
   | 'rel'
   | 'ind';
 
-export type Kind = 'implied' | 'read' | 'write' | 'rmw' | 'branch' | 'flow' | 'jam';
+export type OpKind = 'implied' | 'read' | 'write' | 'rmw' | 'branch' | 'flow' | 'jam';
 
 export interface OpInfo {
   readonly mnemonic: string;
   readonly mode: Mode;
-  readonly kind: Kind;
+  readonly kind: OpKind;
   readonly official: boolean;
 }
 
@@ -83,7 +83,7 @@ const ILLEGAL = new Set([
   'JAM',
 ]);
 
-function kindOf(mnemonic: string, mode: Mode): Kind {
+function kindOf(mnemonic: string, mode: Mode): OpKind {
   if (mnemonic === 'JAM') return 'jam';
   if (BRANCHES.has(mnemonic)) return 'branch';
   if (FLOW.has(mnemonic)) return 'flow';

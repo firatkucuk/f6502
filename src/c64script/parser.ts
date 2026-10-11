@@ -13,7 +13,51 @@ import type {
   AsmExpr,
   AsmItem,
   AsmOperand,
+  VarDecl,
+  AssignOp,
+  BinaryOp,
+  UnaryOp,
 } from './ast';
+
+/** Binary operators by token kind, with their precedence (a higher number binds tighter). */
+const BINARY_OPS: Partial<Record<TokenKind, { op: BinaryOp; prec: number }>> = {
+  pipepipe: { op: '||', prec: 1 },
+  ampamp: { op: '&&', prec: 2 },
+  pipe: { op: '|', prec: 3 },
+  caret: { op: '^', prec: 4 },
+  amp: { op: '&', prec: 5 },
+  eqeq: { op: '==', prec: 6 },
+  bangeq: { op: '!=', prec: 6 },
+  lt: { op: '<', prec: 7 },
+  gt: { op: '>', prec: 7 },
+  lteq: { op: '<=', prec: 7 },
+  gteq: { op: '>=', prec: 7 },
+  ltlt: { op: '<<', prec: 8 },
+  gtgt: { op: '>>', prec: 8 },
+  plus: { op: '+', prec: 9 },
+  minus: { op: '-', prec: 9 },
+  star: { op: '*', prec: 10 },
+  slash: { op: '/', prec: 10 },
+  percent: { op: '%', prec: 10 },
+};
+/** `as` binds tighter than every binary operator. */
+const CAST_PREC = 11;
+
+const UNARY_OPS: Partial<Record<TokenKind, UnaryOp>> = { minus: '-', tilde: '~', bang: '!' };
+
+const ASSIGN_OPS: Partial<Record<TokenKind, AssignOp>> = {
+  eq: '=',
+  pluseq: '+=',
+  minuseq: '-=',
+  stareq: '*=',
+  slasheq: '/=',
+  percenteq: '%=',
+  ampeq: '&=',
+  pipeeq: '|=',
+  careteq: '^=',
+  ltlteq: '<<=',
+  gtgteq: '>>=',
+};
 
 export function parse(tokens: Token[]): Program {
   let pos = 0;
@@ -193,7 +237,7 @@ export function parse(tokens: Token[]): Program {
     return { tag: 'program', address, body, line };
   }
 
-  function parseVarDecl(line: number): Decl {
+  function parseVarDecl(line: number): VarDecl {
     const isConst = maybe('const') !== null;
     if (!isConst) eat('let');
     const annotation = parseAnnotation();
@@ -236,31 +280,19 @@ export function parse(tokens: Token[]): Program {
       at('const') ||
       (at('at') && (peek(1).text === 'zp' || peek(1).text === 'addr'))
     ) {
-      return parseVarDecl(l) as unknown as Stmt;
+      return parseVarDecl(l);
     }
     const lhsExpr = parseExpr();
-    const assignOps = [
-      'eq',
-      'pluseq',
-      'minuseq',
-      'stareq',
-      'slasheq',
-      'percenteq',
-      'ampeq',
-      'pipeeq',
-      'careteq',
-      'ltlteq',
-      'gtgteq',
-    ];
-    if (assignOps.includes(peek().kind)) {
-      const op = tokens[pos++]!.text;
+    const assignOp = ASSIGN_OPS[peek().kind];
+    if (assignOp !== undefined) {
+      pos++;
       const rhs = parseExpr();
       eat('semicolon');
-      return { tag: 'assign', lhs: lhsExpr, op, rhs, line: l };
+      return { tag: 'assign', lhs: lhsExpr, op: assignOp, rhs, line: l };
     }
     if (at('plusplus') || at('minusminus')) {
       const opTok = tokens[pos++]!;
-      const op = (opTok.kind === 'plusplus' ? '++' : '--') as '++' | '--';
+      const op = opTok.kind === 'plusplus' ? '++' : '--';
       eat('semicolon');
       return { tag: 'incDec', lhs: lhsExpr, op, line: l };
     }
@@ -311,7 +343,7 @@ export function parse(tokens: Token[]): Program {
     let post: Stmt;
     if (at('plusplus') || at('minusminus')) {
       const opTok = tokens[pos++]!;
-      const op = (opTok.kind === 'plusplus' ? '++' : '--') as '++' | '--';
+      const op = opTok.kind === 'plusplus' ? '++' : '--';
       post = { tag: 'incDec', lhs: postExpr, op, line: postExpr.line };
     } else {
       post = { tag: 'exprStmt', expr: postExpr, line: postExpr.line };
@@ -382,8 +414,7 @@ export function parse(tokens: Token[]): Program {
   /** The operand must start on the instruction's own line, so `dex` ⏎ `bne x` stays two items. */
   function parseAsmOperand(mnemonic: string, line: number): AsmOperand {
     const next = peek();
-    if (next.line !== line || next.kind === 'rbrace' || next.kind === 'eof')
-      return { tag: 'none' };
+    if (next.line !== line || next.kind === 'rbrace' || next.kind === 'eof') return { tag: 'none' };
     if (isMnemonic(mnemonic) && !takesOperand(mnemonic)) return { tag: 'none' };
     if (isWord(next) && next.text.toLowerCase() !== 'a' && isMnemonic(next.text)) {
       return { tag: 'none' }; // `asl bne …` on one line: the next word starts a new instruction
@@ -465,62 +496,28 @@ export function parse(tokens: Token[]): Program {
     let lhs = parseUnary();
     while (true) {
       const t = peek();
-      const prec = binPrec(t.kind);
-      if (prec < minPrec) break;
-      pos++;
       if (t.kind === 'as') {
+        if (CAST_PREC < minPrec) break;
+        pos++;
         const toType = parseType();
         lhs = { tag: 'cast', expr: lhs, toType, line: t.line };
-      } else {
-        const rhs = parseExpr(prec + 1);
-        lhs = { tag: 'binary', op: t.text, lhs, rhs, line: t.line };
+        continue;
       }
+      const bin = BINARY_OPS[t.kind];
+      if (bin === undefined || bin.prec < minPrec) break;
+      pos++;
+      const rhs = parseExpr(bin.prec + 1);
+      lhs = { tag: 'binary', op: bin.op, lhs, rhs, line: t.line };
     }
     return lhs;
   }
 
-  function binPrec(kind: TokenKind): number {
-    switch (kind) {
-      case 'pipepipe':
-        return 1;
-      case 'ampamp':
-        return 2;
-      case 'pipe':
-        return 3;
-      case 'caret':
-        return 4;
-      case 'amp':
-        return 5;
-      case 'eqeq':
-      case 'bangeq':
-        return 6;
-      case 'lt':
-      case 'gt':
-      case 'lteq':
-      case 'gteq':
-        return 7;
-      case 'ltlt':
-      case 'gtgt':
-        return 8;
-      case 'plus':
-      case 'minus':
-        return 9;
-      case 'star':
-      case 'slash':
-      case 'percent':
-        return 10;
-      case 'as':
-        return 11;
-      default:
-        return -1;
-    }
-  }
-
   function parseUnary(): Expr {
     const t = peek();
-    if (t.kind === 'minus' || t.kind === 'tilde' || t.kind === 'bang') {
+    const op = UNARY_OPS[t.kind];
+    if (op !== undefined) {
       pos++;
-      return { tag: 'unary', op: t.text, rhs: parseUnary(), line: t.line };
+      return { tag: 'unary', op, rhs: parseUnary(), line: t.line };
     }
     return parsePostfix(parsePrimary());
   }
@@ -560,7 +557,7 @@ export function parse(tokens: Token[]): Program {
         eat('lparen');
         const e = parseExpr();
         eat('rparen');
-        return { tag: t.text as 'lo' | 'hi', expr: e, line: t.line };
+        return { tag: t.text, expr: e, line: t.line };
       }
       if (at('lparen')) {
         eat('lparen');

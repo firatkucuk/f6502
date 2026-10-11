@@ -1,10 +1,14 @@
 import { defineConfig } from 'tsup';
 
+// tsup's declaration build still passes `baseUrl` to the compiler, which TypeScript 6 reports as
+// a deprecation error; the override silences it for that build only.
+const dts = { compilerOptions: { ignoreDeprecations: '6.0' } };
+
 export default defineConfig([
   {
     entry: ['src/index.ts'],
     format: ['esm'],
-    dts: true,
+    dts,
     clean: true,
     target: 'es2022',
     outDir: 'dist',

@@ -22,9 +22,10 @@ interface Case {
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const DIR = join(HERE, '..', '..', '.testdata', 'singlestep', '6502', 'v1');
-const SKIP: Record<string, string> = JSON.parse(
-  readFileSync(join(HERE, 'singlestep-skip.json'), 'utf8'),
-);
+const SKIP = JSON.parse(readFileSync(join(HERE, 'singlestep-skip.json'), 'utf8')) as Record<
+  string,
+  string
+>;
 const FULL = process.env.SST_FULL === '1';
 const SAMPLE = Number(process.env.SST_SAMPLE ?? 200);
 const P_MASK = 0xcf; // bits 4 (B) and 5 (always 1) are not real flag storage

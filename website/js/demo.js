@@ -8,7 +8,9 @@
     try {
       const b64 = btoa(String.fromCharCode(...new Uint8Array(ab)));
       localStorage.setItem(LS_PREFIX + name, b64);
-    } catch (_) { /* storage full or unavailable */ }
+    } catch {
+      /* storage full or unavailable */
+    }
   }
 
   function loadRomFromStorage(name) {
@@ -19,20 +21,22 @@
       const ab = new Uint8Array(bin.length);
       for (let i = 0; i < bin.length; i++) ab[i] = bin.charCodeAt(i);
       return ab.buffer;
-    } catch (_) { return null; }
+    } catch {
+      return null;
+    }
   }
 
   /* ---------- DOM refs ---------- */
-  const loader   = document.getElementById('rom-loader');
-  const canvas   = document.getElementById('c64-canvas');
+  const loader = document.getElementById('rom-loader');
+  const canvas = document.getElementById('c64-canvas');
   const statusEl = document.getElementById('rom-status');
-  const btnLoad  = document.getElementById('btn-load-roms');
+  const btnLoad = document.getElementById('btn-load-roms');
   const fileInput = document.getElementById('rom-file-input');
   const btnPause = document.getElementById('btn-pause');
   const btnReset = document.getElementById('btn-reset');
-  const btnPrg   = document.getElementById('btn-load-prg');
+  const btnPrg = document.getElementById('btn-load-prg');
   const prgInput = document.getElementById('prg-file-input');
-  const led      = document.getElementById('crt-led');
+  const led = document.getElementById('crt-led');
 
   if (!canvas || !loader) return; /* not on the demo page */
 
@@ -60,7 +64,7 @@
       });
       if (btnPause) btnPause.disabled = false;
       if (btnReset) btnReset.disabled = false;
-      if (btnPrg)   btnPrg.disabled   = false;
+      if (btnPrg) btnPrg.disabled = false;
     } catch (err) {
       loader.style.display = '';
       setStatus('Error: ' + (err.message || err));
@@ -76,7 +80,11 @@
   let allCached = true;
   for (const k of ROM_KEYS) {
     const ab = loadRomFromStorage(k);
-    if (ab) { cached[k] = ab; } else { allCached = false; }
+    if (ab) {
+      cached[k] = ab;
+    } else {
+      allCached = false;
+    }
   }
 
   if (allCached) {
@@ -92,16 +100,22 @@
       if (!files.length) return;
 
       const roms = {};
-      const names = files.map((f) => f.name.toLowerCase());
 
       setStatus('Reading files…');
 
       for (const f of files) {
         const n = f.name.toLowerCase();
         const ab = await f.arrayBuffer();
-        if (n.includes('kernal')) { roms.kernal = ab; saveRom('kernal', ab); }
-        else if (n.includes('basic'))  { roms.basic  = ab; saveRom('basic',  ab); }
-        else if (n.includes('char'))   { roms.chargen = ab; saveRom('chargen', ab); }
+        if (n.includes('kernal')) {
+          roms.kernal = ab;
+          saveRom('kernal', ab);
+        } else if (n.includes('basic')) {
+          roms.basic = ab;
+          saveRom('basic', ab);
+        } else if (n.includes('char')) {
+          roms.chargen = ab;
+          saveRom('chargen', ab);
+        }
       }
 
       const missing = ROM_KEYS.filter((k) => !roms[k]);
@@ -119,8 +133,15 @@
   if (btnPause) {
     btnPause.addEventListener('click', () => {
       if (!player) return;
-      if (paused) { player.resume(); paused = false; btnPause.textContent = 'Pause'; }
-      else        { player.pause();  paused = true;  btnPause.textContent = 'Resume'; }
+      if (paused) {
+        player.resume();
+        paused = false;
+        btnPause.textContent = 'Pause';
+      } else {
+        player.pause();
+        paused = true;
+        btnPause.textContent = 'Resume';
+      }
     });
   }
 
@@ -128,7 +149,11 @@
     btnReset.addEventListener('click', () => {
       if (!player) return;
       player.reset();
-      if (paused) { player.resume(); paused = false; if (btnPause) btnPause.textContent = 'Pause'; }
+      if (paused) {
+        player.resume();
+        paused = false;
+        if (btnPause) btnPause.textContent = 'Pause';
+      }
     });
   }
 

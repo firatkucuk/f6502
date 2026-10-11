@@ -29,7 +29,6 @@ export interface LoadPrgOptions {
   whenReady?: boolean;
 }
 
-export const CYCLES_PER_FRAME = 19_656;
 const RESTORE_PULSE_CYCLES = 8;
 
 export class C64 {
@@ -52,7 +51,9 @@ export class C64 {
   constructor(roms: RomSet, options: C64Options = {}) {
     validateRoms(roms);
     if (options.video !== undefined && options.video !== 'pal') {
-      throw new Error(`unsupported video standard '${options.video}': only 'pal' is implemented`);
+      throw new Error(
+        `unsupported video standard '${String(options.video)}': only 'pal' is implemented`,
+      );
     }
     this.port = new CpuPort(() => this.bus.rebuild());
     this.cia1 = new Cia({
@@ -107,7 +108,7 @@ export class C64 {
   /** One CPU step, with the KERNAL traps consulted at the instruction boundary. */
   private stepCpu(): number {
     const pc = this.cpu.regs.pc;
-    if (this.traps.map[pc] !== 0 && this.traps.handle(pc)) return this.cpu.step();
+    if (this.traps.map[pc] !== 0) this.traps.handle(pc);
     return this.cpu.step();
   }
 
@@ -133,8 +134,8 @@ export class C64 {
     this.restoreCountdown = 0;
     this.pendingCycles = 0;
     this.cpu.reset();
-    this.traps?.reset();
-    this.traps?.refresh();
+    this.traps.reset();
+    this.traps.refresh();
   }
 
   runCycles(n: number): void {
@@ -248,12 +249,12 @@ export class C64 {
     this.bus.ram[addr & 0xffff] = value & 0xff;
   }
 
-  /** @internal Test/diagnostic helper: a CPU-visible bus write (RAM, I/O or the 6510 port). */
-  /** Debug/test accessor: a CPU-visible read with side effects, as the CPU would do it. */
+  /** @internal Test/diagnostic helper: a CPU-visible read with side effects. */
   busRead(addr: number): number {
     return this.bus.read(addr);
   }
 
+  /** @internal Test/diagnostic helper: a CPU-visible bus write (RAM, I/O or the 6510 port). */
   busWrite(addr: number, value: number): void {
     this.bus.write(addr, value);
   }

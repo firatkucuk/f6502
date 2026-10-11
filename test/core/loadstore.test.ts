@@ -55,8 +55,8 @@ describe('load/store', () => {
     cpu.step();
     bus.trace = [];
     expect(cpu.step()).toBe(5);
-    expect(bus.trace![3]).toEqual([0x1200, 0x00, 'read']);
-    expect(bus.trace![4]).toEqual([0x1300, 0x55, 'read']);
+    expect(bus.trace[3]).toEqual([0x1200, 0x00, 'read']);
+    expect(bus.trace[4]).toEqual([0x1300, 0x55, 'read']);
     expect(cpu.regs.a).toBe(0x55);
   });
 
@@ -66,8 +66,8 @@ describe('load/store', () => {
     cpu.step();
     bus.trace = [];
     expect(cpu.step()).toBe(5);
-    expect(bus.trace![3]).toEqual([0x1201, 0x00, 'read']);
-    expect(bus.trace![4]).toEqual([0x1201, 0x99, 'write']);
+    expect(bus.trace[3]).toEqual([0x1201, 0x00, 'read']);
+    expect(bus.trace[4]).toEqual([0x1201, 0x99, 'write']);
   });
 
   it('LDA (zp,X) and LDA (zp),Y resolve pointers', () => {

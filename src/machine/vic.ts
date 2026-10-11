@@ -8,6 +8,7 @@ export const FRAME_WIDTH = 384;
 export const FRAME_HEIGHT = 272;
 export const CYCLES_PER_LINE = 63;
 export const LINES = 312;
+export const CYCLES_PER_FRAME = CYCLES_PER_LINE * LINES;
 
 const FIRST_VISIBLE_CYCLE = 12;
 const LAST_VISIBLE_CYCLE = 59;
@@ -289,7 +290,7 @@ export class VicII implements IoChip {
       }
       renderGraphics(this.gColor, this.gFg, mode, glyph, code, nibble, bg);
     } else {
-      this.gColor.fill(bg[0]!);
+      this.gColor.fill(bg[0]);
       this.gFg.fill(0);
     }
 

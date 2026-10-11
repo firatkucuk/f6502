@@ -29,7 +29,9 @@ describe('ZpAllocator', () => {
   });
 });
 
-function compile(src: string) { return check(parse(tokenize(src))); }
+function compile(src: string) {
+  return check(parse(tokenize(src)));
+}
 
 describe('type checker', () => {
   it('resolves a @zp var address', () => {
@@ -45,13 +47,13 @@ describe('type checker', () => {
 
   it('resolves @addr var to fixed address', () => {
     const cp = compile('let @addr(0xD020) reg: u8; program @ 0xC000 {}');
-    expect(cp.vars.get('reg')?.absAddr).toBe(0xD020);
+    expect(cp.vars.get('reg')?.absAddr).toBe(0xd020);
     expect(cp.vars.get('reg')?.zpAddr).toBeNull();
   });
 
   it('reads load address from program block', () => {
     const cp = compile('program @ 0xC000 {}');
-    expect(cp.loadAddr).toBe(0xC000);
+    expect(cp.loadAddr).toBe(0xc000);
   });
 
   it('rejects duplicate variable names', () => {
@@ -103,6 +105,8 @@ describe('type checker', () => {
   });
 
   it('throws when reading writeonly field inside binary expression', () => {
-    expect(() => compile('program @ 0xC000 { let @zp x: u8 = VIC2.rasterIRQ + 1; }')).toThrow(PsTypeError);
+    expect(() => compile('program @ 0xC000 { let @zp x: u8 = VIC2.rasterIRQ + 1; }')).toThrow(
+      PsTypeError,
+    );
   });
 });

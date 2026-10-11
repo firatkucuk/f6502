@@ -12,12 +12,14 @@ describe('toBytes', () => {
   });
 
   it('fetches URLs', async () => {
-    vi.stubGlobal('fetch', async () => new Response(Uint8Array.from([9, 8]), { status: 200 }));
+    vi.stubGlobal('fetch', () =>
+      Promise.resolve(new Response(Uint8Array.from([9, 8]), { status: 200 })),
+    );
     expect([...(await toBytes('http://x/y.prg'))]).toEqual([9, 8]);
   });
 
   it('rejects non-2xx with LoadError carrying URL and status', async () => {
-    vi.stubGlobal('fetch', async () => new Response('nope', { status: 404 }));
+    vi.stubGlobal('fetch', () => Promise.resolve(new Response('nope', { status: 404 })));
     await expect(toBytes('http://x/missing.prg')).rejects.toMatchObject({
       name: 'LoadError',
       status: 404,
@@ -27,9 +29,7 @@ describe('toBytes', () => {
   });
 
   it('wraps network failures as LoadError with status 0', async () => {
-    vi.stubGlobal('fetch', async () => {
-      throw new TypeError('network down');
-    });
+    vi.stubGlobal('fetch', () => Promise.reject(new TypeError('network down')));
     await expect(toBytes('http://x/y')).rejects.toMatchObject({ name: 'LoadError', status: 0 });
   });
 });

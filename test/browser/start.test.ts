@@ -21,10 +21,11 @@ class FakeTarget {
 
 function fakeCanvas() {
   const target = new FakeTarget();
+  const style: Record<string, string> = {};
   return Object.assign(target, {
     width: 0,
     height: 0,
-    style: {} as Record<string, string>,
+    style,
     tabIndex: -1,
     focus: () => undefined,
     getContext: () => ({ putImageData: () => undefined }),
