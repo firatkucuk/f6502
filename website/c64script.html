@@ -851,6 +851,10 @@
             <td style="color:var(--text-muted)">The colour RAM address of the same cell: <code>$D800 + row × 40 + col</code>.</td>
           </tr>
           <tr>
+            <td><code>spritePtr(addr)</code></td>
+            <td style="color:var(--text-muted)">The value for a sprite pointer (<code>addr / 64</code>). The address must be a constant on a 64-byte boundary inside the first 16 KB; anything else is a compile error.</td>
+          </tr>
+          <tr>
             <td><code>lo(x), hi(x)</code></td>
             <td style="color:var(--text-muted)">The low or high byte of a <code>u16</code> variable or constant.</td>
           </tr>
@@ -927,6 +931,48 @@
           <tr><td><code>COLOR_YELLOW</code></td><td style="color:var(--text-muted)">7</td><td><code>COLOR_LIGHT_GREY</code></td><td style="color:var(--text-muted)">15</td></tr>
         </tbody>
       </table>
+    </div>
+
+    <h3 style="margin-top:2rem">Memory address constants</h3>
+    <p style="color:var(--text-muted);font-size:0.9rem;margin-bottom:1rem">
+      A few well-known addresses are pre-defined as <code>u16</code> constants, so
+      <code>poke(0x07F8, 53)</code> can read as what it means. Hardware registers are not here:
+      they are fields of <code>VIC2</code>, <code>SID</code>, <code>CIA1</code> and
+      <code>CIA2</code>. Like colours, they cannot be redefined.
+    </p>
+    <div class="table-wrap reveal">
+      <table>
+        <thead><tr><th>Name</th><th>Value</th><th>What it is</th></tr></thead>
+        <tbody>
+          <tr><td><code>SCREEN_RAM</code></td><td style="color:var(--text-muted)">$0400</td><td style="color:var(--text-muted)">The 40 &times; 25 character cells. <code>screen(0, 0)</code> is the same address.</td></tr>
+          <tr><td><code>COLOR_RAM</code></td><td style="color:var(--text-muted)">$D800</td><td style="color:var(--text-muted)">The colour of each cell. <code>color(0, 0)</code> is the same address.</td></tr>
+          <tr><td><code>SPRITE_PTRS</code></td><td style="color:var(--text-muted)">$07F8</td><td style="color:var(--text-muted)">Eight pointer bytes, one per sprite: <code>SPRITE_PTRS + n</code> is sprite <em>n</em>.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="terminal reveal" style="margin-top:1.25rem">
+      <div class="terminal-bar">
+        <span class="terminal-dot red"></span>
+        <span class="terminal-dot yellow"></span>
+        <span class="terminal-dot green"></span>
+        <span class="terminal-title">sprite-pointer.c64s</span>
+      </div>
+      <div class="terminal-body">
+        <pre data-try><span class="cm">// Name the sprite's address once; spritePtr() does the division by 64.</span>
+<span class="kw">const</span> SHAPE: <span class="ty">u16</span> = <span class="nu">0x0D40</span>;
+
+<span class="kw">data</span> @addr(SHAPE) {
+  dot: [<span class="ty">u8</span>; <span class="nu">3</span>] = [<span class="nu">0x18</span>, <span class="nu">0x3C</span>, <span class="nu">0x18</span>];
+}
+
+<span class="kw">program</span> @ <span class="nu">0x0810</span> {
+  poke(SPRITE_PTRS, spritePtr(SHAPE));
+  VIC2.spriteEnable = <span class="nu">1</span>;
+  VIC2.sprite0x = <span class="nu">100</span>;
+  VIC2.sprite0y = <span class="nu">100</span>;
+  <span class="kw">loop</span> {}
+}</pre>
+      </div>
     </div>
   </section>
 
