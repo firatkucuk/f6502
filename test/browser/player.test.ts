@@ -163,6 +163,55 @@ describe('Player audio', () => {
   });
 });
 
+describe('Player mute', () => {
+  const rig = () => {
+    const f = fakeEnv();
+    const muted: boolean[] = [];
+    const audio = { pump: () => 0, close: () => {}, setMuted: (m: boolean) => void muted.push(m) };
+    const c64 = new C64(loopRoms());
+    return { f, muted, audio, c64, player: new Player(c64, f.env, { audio }) };
+  };
+
+  it('reports whether there is any sound to mute', () => {
+    const f = fakeEnv();
+    expect(new Player(new C64(loopRoms()), f.env).hasAudio).toBe(false);
+    expect(rig().player.hasAudio).toBe(true);
+  });
+
+  it('silences the sound without pausing, and brings it back', () => {
+    const { player, muted } = rig();
+    player.resume();
+    player.muted = true;
+    expect(player.running).toBe(true);
+    expect(muted[muted.length - 1]).toBe(true);
+    player.muted = false;
+    expect(muted[muted.length - 1]).toBe(false);
+  });
+
+  it('stays muted across pause and resume', () => {
+    const { player, muted } = rig();
+    player.muted = true; // before the first resume
+    player.resume();
+    expect(muted[muted.length - 1]).toBe(true);
+    player.pause();
+    player.resume();
+    expect(muted[muted.length - 1]).toBe(true);
+  });
+
+  it('is not undone when warping ends', () => {
+    const { f, c64, player, muted } = rig();
+    let warp = true;
+    Object.defineProperty(c64, 'warp', { get: () => warp });
+    player.resume();
+    player.muted = true;
+    f.fire(0);
+    f.fire(20);
+    warp = false;
+    f.fire(40);
+    expect(muted[muted.length - 1]).toBe(true);
+  });
+});
+
 describe('Player media', () => {
   it('mounts a D64, exports it after a SAVE through the drive, and rejects junk early', async () => {
     const f = fakeEnv();

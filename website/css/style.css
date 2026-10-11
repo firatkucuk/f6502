@@ -1013,6 +1013,7 @@ kbd {
 .emu-bar button:hover:not(:disabled) { color: var(--text); border-color: var(--primary); }
 .emu-bar button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .emu-bar button:disabled { opacity: 0.5; cursor: default; }
+.emu-bar button[hidden] { display: none; }
 .emu-bar .on-state, .emu-bar [aria-pressed="true"] .off-state { display: none; }
 .emu-bar [aria-pressed="true"] .on-state { display: block; }
 
