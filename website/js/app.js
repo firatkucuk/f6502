@@ -37,7 +37,7 @@
   document.querySelectorAll('.reveal').forEach((el) => observer.observe(el));
 
   /* copy buttons */
-  document.querySelectorAll('pre').forEach((pre) => {
+  document.querySelectorAll('pre:not([data-no-copy])').forEach((pre) => {
     const btn = document.createElement('button');
     btn.className = 'copy-btn';
     btn.textContent = 'copy';

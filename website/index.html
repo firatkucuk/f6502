@@ -80,6 +80,7 @@
     <li><a href="architecture.html">Architecture</a></li>
     <li><a href="usage.html">Usage</a></li>
     <li><a href="c64script.html">C64Script</a></li>
+    <li><a href="playground.html">Playground</a></li>
     <li><a href="showcases.html">Showcases</a></li>
   </ul>
   <a class="nav-gh" href="https://github.com/firatkucuk/f6502" target="_blank" rel="noopener">
@@ -292,14 +293,22 @@
         <span class="terminal-title">demo.c64s</span>
       </div>
       <div class="terminal-body">
-        <pre><span class="token-cmt">// Rainbow border — cycles all 16 C64 colours</span>
-<span class="token-kw">program</span>(<span class="token-num">0x0810</span>) {
-  <span class="token-kw">var</span> <span class="token-type">color</span>: <span class="token-type">byte</span> <span class="token-ann">@zp</span> = <span class="token-num">0</span>;
+        <pre data-try><span class="token-cmt">// Cycle the border through all 16 C64 colours</span>
+<span class="token-kw">let</span> <span class="token-ann">@zp</span> color: <span class="token-type">u8</span> = <span class="token-num">0</span>;
+<span class="token-kw">let</span> <span class="token-ann">@zp</span> ticks: <span class="token-type">u8</span> = <span class="token-num">0</span>;
 
+<span class="token-kw">program</span> <span class="token-ann">@</span> <span class="token-num">0x0810</span> {
   <span class="token-kw">loop</span> {
-    <span class="token-kw">c64</span>.border = color;
-    color = color + <span class="token-num">1</span>;
-    <span class="token-kw">if</span> (color == <span class="token-num">16</span>) { color = <span class="token-num">0</span>; }
+    <span class="token-kw">while</span> (VIC2.rasterLine != <span class="token-num">200</span>) {}
+    <span class="token-kw">while</span> (VIC2.rasterLine == <span class="token-num">200</span>) {}
+
+    ticks = ticks + <span class="token-num">1</span>;
+    <span class="token-kw">if</span> (ticks == <span class="token-num">5</span>) {
+      ticks = <span class="token-num">0</span>;
+      color = color + <span class="token-num">1</span>;
+      <span class="token-kw">if</span> (color == <span class="token-num">16</span>) { color = <span class="token-num">0</span>; }
+      VIC2.borderColor = color;
+    }
   }
 }</pre>
       </div>
@@ -372,5 +381,6 @@
 <script src="js/app.js"></script>
 <script src="dist/f6502.min.js"></script>
 <script src="js/demo.js"></script>
+<script type="module" src="js/try-now.js"></script>
 </body>
 </html>

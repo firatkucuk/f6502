@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Playground — f6502</title>
+  <meta name="description" content="Write C64Script in your browser and run it on a cycle-accurate Commodore 64 emulator.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Space+Grotesk:wght@300;400;500;600;700&family=Fira+Code:wght@400;500&family=VT323&display=swap">
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .pg-head { max-width: var(--max-w); margin: 0 auto; padding: 2.5rem 1.5rem 1rem; }
+    .pg-head h1 { font-family: var(--font-pixel); font-size: 1.1rem; margin: 0.75rem 0 0.5rem; }
+    .pg-head p { color: var(--text-muted); margin: 0; }
+    .pg { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 1.25rem;
+          max-width: var(--max-w); margin: 0 auto; padding: 0 1.5rem 3rem; }
+    @media (max-width: 900px) { .pg { grid-template-columns: minmax(0, 1fr); } }
+    .pg-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem; margin-bottom: 0.6rem; }
+    .pg-select-label { display: inline-flex; align-items: center; gap: 0.5rem; margin-left: auto;
+                       font-size: 0.8rem; color: var(--text-muted); }
+    .pg-select-label select { background: var(--surface-2); color: var(--text); border: 1px solid var(--border-2);
+                              border-radius: 6px; padding: 0.35rem 0.5rem; font: inherit; }
+    .pg-hint { font-size: 0.75rem; color: var(--text-dim); }
+    .pg-editor { position: relative; height: 480px; background: #0b0c1e; border: 1px solid var(--border-2);
+                 border-radius: 8px; overflow: hidden; counter-reset: line; }
+    .pg-editor pre, .pg-editor textarea {
+      position: absolute; inset: 0; margin: 0; box-sizing: border-box;
+      padding: 12px 12px 12px 3.6em; border: 0; outline: 0;
+      font-family: 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+      font-size: 0.83rem; line-height: 1.65; tab-size: 2; white-space: pre;
+      word-wrap: normal; overflow-wrap: normal;
+    }
+    .pg-editor pre { overflow: hidden; color: #c0c4e0; pointer-events: none; }
+    .pg-editor textarea { background: transparent; color: transparent; caret-color: #c0c4e0;
+                          resize: none; overflow: auto; }
+    .pg-editor textarea::selection { background: rgba(136, 126, 203, 0.35); }
+    .pg-editor .ln { display: block; position: relative; min-height: 1.65em; counter-increment: line; }
+    .pg-editor .ln::before { content: counter(line); position: absolute; left: -3.1em; width: 2.4em;
+                             text-align: right; color: #454770; }
+    .pg-editor .ln.err { background: rgba(255, 90, 90, 0.18); box-shadow: inset 3px 0 0 #ff5a5a; }
+    .pg-editor .token.comment { color: #454770; font-style: italic; }
+    .pg-editor .token.keyword { color: #887ecb; }
+    .pg-editor .token.attr-name { color: #c9934a; }
+    .pg-editor .token.class-name { color: #6abfc6; }
+    .pg-editor .token.property { color: #50b8c8; }
+    .pg-editor .token.function { color: #a090e8; }
+    .pg-editor .token.boolean, .pg-editor .token.number { color: #c9d487; }
+    .pg-editor .token.operator { color: #6070a0; }
+    .pg-editor .token.punctuation { color: #4a4d70; }
+    .pg-status { margin-top: 0.6rem; min-height: 1.4em; font-family: var(--font-mono); font-size: 0.8rem;
+                 color: var(--text-muted); }
+    .pg-status.err { color: #ff8a8a; }
+    .pg-status.ok { color: var(--accent); }
+    .pg-crt { background: #000; border: 1px solid var(--border-2); border-radius: 10px; padding: 12px; }
+    .pg-crt canvas { display: block; width: 100%; aspect-ratio: 384 / 272; image-rendering: pixelated;
+                     background: #000; }
+    .pg-note { font-size: 0.78rem; color: var(--text-dim); margin: 0.6rem 0 0; }
+  </style>
+</head>
+<body>
+
+<!-- ── Navigation ──────────────────────────────────────────────── -->
+<nav class="nav" role="navigation" aria-label="Main">
+  <a class="nav-logo" href="index.html">f6502<span>.</span></a>
+  <ul class="nav-links">
+    <li><a href="index.html">Home</a></li>
+    <li><a href="architecture.html">Architecture</a></li>
+    <li><a href="usage.html">Usage</a></li>
+    <li><a href="c64script.html">C64Script</a></li>
+    <li><a href="playground.html" aria-current="page">Playground</a></li>
+    <li><a href="showcases.html">Showcases</a></li>
+  </ul>
+  <a class="nav-gh" href="https://github.com/firatkucuk/f6502" target="_blank" rel="noopener">
+    <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+    GitHub
+  </a>
+  <button class="nav-burger" aria-label="Menu" aria-expanded="false">☰</button>
+</nav>
+
+<div class="page">
+  <header class="pg-head">
+    <span class="hero-badge">PLAYGROUND</span>
+    <h1>C64Script Playground</h1>
+    <p>Write C64Script, press Run: it compiles in your browser and runs on the emulator.</p>
+  </header>
+
+  <main class="pg">
+    <section aria-label="Editor">
+      <div class="pg-toolbar">
+        <button id="run-btn" class="btn btn-primary" type="button">&#9654; Run</button>
+        <button id="reboot-btn" class="btn btn-outline" type="button">&#8634; Reboot</button>
+        <span class="pg-hint">Ctrl/&#8984; + Enter</span>
+        <label class="pg-select-label">Example
+          <select id="example-select"></select>
+        </label>
+      </div>
+      <div class="pg-editor">
+        <pre id="highlight" data-no-copy aria-hidden="true"></pre>
+        <textarea id="editor" spellcheck="false" wrap="off" autocomplete="off"
+                  autocapitalize="off" aria-label="C64Script source"></textarea>
+      </div>
+      <div id="status" class="pg-status" role="status" aria-live="polite">Loading emulator…</div>
+    </section>
+
+    <section aria-label="Emulator">
+      <div class="pg-crt"><canvas id="emu-canvas" width="384" height="272"></canvas></div>
+      <p class="pg-note">Click the screen to give it keyboard focus.</p>
+    </section>
+  </main>
+
+  <footer>
+    <div>
+      <div class="footer-brand">f6502</div>
+      <p class="footer-desc">A cycle-accurate Commodore 64 emulator in TypeScript. Apache-2.0.</p>
+    </div>
+    <nav class="footer-links" aria-label="Footer">
+      <a href="index.html">Home</a>
+      <a href="architecture.html">Architecture</a>
+      <a href="usage.html">Usage</a>
+      <a href="showcases.html">Showcases</a>
+      <a href="playground.html">Playground</a>
+      <a href="https://github.com/firatkucuk/f6502" target="_blank" rel="noopener">GitHub</a>
+    </nav>
+  </footer>
+
+</div><!-- /.page -->
+
+<script src="js/app.js"></script>
+<script src="dist/f6502.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"
+        integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg=="
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script type="module" src="js/playground.js"></script>
+</body>
+</html>

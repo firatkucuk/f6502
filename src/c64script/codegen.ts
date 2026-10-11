@@ -121,13 +121,15 @@ export function generate(cp: CheckedProgram): CodeBuffer {
     emit(0x9D, 0x00, 0x05);                  // STA $0500,X
     emit(0x9D, 0x00, 0x06);                  // STA $0600,X
     emit(0xE8);                              // INX
-    emit(0xD0, (scrLoop - bytes.length - 1) & 0xFF); // BNE scrLoop
+    emit(0xD0, (scrLoop - bytes.length - 2) & 0xFF); // BNE scrLoop
     // Last partial page: $0700-$07E7 (232 bytes), avoid sprite ptrs $07F8-$07FF
-    emit(0xA2, 231);                         // LDX #231
+    // BNE (not BPL): X starts above 127, so N would be set after the first DEX.
+    // STA $06FF,X with X = 232..1 covers $07E7 down to $0700.
+    emit(0xA2, 232);                         // LDX #232
     const scrLoop2 = bytes.length;
-    emit(0x9D, 0x00, 0x07);                  // STA $0700,X
+    emit(0x9D, 0xFF, 0x06);                  // STA $06FF,X
     emit(0xCA);                              // DEX
-    emit(0x10, (scrLoop2 - bytes.length - 1) & 0xFF); // BPL scrLoop2
+    emit(0xD0, (scrLoop2 - bytes.length - 2) & 0xFF); // BNE scrLoop2
     // Fill color RAM $D800-$DBFF with black (0)
     emit(0xA9, 0x00);                        // LDA #0
     emit(0xA2, 0x00);                        // LDX #0
@@ -136,23 +138,30 @@ export function generate(cp: CheckedProgram): CodeBuffer {
     emit(0x9D, 0x00, 0xD9);                  // STA $D900,X
     emit(0x9D, 0x00, 0xDA);                  // STA $DA00,X
     emit(0xE8);                              // INX
-    emit(0xD0, (colLoop - bytes.length - 1) & 0xFF); // BNE colLoop
-    emit(0xA2, 231);                         // LDX #231
+    emit(0xD0, (colLoop - bytes.length - 2) & 0xFF); // BNE colLoop
+    emit(0xA2, 232);                         // LDX #232
     const colLoop2 = bytes.length;
-    emit(0x9D, 0x00, 0xDB);                  // STA $DB00,X
+    emit(0x9D, 0xFF, 0xDA);                  // STA $DAFF,X  (covers $DB00..$DBE7)
     emit(0xCA);                              // DEX
-    emit(0x10, (colLoop2 - bytes.length - 1) & 0xFF); // BPL colLoop2
+    emit(0xD0, (colLoop2 - bytes.length - 2) & 0xFF); // BNE colLoop2
   }
 
   function genCall(e: Extract<Expr, { tag: 'call' }>): void {
     // ── built-in: poke(addr, val) ──────────────────────────────────────────
     if (e.name === 'poke') {
-      const addrVal = e.args[0] !== undefined ? evalConst(e.args[0]) : null;
-      const byteVal = e.args[1] !== undefined ? evalConst(e.args[1]) : null;
-      if (addrVal !== null && byteVal !== null) {
-        emit(0xA9, byteVal & 0xFF);
-        emit(0x8D, addrVal & 0xFF, (addrVal >> 8) & 0xFF);
+      const addrExpr = e.args[0];
+      const valueExpr = e.args[1];
+      if (addrExpr === undefined || valueExpr === undefined || e.args.length !== 2) {
+        throw new CodeGenError('poke() takes an address and a value', e.line, 0);
       }
+      const addrVal = evalConst(addrExpr);
+      if (addrVal === null) {
+        throw new CodeGenError('poke() address must be a compile-time constant', e.line, 0);
+      }
+      const byteVal = evalConst(valueExpr);
+      if (byteVal !== null) emit(0xA9, byteVal & 0xFF);
+      else genExpr(valueExpr);
+      emit(0x8D, addrVal & 0xFF, (addrVal >> 8) & 0xFF);
       return;
     }
     // ── built-in: clrscr() ────────────────────────────────────────────────
