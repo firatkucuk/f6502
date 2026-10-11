@@ -1,5 +1,5 @@
 import { D64Source, directoryProgram, matchName, type FileSource } from './sources';
-import { DiskError, petscii, toText } from './d64';
+import { DiskError, petscii, toText, type D64 } from './d64';
 
 export interface DiskDrive {
   readonly device: number;
@@ -333,17 +333,22 @@ export class ImageDrive implements DiskDrive {
     const letter = text[0] ?? '';
     const colon = text.indexOf(':');
     const arg = colon >= 0 ? text.slice(colon + 1) : text.slice(1);
-    const needsWrite = 'SNVRC'.includes(letter);
-    if (needsWrite && !(this.source instanceof D64Source)) return this.setStatus(26);
-    const image = this.source instanceof D64Source ? this.source.image : null;
+    if (letter === 'I') return this.setStatus(0);
+    if (!'SNVRC'.includes(letter)) return this.setStatus(31);
+    // The remaining commands modify the disk, which only a D64 image allows.
+    if (!(this.source instanceof D64Source)) return this.setStatus(26);
+    this.diskCommand(letter, arg, this.source.image);
+  }
+
+  private diskCommand(letter: string, arg: string, image: D64): void {
     switch (letter) {
       case 'S': {
         let count = 0;
         for (const part of arg.split(',')) {
           const pat = petscii(part.replace(/^\d*:?/, ''));
-          for (const e of image!.entries()) {
+          for (const e of image.entries()) {
             if (matchName(pat, e.name) && !e.locked) {
-              image!.scratch(e);
+              image.scratch(e);
               count++;
             }
           }
@@ -352,27 +357,25 @@ export class ImageDrive implements DiskDrive {
       }
       case 'N': {
         const [name = '', id] = arg.split(',');
-        image!.format(name, id);
+        image.format(name, id);
         return this.setStatus(0);
       }
       case 'V':
-        image!.validate();
-        return this.setStatus(0);
-      case 'I':
+        image.validate();
         return this.setStatus(0);
       case 'R': {
         const [to = '', from = ''] = arg.split('=');
-        const entry = image!.entries().find((e) => matchName(petscii(from), e.name));
+        const entry = image.entries().find((e) => matchName(petscii(from), e.name));
         if (!entry) return this.setStatus(62);
-        if (image!.entries().some((e) => matchName(petscii(to), e.name))) return this.setStatus(63);
-        image!.rename(entry, petscii(to));
+        if (image.entries().some((e) => matchName(petscii(to), e.name))) return this.setStatus(63);
+        image.rename(entry, petscii(to));
         return this.setStatus(0);
       }
       case 'C': {
         const [to = '', from = ''] = arg.split('=');
-        const entry = image!.entries().find((e) => matchName(petscii(from), e.name));
+        const entry = image.entries().find((e) => matchName(petscii(from), e.name));
         if (!entry) return this.setStatus(62);
-        const data = image!.readFile(entry);
+        const data = image.readFile(entry);
         const code = this.store(
           {
             name: petscii(to),
@@ -387,8 +390,6 @@ export class ImageDrive implements DiskDrive {
         );
         return this.setStatus(code);
       }
-      default:
-        return this.setStatus(31);
     }
   }
 }

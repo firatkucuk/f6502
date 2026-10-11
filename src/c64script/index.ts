@@ -7,9 +7,9 @@ import { writePrg } from './prg-writer';
 
 export function compile(source: string): Uint8Array {
   const tokens = tokenize(source);
-  const ast    = parse(tokens);
+  const ast = parse(tokens);
   const checked = check(ast);
-  const buf    = generate(checked);
+  const buf = generate(checked);
   const linked = link(buf);
   return writePrg(linked);
 }

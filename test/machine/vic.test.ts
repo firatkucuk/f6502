@@ -151,7 +151,7 @@ describe('text mode rendering', () => {
     setup(w);
     w.vm[0] = 1;
     w.color[0] = 1;
-    w.glyphs.set(1, new Array(8).fill(0x80)); // only the leftmost pixel set
+    w.glyphs.set(1, new Array<number>(8).fill(0x80)); // only the leftmost pixel set
     w.vic.write(0x16, 0x08 | 3);
     runFrame(w.vic);
     runFrame(w.vic);

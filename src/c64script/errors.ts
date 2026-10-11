@@ -10,14 +10,26 @@ export class C64ScriptError extends Error {
 }
 
 export class LexError extends C64ScriptError {
-  constructor(msg: string, line: number, col: number) { super(msg, line, col); this.name = 'LexError'; }
+  constructor(msg: string, line: number, col: number) {
+    super(msg, line, col);
+    this.name = 'LexError';
+  }
 }
 export class ParseError extends C64ScriptError {
-  constructor(msg: string, line: number, col: number) { super(msg, line, col); this.name = 'ParseError'; }
+  constructor(msg: string, line: number, col: number) {
+    super(msg, line, col);
+    this.name = 'ParseError';
+  }
 }
 export class C64ScriptTypeError extends C64ScriptError {
-  constructor(msg: string, line: number, col: number) { super(msg, line, col); this.name = 'C64ScriptTypeError'; }
+  constructor(msg: string, line: number, col: number) {
+    super(msg, line, col);
+    this.name = 'C64ScriptTypeError';
+  }
 }
 export class CodeGenError extends C64ScriptError {
-  constructor(msg: string, line: number, col: number) { super(msg, line, col); this.name = 'CodeGenError'; }
+  constructor(msg: string, line: number, col: number) {
+    super(msg, line, col);
+    this.name = 'CodeGenError';
+  }
 }

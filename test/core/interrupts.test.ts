@@ -18,7 +18,7 @@ describe('IRQ', () => {
   });
 
   it('is never serviced while I is set, even if held for a long time', () => {
-    const m = boot(new Array(64).fill(0xea));
+    const m = boot(new Array<number>(64).fill(0xea));
     m.cpu.setIrq(true); // I is set after reset
     for (let i = 0; i < 50; i++) m.cpu.step();
     expect(m.cpu.regs.pc).toBe(0x0200 + 50);
@@ -58,7 +58,7 @@ describe('NMI', () => {
   });
 
   it('a held-low NMI line does not retrigger; a new edge does', () => {
-    const m = boot(new Array(32).fill(0xea));
+    const m = boot(new Array<number>(32).fill(0xea));
     m.bus.mem[0x0400] = 0xea;
     m.bus.mem[0x0401] = 0xea;
     m.bus.mem[0x0402] = 0xea;

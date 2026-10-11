@@ -1,15 +1,45 @@
 import js from '@eslint/js';
 import tseslint from 'typescript-eslint';
 
+const BROWSER_GLOBALS = {
+  window: 'readonly',
+  document: 'readonly',
+  location: 'readonly',
+  history: 'readonly',
+  navigator: 'readonly',
+  console: 'readonly',
+  alert: 'readonly',
+  setTimeout: 'readonly',
+  File: 'readonly',
+  URL: 'readonly',
+  URLSearchParams: 'readonly',
+  fetch: 'readonly',
+  TextEncoder: 'readonly',
+  TextDecoder: 'readonly',
+  btoa: 'readonly',
+  atob: 'readonly',
+  localStorage: 'readonly',
+  IntersectionObserver: 'readonly',
+  /** The IIFE bundle (dist/f6502.min.js) loaded by the pages. */
+  F6502: 'readonly',
+};
+
 export default tseslint.config(
   { ignores: ['dist', '.testdata', 'node_modules', 'scripts', '.superpowers', '.playwright-mcp'] },
   js.configs.recommended,
-  ...tseslint.configs.recommended,
+  ...tseslint.configs.recommendedTypeChecked,
   {
+    languageOptions: {
+      parserOptions: {
+        project: ['./tsconfig.json', './tsconfig.browser.json'],
+        tsconfigRootDir: import.meta.dirname,
+      },
+    },
     rules: {
       '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
     },
   },
+  { files: ['**/*.js', '**/*.mjs'], ...tseslint.configs.disableTypeChecked },
   {
     files: ['src/core/**/*.ts'],
     rules: {
@@ -43,28 +73,12 @@ export default tseslint.config(
     },
   },
   {
-    files: [
-      'website/js/{c64script-grammar,code-hash,editor-render,emu-controls,home-slideshow,playground,playground-examples,showcase,showcase-list,try-now}.js',
-    ],
-    languageOptions: {
-      sourceType: 'module',
-      globals: {
-        window: 'readonly',
-        document: 'readonly',
-        location: 'readonly',
-        history: 'readonly',
-        navigator: 'readonly',
-        console: 'readonly',
-        setTimeout: 'readonly',
-        File: 'readonly',
-        URL: 'readonly',
-        URLSearchParams: 'readonly',
-        fetch: 'readonly',
-        TextEncoder: 'readonly',
-        TextDecoder: 'readonly',
-        btoa: 'readonly',
-        atob: 'readonly',
-      },
-    },
+    files: ['website/js/*.js'],
+    languageOptions: { sourceType: 'module', globals: BROWSER_GLOBALS },
+  },
+  {
+    // Classic (non-module) scripts.
+    files: ['website/js/app.js', 'website/js/demo.js'],
+    languageOptions: { sourceType: 'script' },
   },
 );

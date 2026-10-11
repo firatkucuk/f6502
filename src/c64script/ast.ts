@@ -52,6 +52,20 @@ export interface HardwareField {
   readonly access: HardwareFieldAccess;
 }
 
+// ── Operators ──────────────────────────────────────────────────────────
+export type CompareOp = '==' | '!=' | '<' | '>' | '<=' | '>=';
+export type ArithmeticOp = '+' | '-' | '*' | '/' | '%' | '&' | '|' | '^' | '<<' | '>>';
+export type LogicalOp = '&&' | '||';
+export type BinaryOp = ArithmeticOp | CompareOp | LogicalOp;
+export type UnaryOp = '-' | '~' | '!';
+export type AssignOp = '=' | '+=' | '-=' | '*=' | '/=' | '%=' | '&=' | '|=' | '^=' | '<<=' | '>>=';
+
+const COMPARE_OPS: ReadonlySet<BinaryOp> = new Set<CompareOp>(['==', '!=', '<', '>', '<=', '>=']);
+
+export function isCompareOp(op: BinaryOp): op is CompareOp {
+  return COMPARE_OPS.has(op);
+}
+
 // ── Expressions ────────────────────────────────────────────────────────
 export type Expr =
   | { readonly tag: 'intLit'; readonly value: number; readonly line: number }
@@ -60,10 +74,10 @@ export type Expr =
   | { readonly tag: 'ident'; readonly name: string; readonly line: number }
   | { readonly tag: 'field'; readonly obj: Expr; readonly field: string; readonly line: number }
   | { readonly tag: 'index'; readonly obj: Expr; readonly idx: Expr; readonly line: number }
-  | { readonly tag: 'unary'; readonly op: string; readonly rhs: Expr; readonly line: number }
+  | { readonly tag: 'unary'; readonly op: UnaryOp; readonly rhs: Expr; readonly line: number }
   | {
       readonly tag: 'binary';
-      readonly op: string;
+      readonly op: BinaryOp;
       readonly lhs: Expr;
       readonly rhs: Expr;
       readonly line: number;
@@ -107,19 +121,11 @@ export type AsmItem =
 
 // ── Statements ─────────────────────────────────────────────────────────
 export type Stmt =
-  | {
-      readonly tag: 'varDecl';
-      readonly name: string;
-      readonly type: PsType;
-      readonly annotation: VarAnnotation;
-      readonly isConst: boolean;
-      readonly init: Expr | null;
-      readonly line: number;
-    }
+  | VarDecl
   | {
       readonly tag: 'assign';
       readonly lhs: Expr;
-      readonly op: string;
+      readonly op: AssignOp;
       readonly rhs: Expr;
       readonly line: number;
     }

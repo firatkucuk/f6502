@@ -1,5 +1,5 @@
 import { C64, type LoadPrgOptions } from '../machine/c64';
-import { openSource } from '../machine/sources';
+import { openSource, type DiskKind } from '../machine/sources';
 import { createWorkletSink, AudioPump, type AudioSink } from './audio';
 import { FrameClock } from './clock';
 import { KeyMapper, type KeyEventLike } from './key-map';
@@ -23,7 +23,7 @@ export interface PlayerEnv {
   cancelFrame(id: number): void;
   listen(type: 'keydown' | 'keyup' | 'blur', handler: (e: PlayerKeyEvent) => void): () => void;
   /** Called once by `Player.destroy()` to undo anything else the environment set up. */
-  dispose?(): void;
+  dispose?: () => void;
 }
 
 export type LoadOptions = LoadPrgOptions;
@@ -137,11 +137,7 @@ export class Player {
   }
 
   /** Mounts a disk image or program on drive 8; junk is rejected here, never at LOAD time. */
-  async mountDisk(
-    source: Source,
-    kind?: 'd64' | 't64' | 'prg' | 'p00',
-    name?: string,
-  ): Promise<void> {
+  async mountDisk(source: Source, kind?: DiskKind, name?: string): Promise<void> {
     const bytes = await toBytes(source);
     this.c64.drive(8).mount(openSource(bytes, kind, name));
   }
@@ -202,7 +198,7 @@ export interface StartOptions {
   scale?: number | 'fit';
   keyboardTarget?: 'canvas' | 'document';
   /** A disk image or program for drive 8 (D64, T64, P00 or PRG; detected by content). */
-  disk?: Source | { source: Source; kind?: 'd64' | 't64' | 'prg' | 'p00'; name?: string };
+  disk?: Source | { source: Source; kind?: DiskKind; name?: string };
   /** A TAP file for the datasette. */
   tape?: Source;
   /** Start the disk (`LOAD"*",8,1` + `RUN`) or the tape (PLAY + `LOAD` + `RUN`) after boot. */
@@ -228,10 +224,11 @@ function isProgramObject(
 export async function start(options: StartOptions): Promise<Player> {
   const canvas =
     typeof options.canvas === 'string'
-      ? (document.querySelector(options.canvas) as HTMLCanvasElement | null)
+      ? document.querySelector<HTMLCanvasElement>(options.canvas)
       : options.canvas;
   if (!canvas || typeof canvas.getContext !== 'function') {
-    throw new Error(`canvas not found: ${String(options.canvas)}`);
+    const what = typeof options.canvas === 'string' ? options.canvas : 'the given element';
+    throw new Error(`canvas not found: ${what}`);
   }
   const [kernal, basic, chargen] = await Promise.all([
     toBytes(options.roms.kernal),
@@ -254,12 +251,13 @@ export async function start(options: StartOptions): Promise<Player> {
     canvas.style.width = `${384 * scale}px`;
     canvas.style.height = `${272 * scale}px`;
   }
-  canvas.tabIndex = 0;
-  const focusOnClick = () => canvas.focus();
-  canvas.addEventListener('click', focusOnClick);
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('2D canvas context unavailable');
   const image = new ImageData(new Uint8ClampedArray(c64.frame.pixels.buffer), 384, 272);
+  canvas.tabIndex = 0;
+  // Added after everything above that can throw, so a failed start() leaves no listener behind.
+  const focusOnClick = () => canvas.focus();
+  canvas.addEventListener('click', focusOnClick);
 
   const target: EventTarget = options.keyboardTarget === 'document' ? document : canvas;
   const env: PlayerEnv = {
@@ -318,7 +316,7 @@ export async function start(options: StartOptions): Promise<Player> {
       ) {
         await player.mountDisk(d.source, d.kind, d.name);
       } else {
-        await player.mountDisk(d as Source);
+        await player.mountDisk(d);
       }
     }
     if (options.tape !== undefined) await player.insertTape(options.tape);

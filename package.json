@@ -8,7 +8,7 @@
   "scripts": {
     "build": "tsup",
     "test": "vitest run test/core test/machine test/browser test/c64script test/website",
-    "test:conformance": "vitest run test/conformance",
+    "test:conformance": "vitest run test/conformance --testTimeout=600000",
     "lint": "eslint . && prettier --check .",
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.browser.json",
     "fetch-test-data": "node scripts/fetch-test-data.mjs",

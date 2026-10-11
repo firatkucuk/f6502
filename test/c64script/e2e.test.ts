@@ -5,8 +5,8 @@ import { compile } from '../../src/c64script/index';
 
 function makeRoms(): RomSet {
   return {
-    kernal:  new Uint8Array(8192).fill(0xEA), // NOPs — lets reset vector land at $0000
-    basic:   new Uint8Array(8192).fill(0x00),
+    kernal: new Uint8Array(8192).fill(0xea), // NOPs — lets reset vector land at $0000
+    basic: new Uint8Array(8192).fill(0x00),
     chargen: new Uint8Array(4096).fill(0x00),
   };
 }
@@ -36,7 +36,7 @@ describe('c64script e2e', () => {
     const src = `program @ 0xC000 { VIC2.borderColor = 2; loop {} }`;
     const c64 = loadAndRun(src, 20);
     // VIC peek at $D020 OR-masks the high nibble with $F0; mask it off
-    expect(c64.peek(0xD020) & 0x0F).toBe(2);
+    expect(c64.peek(0xd020) & 0x0f).toBe(2);
   });
 
   it('CLD clears decimal mode flag', () => {
@@ -76,7 +76,7 @@ describe('c64script e2e', () => {
         loop {}
       }`;
     const c64 = loadAndRun(src, 30);
-    expect(c64.peek(0xD020) & 0x0F).toBe(6);
+    expect(c64.peek(0xd020) & 0x0f).toBe(6);
   });
 
   it('COLOR_BLACK color constant folds to zero at runtime', () => {
@@ -87,7 +87,7 @@ describe('c64script e2e', () => {
       loop {}
     }`;
     const c64 = loadAndRun(src, 20);
-    expect(c64.peek(0xD020) & 0x0F).toBe(0);
+    expect(c64.peek(0xd020) & 0x0f).toBe(0);
   });
 
   it('if/else executes else branch when condition is false', () => {
@@ -99,7 +99,7 @@ describe('c64script e2e', () => {
         loop {}
       }`;
     const c64 = loadAndRun(src, 50);
-    expect(c64.peek(0xD020) & 0x0F).toBe(2);
+    expect(c64.peek(0xd020) & 0x0f).toBe(2);
   });
 
   it('break exits while loop before body decrement', () => {
@@ -111,7 +111,7 @@ describe('c64script e2e', () => {
         loop {}
       }`;
     const c64 = loadAndRun(src, 100);
-    expect(c64.peek(0xD020) & 0x0F).toBe(5);
+    expect(c64.peek(0xd020) & 0x0f).toBe(5);
   });
 
   it('ZP variable addition produces correct result', () => {
@@ -124,7 +124,7 @@ describe('c64script e2e', () => {
         loop {}
       }`;
     const c64 = loadAndRun(src, 100);
-    expect(c64.peek(0xD020) & 0x0F).toBe(7);
+    expect(c64.peek(0xd020) & 0x0f).toBe(7);
   });
 
   it('hardware field ++ increments register value', () => {
@@ -134,7 +134,7 @@ describe('c64script e2e', () => {
       loop {}
     }`;
     const c64 = loadAndRun(src, 30);
-    expect(c64.peek(0xD020) & 0x0F).toBe(4);
+    expect(c64.peek(0xd020) & 0x0f).toBe(4);
   });
 
   it('while loop with > does not execute when x is below threshold', () => {
@@ -147,6 +147,6 @@ describe('c64script e2e', () => {
         loop {}
       }`;
     const c64 = loadAndRun(src, 200);
-    expect(c64.peek(0xD020) & 0x0F).toBe(1);
+    expect(c64.peek(0xd020) & 0x0f).toBe(1);
   });
 });

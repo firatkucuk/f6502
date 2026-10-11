@@ -107,7 +107,7 @@ describe('Datasette', () => {
 describe('machine wiring', () => {
   it('feeds pulses into the CIA1 FLAG interrupt and reports warp only while the motor runs', () => {
     const c64 = new C64(markerRoms());
-    c64.tape.insert(tap(0, new Array(50).fill(0x30)));
+    c64.tape.insert(tap(0, new Array<number>(50).fill(0x30)));
     c64.tape.play();
     expect(c64.warp).toBe(false); // motor off (the port's bit 5 is an input: pulled up)
     c64.busWrite(0x00, 0x2f);
