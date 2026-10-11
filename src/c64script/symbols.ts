@@ -7,25 +7,25 @@ export type SymbolKind =
   | { kind: 'struct' }
   | { kind: 'color';    value: number };
 
-export interface Symbol {
+export interface C64Symbol {
   name: string;
   sym: SymbolKind;
   line: number;
 }
 
 export class SymbolTable {
-  private readonly scopes: Map<string, Symbol>[] = [new Map()];
+  private readonly scopes: Map<string, C64Symbol>[] = [new Map()];
 
   push(): void { this.scopes.push(new Map()); }
   pop(): void  { if (this.scopes.length > 1) this.scopes.pop(); }
 
-  define(sym: Symbol): void {
+  define(sym: C64Symbol): void {
     const top = this.scopes[this.scopes.length - 1]!;
     if (top.has(sym.name)) throw new TypeError(`'${sym.name}' already defined`, sym.line, 0);
     top.set(sym.name, sym);
   }
 
-  resolve(name: string): Symbol | undefined {
+  resolve(name: string): C64Symbol | undefined {
     for (let i = this.scopes.length - 1; i >= 0; i--) {
       const found = this.scopes[i]!.get(name);
       if (found) return found;
