@@ -1,0 +1,345 @@
+// Crystal Climb: collect four gems, then reach the green door at the top.
+// A/D or LEFT/RIGHT move. SPACE starts, jumps, and plays again.
+// One-way platforms catch the climber's feet only on the way down.
+// All gameplay runs on the emulated 6502: no JavaScript or inline assembly.
+
+const HERO: u16 = 0x3000;    // outside the VIC-II character-ROM window
+const PATROL: u16 = 0x3040;
+
+data @addr(HERO) {
+  climber: [u8; 64] = [
+    0x3F, 0x00, 0,  0x7F, 0x80, 0,  0x7F, 0x80, 0,
+    0x5B, 0x80, 0,  0x7F, 0x80, 0,  0x3F, 0x00, 0,
+    0x1E, 0x00, 0,  0x7F, 0x80, 0,  0xFF, 0xC0, 0,
+    0xDE, 0xC0, 0,  0xDE, 0xC0, 0,  0x3F, 0x00, 0,
+    0x33, 0x00, 0,  0x33, 0x00, 0,  0x33, 0x00, 0,
+    0x73, 0x80, 0,  0, 0, 0,  0, 0, 0,
+    0, 0, 0,  0, 0, 0,  0, 0, 0,  0,
+  ];
+  crawler: [u8; 64] = [
+    0, 0, 0,  0, 0, 0,  0, 0, 0,  0, 0, 0,
+    0x40, 0x80, 0,  0x21, 0x00, 0,  0x3F, 0x00, 0,
+    0x7F, 0x80, 0,  0xED, 0xC0, 0,  0xED, 0xC0, 0,
+    0xFF, 0xC0, 0,  0x7F, 0x80, 0,  0x3F, 0x00, 0,
+    0x6D, 0x80, 0,  0xCC, 0xC0, 0,  0x84, 0x40, 0,
+    0, 0, 0,  0, 0, 0,  0, 0, 0,  0, 0, 0,  0, 0, 0,  0,
+  ];
+}
+
+data @addr(0x3100) {
+  ledgeCol: [u8; 7] = [1, 27, 10, 21, 9, 2, 15];
+  ledgeRow: [u8; 7] = [22, 22, 18, 14, 10, 6, 4];
+  ledgeWidth: [u8; 7] = [12, 12, 9, 10, 10, 6, 10];
+  ledgeY: [u8; 7] = [226, 226, 194, 162, 130, 98, 82];
+  gemCol: [u8; 4] = [14, 26, 13, 5];
+  gemRow: [u8; 4] = [16, 12, 8, 4];
+  gemY: [u8; 4] = [178, 146, 114, 82];
+  jumpSpeed: [u8; 15] = [5, 5, 5, 4, 4, 4, 3, 3, 3, 2, 2, 2, 1, 1, 1];
+}
+let @addr(0x3200) collected: [u8; 4];
+
+let @zp x: u16 = 48;
+let @zp y: u8 = 210;
+let @zp grounded: u8 = 1;
+let @zp rising: u8 = 0;
+let @zp jumpIndex: u8 = 0;
+let @zp fallSpeed: u8 = 1;
+let @zp fallTick: u8 = 0;
+let @zp held: u8 = 1;
+let @zp gems: u8 = 0;
+let @zp lives: u8 = 3;
+let @zp won: u8 = 0;
+let @zp patrolX: u8 = 104;
+let @zp patrolRight: u8 = 1;
+let @zp ticks: u8 = 0;
+let @zp pixel: u16 = 0;      // result of pixelX (functions return bytes only)
+
+fn frame(): void {
+  while (VIC2.rasterLine != 250) {}
+  while (VIC2.rasterLine == 250) {}
+}
+
+fn space(): u8 {
+  CIA1.portA = 0x7F;
+  if ((CIA1.portB & 0x10) == 0) { return 1; }
+  return 0;
+}
+
+fn leftKey(): u8 {
+  CIA1.portA = 0xFD;
+  if ((CIA1.portB & 0x04) == 0) { return 1; }
+  CIA1.portA = 0xFE;
+  if ((CIA1.portB & 0x04) == 0) {
+    CIA1.portA = 0xFD;
+    if ((CIA1.portB & 0x80) == 0) { return 1; }
+  }
+  return 0;
+}
+
+fn rightKey(): u8 {
+  CIA1.portA = 0xFB;
+  if ((CIA1.portB & 0x04) == 0) { return 1; }
+  CIA1.portA = 0xFE;
+  if ((CIA1.portB & 0x04) == 0) {
+    CIA1.portA = 0xFD;
+    if ((CIA1.portB & 0x80) != 0) { return 1; }
+  }
+  return 0;
+}
+
+fn waitForSpace(): void {
+  while (space() == 1) { frame(); }
+  while (space() == 0) { frame(); }
+}
+
+// Eight pixels per character. Widen first so columns past 28 do not wrap.
+fn pixelX(col: u8): void {
+  pixel = col as u16;
+  pixel += pixel;
+  pixel += pixel;
+  pixel += pixel;
+  pixel += 24;
+}
+
+fn plot(row: u8, col: u8, ch: u8, hue: u8): void {
+  poke(screen(row, col), ch);
+  poke(color(row, col), hue);
+}
+
+fn drawDoor(hue: u8): void {
+  puts(1, 19, "EXIT", COLOR_WHITE);
+  for (let col: u8 = 19; col < 23; col++) { poke(color(1, col), hue); }
+  for (let r: u8 = 2; r < 4; r++) {
+    plot(r, 20, 0xA0, hue);
+    plot(r, 21, 0xA0, hue);
+  }
+}
+
+fn drawField(): void {
+  VIC2.spriteEnable = 0;
+  clrscr();
+  // Sparse cave glints leave the route easy to read.
+  plot(3, 32, 42, COLOR_MEDIUM_GREY);
+  plot(7, 24, 46, COLOR_MEDIUM_GREY);
+  plot(9, 35, 42, COLOR_MEDIUM_GREY);
+  plot(16, 4, 46, COLOR_MEDIUM_GREY);
+  plot(19, 32, 46, COLOR_MEDIUM_GREY);
+  for (let p: u8 = 0; p < 7; p++) {
+    let width: u8 = ledgeWidth[p];
+    let end: u8 = ledgeCol[p] + width;
+    for (let col: u8 = ledgeCol[p]; col < end; col++) {
+      plot(ledgeRow[p], col, 0xA0, COLOR_LIGHT_BLUE);
+      plot(ledgeRow[p] + 1, col, 0xA0, COLOR_BLUE);
+    }
+  }
+  for (let g: u8 = 0; g < 4; g++) {
+    collected[g] = 0;
+    plot(gemRow[g], gemCol[g], 42, COLOR_YELLOW);
+  }
+  for (let col: u8 = 13; col < 27; col++) {
+    plot(23, col, 42, COLOR_ORANGE);
+  }
+  puts(0, 1, "CRYSTAL CLIMB", COLOR_CYAN);
+  puts(0, 18, "GEMS 0 OF 4", COLOR_YELLOW);
+  puts(0, 32, "LIVES 3", COLOR_WHITE);
+  puts(24, 3, "A D MOVE   SPACE JUMP   GET ALL GEMS", COLOR_LIGHT_GREY);
+  drawDoor(COLOR_BROWN);
+}
+
+fn showPlayer(): void {
+  VIC2.sprite0x = lo(x);
+  VIC2.sprite0y = y;
+  poke(0xD010, hi(x));       // ninth X bit: the right side of the screen
+}
+
+fn respawn(): void {
+  x = 48;
+  y = 210;
+  grounded = 1;
+  rising = 0;
+  fallSpeed = 1;
+  fallTick = 0;
+  held = 1;
+  showPlayer();
+}
+
+fn resetGame(): void {
+  gems = 0;
+  lives = 3;
+  won = 0;
+  ticks = 0;
+  patrolX = 104;
+  patrolRight = 1;
+  drawField();
+  respawn();
+  VIC2.sprite1x = patrolX;
+  VIC2.sprite1y = 210;
+  VIC2.spriteEnable = 3;
+}
+
+fn readControls(): void {
+  if (leftKey() == 1) {
+    if (x > 32) { x -= 2; }
+  } else if (rightKey() == 1) {
+    if (x < 324) { x += 2; }
+  }
+  if (space() == 1) {
+    if (held == 0) {
+      if (grounded == 1) {
+        rising = 1;
+        jumpIndex = 0;
+        grounded = 0;
+      }
+    }
+    held = 1;
+  } else { held = 0; }
+}
+
+fn movePlayer(): void {
+  if (rising == 1) {
+    let step: u8 = jumpSpeed[jumpIndex];
+    y = y - step;
+    jumpIndex += 1;
+    if (jumpIndex == 15) {
+      rising = 0;
+      fallSpeed = 1;
+      fallTick = 0;
+    }
+  } else {
+    let oldFeet: u8 = y + 16;
+    fallTick += 1;
+    if (fallTick == 4) {
+      fallTick = 0;
+      if (fallSpeed < 4) { fallSpeed += 1; }
+    }
+    y += fallSpeed;
+    grounded = 0;
+    for (let p: u8 = 0; p < 7; p++) {
+      let top: u8 = ledgeY[p];
+      if (oldFeet <= top) {
+        if (y + 16 >= top) {
+          pixelX(ledgeCol[p]);
+          let left: u16 = pixel;
+          let width: u8 = ledgeWidth[p];
+          pixelX(ledgeCol[p] + width);
+          let right: u16 = pixel;
+          if (x + 10 > left) {
+            if (x + 2 < right) {
+              y = top - 16;
+              grounded = 1;
+              fallSpeed = 1;
+              fallTick = 0;
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+fn collectGems(): void {
+  for (let g: u8 = 0; g < 4; g++) {
+    if (collected[g] == 0) {
+      pixelX(gemCol[g]);
+      let gx: u16 = pixel;
+      let gxEnd: u16 = gx + 8;
+      let gy: u8 = gemY[g];
+      let gyEnd: u8 = gy + 8;
+      if (x + 10 > gx) {
+        if (x < gxEnd) {
+          if (y + 16 > gy) {
+            if (y < gyEnd) {
+              collected[g] = 1;
+              gems += 1;
+              plot(gemRow[g], gemCol[g], 32, COLOR_YELLOW);
+              poke(screen(0, 23), gems + 0x30);
+              if (gems == 4) { drawDoor(COLOR_LIGHT_GREEN); }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+fn movePatrol(): void {
+  if ((ticks & 1) == 0) {
+    if (patrolRight == 1) {
+      patrolX += 1;
+      if (patrolX == 114) { patrolRight = 0; }
+    } else {
+      patrolX -= 1;
+      if (patrolX == 88) { patrolRight = 1; }
+    }
+  }
+  VIC2.sprite1x = patrolX;
+}
+
+fn checkHazards(): void {
+  let hit: u8 = 0;
+  let patrolEnd: u16 = (patrolX as u16) + 10;
+  if (y > 218) { hit = 1; } // lava, before an 8-bit Y can wrap
+  if (y + 16 > 216) {
+    if (x + 10 > patrolX) {
+      if (x < patrolEnd) { hit = 1; }
+    }
+  }
+  if (hit == 1) {
+    lives -= 1;
+    poke(screen(0, 38), lives + 0x30);
+    respawn();
+  }
+}
+
+fn play(): void {
+  while (lives > 0) {
+    if (won == 1) { return; }
+    frame();
+    ticks += 1;
+    readControls();
+    movePlayer();
+    collectGems();
+    movePatrol();
+    checkHazards();
+    showPlayer();
+    if (gems == 4) {
+      if (grounded == 1) {
+        if (y == 66) {
+          if (x + 10 > 184) {
+            if (x < 200) { won = 1; }
+          }
+        }
+      }
+    }
+  }
+}
+
+program @ 0x0810 {
+  VIC2.ctrl1 = 0x1B;
+  VIC2.memPointers = 0x15;
+  VIC2.borderColor = COLOR_BLACK;
+  VIC2.bgColor0 = COLOR_BLACK;
+  CIA1.ddrA = 0xFF;
+  CIA1.ddrB = 0;
+  poke(SPRITE_PTRS, spritePtr(HERO));
+  poke(SPRITE_PTRS + 1, spritePtr(PATROL));
+  VIC2.sprite0color = COLOR_CYAN;
+  VIC2.sprite1color = COLOR_LIGHT_RED;
+  resetGame();
+  puts(12, 3, "CRYSTAL CLIMB", COLOR_WHITE);
+  puts(14, 2, "SPACE TO START", COLOR_WHITE);
+  waitForSpace();
+  puts(12, 3, "             ", COLOR_WHITE);
+  puts(14, 2, "              ", COLOR_WHITE);
+  loop {
+    play();
+    if (won == 1) {
+      puts(12, 13, "CAVE COMPLETE", COLOR_LIGHT_GREEN);
+    } else {
+      puts(12, 15, "GAME OVER", COLOR_LIGHT_RED);
+    }
+    puts(13, 12, "SPACE TO REPLAY", COLOR_WHITE);
+    waitForSpace();
+    resetGame();
+  }
+}
