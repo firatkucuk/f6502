@@ -79,6 +79,10 @@ describe('playground toolbar', () => {
     const screen = page.slice(page.indexOf('id="emu-crt"'), page.indexOf('</main>'));
     expect(screen.indexOf('<canvas')).toBeGreaterThan(-1);
     expect(screen.indexOf('class="emu-bar"')).toBeGreaterThan(screen.indexOf('<canvas'));
+    // the f6502 logo is the first thing in the bar, the buttons come after it
+    const bar = screen.slice(screen.indexOf('class="emu-bar"'));
+    expect(bar.indexOf('class="emu-bar-logo"')).toBeGreaterThan(-1);
+    expect(bar.indexOf('class="emu-bar-logo"')).toBeLessThan(bar.indexOf('<button'));
     for (const id of ['pause-btn', 'reboot-btn', 'fullscreen-btn']) {
       expect(screen).toMatch(new RegExp(`id="${id}"`));
     }
