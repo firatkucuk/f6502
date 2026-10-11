@@ -312,8 +312,9 @@
     <p style="color:var(--text-muted);font-size:0.9rem;margin-bottom:1rem">
       Zero page holds 246 bytes ($02–$F7) for all variables, parameters and locals together.
       <code>u8</code> arithmetic wraps modulo 256, and a constant above 255 is an error for a
-      <code>u8</code>. Array, pointer and struct declarations are accepted but cannot be used yet
-      (indexing is a compile error; see <a href="#not-in-the-language-yet">what is not in the language yet</a>).
+      <code>u8</code>. Byte arrays can be indexed (see <em>Arrays and tables</em> below); pointer and struct
+      declarations are accepted but cannot be used yet
+      (see <a href="#not-in-the-language-yet">what is not in the language yet</a>).
     </p>
     <div class="terminal reveal" style="margin-top:1.5rem">
       <div class="terminal-bar">
@@ -440,7 +441,9 @@
       expression. A constant index past the end is a compile error; an index worked out while
       running is not checked. The bare name of an array is its address (a <code>u16</code>
       constant), so <code>spritePtr(shape)</code> works for a sprite stored in a data block.
-      Elements are bytes; <code>[u16; N]</code> is not available.
+      Elements are bytes; <code>[u16; N]</code> is not available. <code>name[i] += 1</code> and
+      <code>name[i]++</code> work the index out twice (once to read, once to write), so keep a
+      function call out of the index there.
     </p>
     <div class="terminal reveal" style="margin-top:1rem">
       <div class="terminal-bar">
@@ -760,7 +763,7 @@
             <td><code>u16</code></td>
             <td>16-bit</td>
             <td style="white-space:nowrap">0 – 65535</td>
-            <td style="color:var(--text-muted)">Can be assigned, copied, incremented and read with <code>lo()</code> / <code>hi()</code>. Arithmetic and comparison on it are compile errors for now; use <code>u8</code>, or <code>asm</code>.</td>
+            <td style="color:var(--text-muted)">Can be assigned, copied, incremented, added to and subtracted from, compared, and used as a loop counter. Narrow it with <code>lo()</code>, <code>hi()</code> or <code>as u8</code>. A sum of two <code>u8</code> values is still an 8-bit add: make one operand a <code>u16</code> first (<code>(x as u16) + y</code>).</td>
           </tr>
           <tr>
             <td><code>bool</code></td>
@@ -921,7 +924,7 @@
         <tbody>
           <tr>
             <td><code>poke(address, value)</code></td>
-            <td style="color:var(--text-muted)">Stores a byte. The address must be known at compile time; the value can be any expression.</td>
+            <td style="color:var(--text-muted)">Stores a byte at any address: a constant, or a <code>u16</code> expression computed while running. The value can be any expression.</td>
           </tr>
           <tr>
             <td><code>clrscr()</code></td>
@@ -1275,10 +1278,10 @@
         <p>The 6502 has no multiply or divide opcode. Workarounds exist (repeated addition, shift-and-add), but C64Script doesn't generate them yet. Use bit-shifts <code>&amp;</code> / <code>|</code> for power-of-two multiples.</p>
       </div>
       <div class="chip-card">
-        <div class="chip-card-num">NO ARRAYS</div>
-        <h3>No arrays or pointers</h3>
-        <p class="chip-label">Design in progress</p>
-        <p>Indexed addressing (e.g. <code>LDA $C000,X</code>) is powerful on 6502, but mapping it to a safe language construct is non-trivial. Array indexing parses but is a compile error for now. Use <code>asm {}</code> with <code>,x</code> / <code>,y</code> indexed addressing in the meantime.</p>
+        <div class="chip-card-num">BYTE ARRAYS</div>
+        <h3>Byte arrays, no pointers</h3>
+        <p class="chip-label">No bounds checks at run time</p>
+        <p><code>[u8; N]</code> arrays can be indexed with <code>t[i]</code>, but there are no pointers, no <code>[u16; N]</code> and no two-dimensional arrays. An index worked out while the program runs is not checked against the array's length; a constant index is.</p>
       </div>
       <div class="chip-card">
         <div class="chip-card-num">LIMITED STRINGS</div>
@@ -1293,8 +1296,8 @@
         <p><code>u16</code> variables can be assigned, copied, incremented, added to and subtracted from (<code>+</code>, <code>-</code>, <code>+=</code>, <code>-=</code>, mixing in <code>u8</code> values) and read with <code>lo()</code> / <code>hi()</code>. They compare as 16-bit values (<code>==</code> … <code>&gt;=</code>) and work as <code>for</code> / <code>while</code> loop counters. <code>*</code>, <code>/</code>, <code>%</code>, shifts and the bitwise operators are not available on them.</p>
       </div>
       <div class="chip-card">
-        <div class="chip-card-num">CONST ADDR</div>
-        <h3>poke() needs a constant address</h3>
+        <div class="chip-card-num">COMPUTED ADDR</div>
+        <h3>Computed addresses cost cycles</h3>
         <p class="chip-label">Computed addresses</p>
         <p><code>poke(addr, value)</code> and <code>peek(addr)</code> take any address expression, and <code>screen()</code> / <code>color()</code> take variable rows and columns. A computed address costs a few dozen cycles; a constant one compiles to a single instruction.</p>
       </div>
@@ -1309,7 +1312,7 @@
     <div class="infobox" style="margin-top:2rem">
       <strong>Contributions welcome.</strong>
       The compiler is &lt;1,500 lines of TypeScript with a comprehensive test suite.
-      If you want to add arrays, multiplication, or more hardware registers,
+      If you want to add pointers, multiplication, or more hardware registers,
       <a href="https://github.com/firatkucuk/f6502" target="_blank" rel="noopener">the source is on GitHub</a>.
     </div>
   </section>

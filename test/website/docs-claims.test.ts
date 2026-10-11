@@ -189,9 +189,23 @@ describe('the types table', () => {
     for (const t of ['u8', 'u16', 'bool']) expect(table).toContain(`<code>${t}</code>`);
   });
 
-  it('describes u16 as it behaves today (arithmetic and comparison are compile errors)', () => {
+  it('describes u16 as it behaves today (16-bit arithmetic and comparison work)', () => {
     expect(table).not.toMatch(/arithmetic on it is incomplete/);
-    expect(table).toMatch(/compile error/);
+    expect(table).not.toMatch(/Arithmetic and comparison on it are compile errors/);
+    expect(table).toMatch(/added to and subtracted from, compared/);
+  });
+
+  it('no longer describes limitations that were removed', () => {
+    for (const stale of [
+      'The address must be known at compile time',
+      'Array indexing parses but is a compile error',
+      'poke() needs a constant address',
+      'If you want to add arrays',
+      'arithmetic and comparison are compile errors',
+      'accepted but cannot be used yet\n      (indexing',
+    ]) {
+      expect(html, stale).not.toContain(stale);
+    }
   });
 });
 
@@ -280,5 +294,23 @@ describe('arrays in the guide', () => {
       1, 2, 5, 10, 17, 26, 37, 50,
     ]);
     expect(c.peek(0xd020) & 15).toBe(10);
+  });
+});
+
+describe('array caveats in the guide', () => {
+  it('says that a compound assignment evaluates the index twice, and that is what happens', () => {
+    expect(text).toMatch(/work the index out twice/);
+    const c = boot(
+      `let @addr(0x0C00) a: [u8; 4];
+let @zp calls: u8 = 0;
+fn f(): u8 { calls++; return 1; }
+program @ 0x0810 {
+  a[f()] += 1;
+  poke(0x0900, calls);
+  loop {}
+}`,
+      3,
+    );
+    expect(c.peek(0x0900)).toBe(2);
   });
 });

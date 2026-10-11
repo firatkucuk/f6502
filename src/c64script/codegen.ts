@@ -249,7 +249,7 @@ export function generate(cp: CheckedProgram): CodeBuffer {
       if (row === null || col === null) {
         throw new CodeGenError(
           'puts(): row and column must be compile-time constants ' +
-            '(runtime positions need 16-bit arithmetic, which is not available yet)',
+            '(use poke(screen(row, col), code) for a position known only at run time)',
           e.line,
           0,
         );
@@ -450,7 +450,10 @@ export function generate(cp: CheckedProgram): CodeBuffer {
         break;
       }
       case 'cast':
-        genExpr(e.expr);
+        if (e.toType.tag === 'u8' && isU16(e.expr) && evalConst(e.expr) === null) {
+          gen16(e.expr); // narrowing a 16-bit expression keeps its low byte
+          emit(0xa5, ACC);
+        } else genExpr(e.expr);
         break;
       case 'call':
         genCall(e);
@@ -1410,6 +1413,7 @@ export function generate(cp: CheckedProgram): CodeBuffer {
           0,
         );
       }
+      const wide = field.type.tag === 'u16'; // a scalar u16 field is two bytes, low first
       for (const init of field.init) {
         const v = evalConst(init);
         if (v === null) {
@@ -1419,14 +1423,15 @@ export function generate(cp: CheckedProgram): CodeBuffer {
             0,
           );
         }
-        if (v > 0xff) {
+        if (!wide && v > 0xff) {
           throw new CodeGenError(
             `value ${v} does not fit in a byte (data '${field.name}')`,
             decl.line,
             0,
           );
         }
-        emit(v);
+        emit(v & 0xff);
+        if (wide) emit((v >> 8) & 0xff);
       }
     }
   }

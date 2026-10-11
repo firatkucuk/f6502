@@ -291,6 +291,15 @@ export function check(userProg: Program): CheckedProgram {
         if (a > 0xffff) {
           throw new TypeError(`address ${a} is out of range 0..65535`, d.line, 0);
         }
+        // $F8-$FF hold the compiler's 16-bit accumulator and temporaries.
+        const size = Math.max(1, sizeOf(d.type, structs));
+        if (a < 0x100 && a + size > 0xf8) {
+          throw new TypeError(
+            `address $${a.toString(16).toUpperCase()} overlaps $F8-$FF, which are reserved by the compiler`,
+            d.line,
+            0,
+          );
+        }
         absAddr = a;
       } else zpAddr = zp.alloc(sizeOf(d.type, structs), d.line);
       if (d.init !== null) {
