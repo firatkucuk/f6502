@@ -1004,7 +1004,23 @@ kbd {
 
 /* ── Emulator control bar (showcase and playground): pause, reboot, fullscreen ── */
 /* The logo sits on the left; its auto right margin pushes the buttons to the right. */
+.emu-crt { position: relative; }
+.emu-crt canvas { position: relative; z-index: 0; }
+.emu-crt::before {
+  content: '';
+  position: absolute;
+  z-index: 1;
+  top: 12px;
+  left: 12px;
+  right: 12px;
+  aspect-ratio: 384 / 272;
+  background:
+    radial-gradient(ellipse at center, transparent 58%, rgba(0, 0, 0, 0.38) 100%),
+    repeating-linear-gradient(0deg, transparent 0 3px, rgba(0, 0, 0, 0.16) 3px 4px);
+  pointer-events: none;
+}
 .emu-bar { display: flex; align-items: center; gap: 0.4rem; margin-top: 10px; }
+.emu-bar { position: relative; z-index: 2; }
 .emu-bar-logo {
   margin-right: auto; font-family: var(--font-pixel); font-size: 11px; line-height: 1;
   letter-spacing: -0.02em; color: var(--primary); text-shadow: 0 0 14px var(--primary-glow);
@@ -1029,7 +1045,12 @@ kbd {
   display: flex; flex-direction: column; justify-content: center; align-items: center;
   border: 0; border-radius: 0; padding: 0; background: #000;
 }
-.emu-crt:fullscreen canvas { width: min(100vw, calc((100vh - 52px) * 384 / 272)); height: auto; }
+.emu-crt:fullscreen canvas,
+.emu-crt:fullscreen::before {
+  width: min(100vw, calc((100vh - 52px) * 384 / 272));
+  height: auto;
+}
+.emu-crt:fullscreen::before { top: 0; left: 50%; right: auto; transform: translateX(-50%); }
 .emu-crt:fullscreen .emu-bar {
   margin-top: 0; padding: 8px 12px; box-sizing: border-box;
   width: min(100vw, calc((100vh - 52px) * 384 / 272));
