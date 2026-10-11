@@ -1,5 +1,5 @@
 import type { C64Key } from '../machine/keyboard';
-import type { KeySink } from './keymap';
+import type { KeySink } from './key-map';
 
 const MODIFIERS: ReadonlySet<C64Key> = new Set<C64Key>(['LSHIFT', 'RSHIFT', 'CTRL', 'COMMODORE']);
 

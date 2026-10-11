@@ -2,7 +2,7 @@ import type { IoChip } from './io';
 import { PALETTE } from './palette';
 import { renderGraphics } from './vic-graphics';
 import { SPRITE_BA } from './vic-schedule';
-import { Sprites } from './vic-sprites';
+import { VicSprites as Sprites } from './vic-sprites';
 
 export const FRAME_WIDTH = 384;
 export const FRAME_HEIGHT = 272;

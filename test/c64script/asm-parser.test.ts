@@ -12,15 +12,15 @@ function items(block: string): AsmItem[] {
   return [...stmt.items];
 }
 
-const instr = (it: AsmItem) => (it.kind === 'instr' ? it : (undefined as never));
+const instr = (it: AsmItem) => (it.tag === 'instr' ? it : (undefined as never));
 
 describe('asm parser', () => {
   it('parses one instruction per line, upper-casing the mnemonic', () => {
     const r = items('asm {\n  sei\n  lda #5\n  sta $D011\n}');
-    expect(r.map((i) => (i.kind === 'instr' ? i.mnemonic : i.name))).toEqual(['SEI', 'LDA', 'STA']);
-    expect(instr(r[1]!).operand).toMatchObject({ kind: 'imm', value: { tag: 'num', value: 5 } });
+    expect(r.map((i) => (i.tag === 'instr' ? i.mnemonic : i.name))).toEqual(['SEI', 'LDA', 'STA']);
+    expect(instr(r[1]!).operand).toMatchObject({ tag: 'imm', value: { tag: 'num', value: 5 } });
     expect(instr(r[2]!).operand).toMatchObject({
-      kind: 'addr',
+      tag: 'addr',
       index: null,
       value: { tag: 'num', value: 0xd011 },
     });
@@ -30,16 +30,16 @@ describe('asm parser', () => {
 
   it('accepts C64Script keywords as labels (loop:, for:)', () => {
     const r = items('asm {\nloop:\n  dex\n  bne loop\n}');
-    expect(r[0]).toMatchObject({ kind: 'label', name: 'loop' });
+    expect(r[0]).toMatchObject({ tag: 'label', name: 'loop' });
     expect(instr(r[2]!).operand).toMatchObject({ value: { tag: 'label', name: 'loop' } });
   });
 
   it('parses labels, including one on the same line as an instruction', () => {
     const r = items('asm {\nloop:\n  dex\nagain: bne loop\n}');
-    expect(r.map((i) => i.kind)).toEqual(['label', 'instr', 'label', 'instr']);
-    expect(r[0]).toMatchObject({ kind: 'label', name: 'loop' });
+    expect(r.map((i) => i.tag)).toEqual(['label', 'instr', 'label', 'instr']);
+    expect(r[0]).toMatchObject({ tag: 'label', name: 'loop' });
     expect(instr(r[3]!).operand).toMatchObject({
-      kind: 'addr',
+      tag: 'addr',
       value: { tag: 'label', name: 'loop' },
     });
   });
@@ -48,7 +48,7 @@ describe('asm parser', () => {
     const r = items(
       'asm {\n  lda #1\n  lda $10\n  lda $10,x\n  lda $10,y\n  lda ($10,x)\n  lda ($10),y\n  jmp ($1234)\n  asl a\n  asl\n  nop\n}',
     );
-    expect(r.map((i) => instr(i).operand.kind)).toEqual([
+    expect(r.map((i) => instr(i).operand.tag)).toEqual([
       'imm',
       'addr',
       'addr',
@@ -72,7 +72,7 @@ describe('asm parser', () => {
       value: { tag: 'sym', expr: { tag: 'ident', name: 'count' } },
     });
     expect(instr(r[1]!).operand).toMatchObject({
-      kind: 'imm',
+      tag: 'imm',
       value: { tag: 'lo', arg: { tag: 'sym' } },
     });
     expect(instr(r[2]!).operand).toMatchObject({
@@ -86,7 +86,7 @@ describe('asm parser', () => {
   it('parses ${screen(1, 2)} as an expression', () => {
     const r = items('asm {\n  sta ${screen(1, 2)},x\n}');
     expect(instr(r[0]!).operand).toMatchObject({
-      kind: 'addr',
+      tag: 'addr',
       index: 'x',
       value: { tag: 'sym', expr: { tag: 'call', name: 'screen' } },
     });
@@ -94,7 +94,7 @@ describe('asm parser', () => {
 
   it('parses character literals', () => {
     const r = items("asm {\n  lda #'H'\n}");
-    expect(instr(r[0]!).operand).toMatchObject({ kind: 'imm', value: { tag: 'num', value: 8 } });
+    expect(instr(r[0]!).operand).toMatchObject({ tag: 'imm', value: { tag: 'num', value: 8 } });
   });
 
   it('separates instructions written on one line', () => {
@@ -104,12 +104,12 @@ describe('asm parser', () => {
 
   it('an implied instruction does not swallow the next instruction as its operand', () => {
     const r = items('asm {\nloop: dex bpl loop\n}');
-    expect(r.map((i) => (i.kind === 'instr' ? i.mnemonic : 'label'))).toEqual([
+    expect(r.map((i) => (i.tag === 'instr' ? i.mnemonic : 'label'))).toEqual([
       'label',
       'DEX',
       'BPL',
     ]);
-    expect(instr(r[1]!).operand.kind).toBe('none');
+    expect(instr(r[1]!).operand.tag).toBe('none');
   });
 
   it('keeps the clobbers list', () => {

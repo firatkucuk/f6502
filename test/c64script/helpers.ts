@@ -3,9 +3,9 @@ import { C64 } from '../../src/machine/c64';
 import { compile } from '../../src/c64script/index';
 import {
   C64ScriptError,
+  C64ScriptTypeError,
   CodeGenError,
   LexError,
-  TypeError as C64ScriptTypeError,
 } from '../../src/c64script/errors';
 
 /** Compiles `src`, loads it into a bare machine and runs `frames` frames. */

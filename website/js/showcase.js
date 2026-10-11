@@ -2,6 +2,7 @@ import { tryNowUrl } from './code-hash.js';
 import { GRAMMAR } from './c64script-grammar.js';
 import { SHOWCASES } from './showcase-list.js';
 import { wireEmuControls } from './emu-controls.js';
+import { escapeHtml } from './editor-render.js';
 
 // showcase.html?id=<id>: fetch the program's C64Script source, compile it in the browser and run
 // it on the emulator with the built-in stub ROMs, next to the highlighted code.
@@ -22,10 +23,6 @@ const pauseBtn = document.getElementById('showcase-pause');
 const rebootBtn = document.getElementById('showcase-reboot');
 const soundBtn = document.getElementById('showcase-sound');
 const fullscreenBtn = document.getElementById('showcase-fullscreen');
-
-function escapeHtml(text) {
-  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-}
 
 function showUnknown() {
   titleEl.textContent = 'Showcase not found';

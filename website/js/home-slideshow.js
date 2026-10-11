@@ -1,6 +1,7 @@
 import { tryNowUrl } from './code-hash.js';
 import { GRAMMAR } from './c64script-grammar.js';
 import { EXAMPLES } from './playground-examples.js';
+import { escapeHtml } from './editor-render.js';
 
 // The home page's "See it run" section: compile the slideshow example in the browser and run it
 // on the emulator with the built-in stub ROMs, so a visitor sees a C64 working without loading
@@ -11,10 +12,6 @@ const sourceEl = document.getElementById('slideshow-source');
 const statusEl = document.getElementById('slideshow-status');
 const tryLink = document.getElementById('slideshow-try');
 const example = EXAMPLES.find((e) => e.id === 'slideshow');
-
-function escapeHtml(text) {
-  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-}
 
 function showSource() {
   const code = example.source.replace(/\n+$/, '');

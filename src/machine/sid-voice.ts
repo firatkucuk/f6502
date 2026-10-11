@@ -8,14 +8,14 @@ const TEST_LFSR_DELAY = 0x8000;
 const FLOAT_DECAY_CYCLES = 2_500_000;
 
 /** One SID voice: 24-bit phase accumulator, noise LFSR and the waveform generators. */
-export class Voice {
+export class SidVoice {
   acc = 0x555555;
   lfsr = NOISE_RESET;
   freq = 0;
   pw = 0;
   control = 0;
   /** The neighbouring voice that drives sync and ring modulation (set by `Sid`). */
-  source: Voice = this;
+  source: SidVoice = this;
   /** True for the cycle in which the accumulator MSB went from 0 to 1. */
   msbRising = false;
 

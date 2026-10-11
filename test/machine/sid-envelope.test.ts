@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { Envelope } from '../../src/machine/sid-envelope';
+import { SidEnvelope as Envelope } from '../../src/machine/sid-envelope';
 
 function run(env: Envelope, cycles: number): void {
   for (let i = 0; i < cycles; i++) env.tick();

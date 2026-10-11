@@ -15,8 +15,8 @@ export class LexError extends C64ScriptError {
 export class ParseError extends C64ScriptError {
   constructor(msg: string, line: number, col: number) { super(msg, line, col); this.name = 'ParseError'; }
 }
-export class TypeError extends C64ScriptError {
-  constructor(msg: string, line: number, col: number) { super(msg, line, col); this.name = 'TypeError'; }
+export class C64ScriptTypeError extends C64ScriptError {
+  constructor(msg: string, line: number, col: number) { super(msg, line, col); this.name = 'C64ScriptTypeError'; }
 }
 export class CodeGenError extends C64ScriptError {
   constructor(msg: string, line: number, col: number) { super(msg, line, col); this.name = 'CodeGenError'; }

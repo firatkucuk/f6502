@@ -27,7 +27,7 @@ describe('SampleRing', () => {
   });
 });
 
-describe('Sid registers', () => {
+describe('SID registers', () => {
   it('mirrors the 32 registers and reads $FF from the paddle registers', () => {
     const s = new Sid();
     expect(s.read(0x19)).toBe(0xff);

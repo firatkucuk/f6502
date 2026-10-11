@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { KeyQueue } from '../../src/browser/keyqueue';
+import { KeyQueue } from '../../src/browser/key-queue';
 import type { C64Key } from '../../src/machine/keyboard';
 
 function rig(minHoldFrames?: number) {

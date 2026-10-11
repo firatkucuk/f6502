@@ -8,7 +8,7 @@ export function link(buf: CodeBuffer): { code: Uint8Array; loadAddr: number } {
   const bytes = [...buf.bytes];
 
   for (const { offset, kind, line } of buf.fixups) {
-    switch (kind.kind) {
+    switch (kind.tag) {
       case 'abs16': {
         const labelOffset = buf.labels.get(kind.label);
         if (labelOffset === undefined)
