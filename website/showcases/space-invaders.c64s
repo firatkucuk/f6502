@@ -1,0 +1,301 @@
+// Space Invaders: a block of invaders marches sideways and drops a row each time it reaches an
+// edge. The cannon moves with A and D and fires one bullet at a time with SPACE. Shoot every
+// invader to win; let the block reach the cannon to lose. SPACE starts the next game.
+// The invaders are solid blocks coloured by row, the bullet is an asterisk. Click the screen first
+// for keyboard focus.
+
+const BLOCK: u8 = 0xA0;      // the solid block: an invader cell, a cannon cell
+const BLANK: u8 = 0x20;
+const SHOT: u8 = 0x2A;       // '*': the bullet (screen code 42)
+const CANNON_ROW: u8 = 22;
+
+// One byte per invader (5 rows x 8 columns): 1 while it is alive. A RAM array, because the game
+// clears invaders as they are shot.
+let @addr(0x2000) alive: [u8; 40];
+
+// The colour of each row of the block, from the top down.
+data @addr(0x2100) {
+  rowColour: [u8; 5] = [COLOR_RED, COLOR_ORANGE, COLOR_YELLOW, COLOR_GREEN, COLOR_CYAN];
+}
+
+let @zp fx: u8 = 0;          // the block's leftmost column (0..8)
+let @zp fdir: u8 = 1;        // 1 while the block moves right
+let @zp top: u8 = 3;         // the top invader row (3..13); the rows are two apart
+let @zp remaining: u8 = 40;  // invaders still alive
+let @zp period: u8 = 12;     // frames between block moves; shorter as the block thins
+let @zp moveTick: u8 = 0;    // frames since the block last moved
+let @zp cx: u8 = 20;         // the cannon's centre column (2..37)
+let @zp bulletOn: u8 = 0;    // 1 while a bullet is in flight
+let @zp brow: u8 = 0;        // the bullet's row
+let @zp bcol: u8 = 0;        // the bullet's column
+let @zp outcome: u8 = 0;     // 0 playing, 1 won, 2 lost
+let @zp tens: u8 = 0;
+let @zp ones: u8 = 0;
+let @zp ticks: u8 = 0;
+let @zp title: u8 = 1;       // 1 until the first game starts: only then show the title
+
+// Wait for one video frame.
+fn frame(): void {
+  while (VIC2.rasterLine != 200) {}
+  while (VIC2.rasterLine == 200) {}
+}
+
+// The keyboard matrix: PA selects a row, PB reads the columns. A is row 1 column 2, D is row 2
+// column 2, SPACE is row 7 column 4. A key is down while its bit reads 0.
+fn leftKey(): u8 {
+  CIA1.portA = 0xFD;
+  if ((CIA1.portB & 0x04) == 0) { return 1; }
+  return 0;
+}
+
+fn rightKey(): u8 {
+  CIA1.portA = 0xFB;
+  if ((CIA1.portB & 0x04) == 0) { return 1; }
+  return 0;
+}
+
+fn fireKey(): u8 {
+  CIA1.portA = 0x7F;
+  if ((CIA1.portB & 0x10) == 0) { return 1; }
+  return 0;
+}
+
+// Writes one character, with its colour, at (row, col).
+fn plot(row: u8, col: u8, ch: u8, hue: u8): void {
+  poke(screen(row, col), ch);
+  poke(color(row, col), hue);
+}
+
+// Blanks a whole screen row.
+fn clearRow(row: u8): void {
+  let cell: u16 = screen(row, 0);
+  for (let c: u8 = 0; c < 40; c++) {
+    poke(cell, BLANK);
+    cell += 1;
+  }
+}
+
+// Blanks the five invader rows that start at `first`, two rows apart.
+fn clearBand(first: u8): void {
+  let rk: u8 = first;
+  for (let k: u8 = 0; k < 5; k++) {
+    clearRow(rk);
+    rk = rk + 2;
+  }
+}
+
+// Draws the block: every live invader is three block characters, with a one-cell gap after it.
+fn drawFormation(): void {
+  let rk: u8 = top;
+  let n: u8 = 0;
+  for (let k: u8 = 0; k < 5; k++) {
+    clearRow(rk);
+    let left: u8 = fx;
+    for (let i: u8 = 0; i < 8; i++) {
+      let mid: u8 = left + 1;
+      let right: u8 = left + 2;
+      if (alive[n] == 1) {
+        plot(rk, left, BLOCK, rowColour[k]);
+        plot(rk, mid, BLOCK, rowColour[k]);
+        plot(rk, right, BLOCK, rowColour[k]);
+      }
+      left = left + 4;
+      n = n + 1;
+    }
+    rk = rk + 2;
+  }
+}
+
+// The cannon: three block characters centred on column `col`.
+fn drawCannon(col: u8, ch: u8): void {
+  let l: u8 = col - 1;
+  let r: u8 = col + 1;
+  plot(CANNON_ROW, l, ch, COLOR_GREEN);
+  plot(CANNON_ROW, col, ch, COLOR_GREEN);
+  plot(CANNON_ROW, r, ch, COLOR_GREEN);
+}
+
+// Adds one to the score and writes the two digits in the top-right corner.
+fn addScore(): void {
+  ones = ones + 1;
+  if (ones == 10) {
+    ones = 0;
+    tens = tens + 1;
+    if (tens == 10) { tens = 0; }
+  }
+  poke(screen(0, 38), tens + 0x30);
+  poke(screen(0, 39), ones + 0x30);
+}
+
+// The bullet is on an invader row at column bcol: if a live invader covers that cell, remove it
+// and return 1. Invader n sits at row top + 2k (k = n / 8), columns fx + 4i .. fx + 4i + 2.
+fn hitInvader(): u8 {
+  let rk: u8 = top;
+  let n: u8 = 0;
+  for (let k: u8 = 0; k < 5; k++) {
+    let left: u8 = fx;
+    for (let i: u8 = 0; i < 8; i++) {
+      let mid: u8 = left + 1;
+      let right: u8 = left + 2;
+      if (rk == brow) {
+        if (bcol >= left) {
+          if (bcol <= right) {
+            if (alive[n] == 1) {
+              alive[n] = 0;
+              plot(rk, left, BLANK, COLOR_BLACK);
+              plot(rk, mid, BLANK, COLOR_BLACK);
+              plot(rk, right, BLANK, COLOR_BLACK);
+              addScore();
+              remaining = remaining - 1;
+              if (remaining == 0) { outcome = 1; }
+              if (remaining == 20) { period = 8; }
+              if (remaining == 8) { period = 4; }
+              return 1;
+            }
+          }
+        }
+      }
+      left = left + 4;
+      n = n + 1;
+    }
+    rk = rk + 2;
+  }
+  return 0;
+}
+
+// Moves the bullet one row up: it ends at the top of the screen or on an invader.
+fn stepBullet(): void {
+  if (bulletOn == 0) { return; }
+  // erase the bullet where it was, unless an invader has been drawn over it since
+  let at: u16 = screen(brow, bcol);
+  if (peek(at) == SHOT) { poke(at, BLANK); }
+  brow = brow - 1;
+  if (brow == 1) {
+    bulletOn = 0;
+    return;
+  }
+  if (brow >= top) {
+    if (hitInvader() == 1) {
+      bulletOn = 0;
+      return;
+    }
+  }
+  plot(brow, bcol, SHOT, COLOR_WHITE);
+}
+
+// Moves the block one step: sideways, or down one row and back the other way at an edge.
+// A block that reaches the cannon's row loses the game.
+fn stepFormation(): void {
+  let prev: u8 = top;
+  if (fdir == 1) {
+    if (fx < 8) {
+      fx = fx + 1;
+    } else {
+      fdir = 0;
+      top = top + 1;
+    }
+  } else {
+    if (fx > 0) {
+      fx = fx - 1;
+    } else {
+      fdir = 1;
+      top = top + 1;
+    }
+  }
+  if (top != prev) { clearBand(prev); }
+  if (top == 13) { outcome = 2; }
+  drawFormation();
+}
+
+program @ 0x0810 {
+  VIC2.ctrl1 = 0x1B;          // screen on, 25 rows, text mode
+  VIC2.memPointers = 0x15;    // screen RAM at $0400
+  CIA1.ddrA = 0xFF;           // keyboard: rows out (PA), columns in (PB)
+  CIA1.ddrB = 0x00;
+  VIC2.borderColor = COLOR_BLACK;
+  VIC2.bgColor0 = COLOR_BLACK;
+
+  loop {
+    // ── a new game ──
+    clrscr();
+    fx = 0;
+    fdir = 1;
+    top = 3;
+    remaining = 40;
+    period = 12;
+    moveTick = 0;
+    cx = 20;
+    bulletOn = 0;
+    outcome = 0;
+    tens = 0;
+    ones = 0;
+    for (let n: u8 = 0; n < 40; n++) { alive[n] = 1; }
+    puts(0, 31, "SCORE", COLOR_WHITE);
+    puts(0, 38, "00", COLOR_WHITE);
+    drawFormation();
+    drawCannon(cx, BLOCK);
+
+    if (title == 1) {
+      puts(13, 12, "SPACE INVADERS", COLOR_WHITE);
+      puts(15, 12, "PRESS SPACE", COLOR_WHITE);
+      while (fireKey() == 0) { frame(); }
+      while (fireKey() == 1) { frame(); }
+      puts(13, 12, "              ", COLOR_WHITE);
+      puts(15, 12, "           ", COLOR_WHITE);
+      title = 0;
+    }
+
+    // ── play ──
+    while (outcome == 0) {
+      frame();
+
+      if (leftKey() == 1) {
+        if (cx > 2) {
+          drawCannon(cx, BLANK);
+          cx = cx - 1;
+          drawCannon(cx, BLOCK);
+        }
+      }
+      if (rightKey() == 1) {
+        if (cx < 37) {
+          drawCannon(cx, BLANK);
+          cx = cx + 1;
+          drawCannon(cx, BLOCK);
+        }
+      }
+
+      stepBullet();
+      if (bulletOn == 0) {
+        if (fireKey() == 1) {
+          bulletOn = 1;
+          bcol = cx;
+          brow = 21;
+          plot(brow, bcol, SHOT, COLOR_WHITE);
+        }
+      }
+
+      moveTick = moveTick + 1;
+      if (moveTick >= period) {
+        moveTick = 0;
+        stepFormation();
+      }
+    }
+
+    // ── the end ──
+    for (let r: u8 = 2; r < 22; r++) { clearRow(r); }   // clear the block away from the message
+    bulletOn = 0;
+    if (outcome == 1) {
+      puts(13, 15, "YOU WIN", COLOR_WHITE);
+    } else {
+      puts(13, 14, "GAME OVER", COLOR_WHITE);
+    }
+    puts(15, 12, "PRESS SPACE", COLOR_WHITE);
+    ticks = 0;
+    while (ticks < 120) {
+      frame();
+      ticks = ticks + 1;
+    }
+    while (fireKey() == 1) { frame(); }   // SPACE starts the next game once it is pressed again
+    while (fireKey() == 0) { frame(); }
+  }
+}
