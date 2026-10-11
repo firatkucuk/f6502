@@ -50,6 +50,22 @@ describe('playground examples', () => {
     expect(c64.peek(0x0400 + 503)).toBe(0x34);
   });
 
+  it('hello centres its three pieces of text on the 40-column screen', () => {
+    const c64 = boot(EXAMPLES.find((e) => e.id === 'hello')!.source, 3);
+    const row = (r: number) => Array.from({ length: 40 }, (_, c) => c64.peek(0x0400 + r * 40 + c));
+    const span = (r: number) => {
+      const cells = row(r);
+      const first = cells.findIndex((v) => v !== 0x20);
+      const last = cells.length - 1 - [...cells].reverse().findIndex((v) => v !== 0x20);
+      return { first, last };
+    };
+    // 9 and 20 characters; one character at column 19
+    expect(span(12)).toEqual({ first: 15, last: 23 });
+    expect(span(14)).toEqual({ first: 9, last: 28 });
+    expect(span(10)).toEqual({ first: 19, last: 19 });
+    expect(c64.peek(0xd800 + 10 * 40 + 19) & 15).toBe(7); // COLOR_YELLOW
+  });
+
   it('sprite moves right across the screen', () => {
     const src = EXAMPLES.find((e) => e.id === 'sprite')!.source;
     const early = boot(src, 10).peek(0xd000);
