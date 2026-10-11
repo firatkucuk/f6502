@@ -7,6 +7,7 @@ const BLOCK: u8 = 0xA0;      // the solid block: an invader cell, a cannon cell
 const BLANK: u8 = 0x20;
 const SHOT: u8 = 0x2A;       // '*': the bullet (screen code 42)
 const CANNON_ROW: u8 = 22;
+const CANNON_STEP: u8 = 4;    // frames per cannon column while A or D is held
 
 // One byte per invader (5 rows x 8 columns): 1 while it is alive. A RAM array, because the game
 // clears invaders as they are shot.
@@ -24,6 +25,7 @@ let @zp remaining: u8 = 40;  // invaders still alive
 let @zp period: u8 = 12;     // frames between block moves; shorter as the block thins
 let @zp moveTick: u8 = 0;    // frames since the block last moved
 let @zp cx: u8 = 20;         // the cannon's centre column (2..37)
+let @zp cannonTick: u8 = 0;  // frames since the cannon last moved
 let @zp bulletOn: u8 = 0;    // 1 while a bullet is in flight
 let @zp brow: u8 = 0;        // the bullet's row
 let @zp bcol: u8 = 0;        // the bullet's column
@@ -248,18 +250,24 @@ program @ 0x0810 {
     while (outcome == 0) {
       frame();
 
-      if (leftKey() == 1) {
-        if (cx > 2) {
-          drawCannon(cx, BLANK);
-          cx = cx - 1;
-          drawCannon(cx, BLOCK);
-        }
+      cannonTick = cannonTick + 1;
+      if (cannonTick >= CANNON_STEP) {
+        cannonTick = 0;
       }
-      if (rightKey() == 1) {
-        if (cx < 37) {
-          drawCannon(cx, BLANK);
-          cx = cx + 1;
-          drawCannon(cx, BLOCK);
+      if (cannonTick == 0) {
+        if (leftKey() == 1) {
+          if (cx > 2) {
+            drawCannon(cx, BLANK);
+            cx = cx - 1;
+            drawCannon(cx, BLOCK);
+          }
+        }
+        if (rightKey() == 1) {
+          if (cx < 37) {
+            drawCannon(cx, BLANK);
+            cx = cx + 1;
+            drawCannon(cx, BLOCK);
+          }
         }
       }
 

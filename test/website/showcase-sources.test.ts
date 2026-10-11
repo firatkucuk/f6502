@@ -436,10 +436,11 @@ describe('showcase: space-invaders', () => {
     expect(row3()).not.toBe(before);
 
     const x = cannonCentre(c);
-    tap(c, 'A', 3);
-    expect(cannonCentre(c)).toBeLessThan(x);
-    tap(c, 'D', 6);
-    expect(cannonCentre(c)).toBeGreaterThan(x);
+    tap(c, 'A', 8);
+    const left = cannonCentre(c);
+    expect(left).toBeLessThan(x);
+    tap(c, 'D', 8);
+    expect(cannonCentre(c)).toBeGreaterThan(left);
   });
 
   it('fires one bullet at a time and the bullet climbs', () => {
