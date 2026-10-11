@@ -20,6 +20,14 @@ describe('showcase: rainbow-border', () => {
     // "RAINBOW BORDER" starts at row 11, column 13; R = screen code 18
     expect(c.peek(0x0400 + 11 * 40 + 13)).toBe(18);
   });
+
+  it('centres its second line (26 characters from column 7 to column 32)', () => {
+    const c = boot(source('rainbow-border'), 3);
+    const row = Array.from({ length: 40 }, (_, col) => c.peek(0x0400 + 13 * 40 + col));
+    const used = row.map((v, col) => (v !== 0x20 ? col : -1)).filter((col) => col >= 0);
+    expect(used[0]).toBe(7);
+    expect(used[used.length - 1]).toBe(32);
+  });
 });
 
 describe('showcase: character-art', () => {

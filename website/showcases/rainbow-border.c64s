@@ -6,7 +6,7 @@ let @zp ticks: u8 = 0;
 program @ 0x0810 {
   clrscr();
   puts(11, 13, "RAINBOW BORDER", COLOR_WHITE);
-  puts(13, 9, "16 COLOURS ON ONE REGISTER", COLOR_LIGHT_GREY);
+  puts(13, 7, "16 COLOURS ON ONE REGISTER", COLOR_LIGHT_GREY);
 
   loop {
     // wait for one video frame
