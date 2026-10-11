@@ -50,6 +50,7 @@ export interface HardwareField {
 // ── Expressions ────────────────────────────────────────────────────────
 export type Expr =
   | { readonly tag: 'intLit';  readonly value: number;  readonly line: number }
+  | { readonly tag: 'strLit';  readonly codes: readonly number[]; readonly line: number }
   | { readonly tag: 'boolLit'; readonly value: boolean; readonly line: number }
   | { readonly tag: 'ident';   readonly name: string;   readonly line: number }
   | { readonly tag: 'field';   readonly obj: Expr;      readonly field: string; readonly line: number }

@@ -390,6 +390,7 @@ export function parse(tokens: Token[]): Program {
   function parsePrimary(): Expr {
     const t = peek(); pos++;
     if (t.kind === 'int_lit') return { tag: 'intLit', value: parseIntLit(t.text), line: t.line };
+    if (t.kind === 'str_lit') return { tag: 'strLit', codes: t.codes ?? [], line: t.line };
     if (t.kind === 'true')    return { tag: 'boolLit', value: true,  line: t.line };
     if (t.kind === 'false')   return { tag: 'boolLit', value: false, line: t.line };
     if (t.kind === 'lparen') {

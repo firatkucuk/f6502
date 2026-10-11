@@ -212,6 +212,44 @@ export function generate(cp: CheckedProgram): CodeBuffer {
     // ── built-in: clrscr() ────────────────────────────────────────────────
     if (e.name === 'clrscr') { genClrscr(); return; }
 
+    // ── built-in: puts(row, col, "TEXT" [, colour]) — constant stores ─────────
+    if (e.name === 'puts') {
+      const [rowE, colE, textE, colourE] = e.args;
+      const row = rowE !== undefined ? evalConst(rowE) : null;
+      const col = colE !== undefined ? evalConst(colE) : null;
+      if (row === null || col === null) {
+        throw new CodeGenError(
+          'puts(): row and column must be compile-time constants ' +
+            '(runtime positions need 16-bit arithmetic, which is not available yet)',
+          e.line,
+          0,
+        );
+      }
+      if (textE === undefined || textE.tag !== 'strLit') {
+        throw new CodeGenError('puts(): the third argument must be a string literal', e.line, 0);
+      }
+      const colour = colourE !== undefined ? evalConst(colourE) : null;
+      if (colourE !== undefined && colour === null) {
+        throw new CodeGenError('puts(): the colour must be a compile-time constant', e.line, 0);
+      }
+      const cell = row * 40 + col;
+      let loaded = -1;
+      textE.codes.forEach((code, i) => {
+        if (code !== loaded) emit(0xA9, code); // LDA #code (skipped when A already holds it)
+        loaded = code;
+        const a = 0x0400 + cell + i;
+        emit(0x8D, a & 0xFF, (a >> 8) & 0xFF); // STA screen cell
+      });
+      if (colour !== null) {
+        emit(0xA9, colour & 0x0F); // LDA #colour
+        for (let i = 0; i < textE.codes.length; i++) {
+          const a = 0xD800 + cell + i;
+          emit(0x8D, a & 0xFF, (a >> 8) & 0xFF); // STA colour cell
+        }
+      }
+      return;
+    }
+
     // ── built-ins: screen(row, col) / color(row, col) — compile-time addresses ──
     if (e.name === 'screen' || e.name === 'color') {
       const address = evalConst(e);
@@ -358,6 +396,8 @@ export function generate(cp: CheckedProgram): CodeBuffer {
         break;
       case 'index':
         throw new CodeGenError('array indexing is not supported yet', e.line, 0);
+      case 'strLit':
+        throw new CodeGenError('string literals are only allowed in puts()', e.line, 0);
     }
   }
 

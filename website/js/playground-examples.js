@@ -61,30 +61,19 @@ program @ 0x0810 {
   {
     id: 'hello',
     title: 'Text on screen',
-    source: `// Write HELLO C64 into screen RAM (screen codes) and colour it white.
-// screen(row, col) / color(row, col) turn a position into an address at compile time.
+    source: `// puts(row, col, "TEXT", colour) writes text at a screen position.
+// 'H' and "HELLO" are screen codes (A = 1 ... Z = 26), uppercase only.
 program @ 0x0810 {
   clrscr();
   VIC2.borderColor = COLOR_BLACK;
   VIC2.bgColor0 = COLOR_BLACK;
 
-  poke(screen(12, 15), 8);    // H
-  poke(screen(12, 16), 5);    // E
-  poke(screen(12, 17), 12);   // L
-  poke(screen(12, 18), 12);   // L
-  poke(screen(12, 19), 15);   // O
-  poke(screen(12, 21), 3);    // C
-  poke(screen(12, 22), 0x36); // 6
-  poke(screen(12, 23), 0x34); // 4
+  puts(12, 15, "HELLO C64", COLOR_WHITE);
+  puts(14, 14, "WRITTEN IN C64SCRIPT", COLOR_LIGHT_BLUE);
 
-  poke(color(12, 15), COLOR_WHITE);
-  poke(color(12, 16), COLOR_WHITE);
-  poke(color(12, 17), COLOR_WHITE);
-  poke(color(12, 18), COLOR_WHITE);
-  poke(color(12, 19), COLOR_WHITE);
-  poke(color(12, 21), COLOR_WHITE);
-  poke(color(12, 22), COLOR_WHITE);
-  poke(color(12, 23), COLOR_WHITE);
+  // A single character: poke it and its colour.
+  poke(screen(10, 20), 'H');
+  poke(color(10, 20), COLOR_YELLOW);
   loop {}
 }
 `,

@@ -4,6 +4,7 @@ import { compile } from '../../src/c64script/index';
 import {
   C64ScriptError,
   CodeGenError,
+  LexError,
   TypeError as C64ScriptTypeError,
 } from '../../src/c64script/errors';
 
@@ -28,11 +29,11 @@ export const background = (c: C64): number => c.peek(0xd021) & 0x0f;
 /** Asserts that compiling `src` fails with the given error class, on `line` when given. */
 export function expectError(
   src: string,
-  kind: 'type' | 'codegen',
+  kind: 'type' | 'codegen' | 'lex',
   match: RegExp,
   line?: number,
 ): void {
-  const Expected = kind === 'type' ? C64ScriptTypeError : CodeGenError;
+  const Expected = kind === 'type' ? C64ScriptTypeError : kind === 'lex' ? LexError : CodeGenError;
   try {
     compile(src);
   } catch (err) {
