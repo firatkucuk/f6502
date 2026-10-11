@@ -1,6 +1,7 @@
 import { tryNowUrl } from './code-hash.js';
 import { GRAMMAR } from './c64script-grammar.js';
 import { SHOWCASES } from './showcase-list.js';
+import { wireEmuControls } from './emu-controls.js';
 
 // showcase.html?id=<id>: fetch the program's C64Script source, compile it in the browser and run
 // it on the emulator with the built-in stub ROMs, next to the highlighted code.
@@ -69,52 +70,23 @@ async function run() {
   });
   await player.load(file());
   statusEl.textContent = `Compiled in your browser (${prg.length - 2} bytes) and running live.`;
-  wireControls(player, file);
-}
-
-function wireControls(player, file) {
-  const syncPause = () => {
-    const label = player.running ? 'Pause' : 'Resume';
-    pauseBtn.title = label;
-    pauseBtn.setAttribute('aria-label', label);
-    pauseBtn.setAttribute('aria-pressed', String(!player.running));
-  };
-  pauseBtn.disabled = false;
-  rebootBtn.disabled = false;
-  syncPause();
-  pauseBtn.addEventListener('click', () => {
-    if (player.running) player.pause();
-    else player.resume();
-    syncPause();
-  });
-  rebootBtn.addEventListener('click', async () => {
-    rebootBtn.disabled = true;
-    try {
-      player.reset();
-      await player.load(file());
-      statusEl.textContent = 'Rebooted and running the showcase again.';
-    } catch (err) {
-      console.error('[showcase]', err);
-      statusEl.textContent = `Reboot failed (${err.message}).`;
-    } finally {
-      rebootBtn.disabled = false;
-    }
-  });
-
-  if (!document.fullscreenEnabled || typeof crtEl.requestFullscreen !== 'function') {
-    fullscreenBtn.hidden = true;
-    return;
-  }
-  fullscreenBtn.addEventListener('click', () => {
-    if (document.fullscreenElement) document.exitFullscreen();
-    else crtEl.requestFullscreen();
-  });
-  document.addEventListener('fullscreenchange', () => {
-    const on = Boolean(document.fullscreenElement);
-    const label = on ? 'Exit fullscreen' : 'Fullscreen';
-    fullscreenBtn.title = label;
-    fullscreenBtn.setAttribute('aria-label', label);
-    fullscreenBtn.setAttribute('aria-pressed', String(on));
+  wireEmuControls({
+    player,
+    crt: crtEl,
+    canvas,
+    pauseBtn,
+    rebootBtn,
+    fullscreenBtn,
+    reboot: async () => {
+      try {
+        player.reset();
+        await player.load(file());
+        statusEl.textContent = 'Rebooted and running the showcase again.';
+      } catch (err) {
+        console.error('[showcase]', err);
+        statusEl.textContent = `Reboot failed (${err.message}).`;
+      }
+    },
   });
 }
 
