@@ -134,3 +134,13 @@ describe('showcase thumbnails', () => {
     expect(readFileSync('AGENTS.md', 'utf8')).not.toMatch(/nyan/i);
   });
 });
+
+describe('showcases page header', () => {
+  it('its main button opens the playground, not the home page demo', () => {
+    const cards = readFileSync('website/showcases.html', 'utf8');
+    expect(cards).toMatch(
+      /<a class="btn btn-primary" href="playground\.html">[^<]*playground<\/a>/,
+    );
+    expect(cards).not.toMatch(/index\.html#demo/);
+  });
+});
