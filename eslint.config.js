@@ -44,7 +44,7 @@ export default tseslint.config(
   },
   {
     files: [
-      'website/js/{c64script-grammar,code-hash,editor-render,home-slideshow,playground,playground-examples,try-now}.js',
+      'website/js/{c64script-grammar,code-hash,editor-render,home-slideshow,playground,playground-examples,showcase,showcase-list,try-now}.js',
     ],
     languageOptions: {
       sourceType: 'module',
@@ -58,6 +58,8 @@ export default tseslint.config(
         setTimeout: 'readonly',
         File: 'readonly',
         URL: 'readonly',
+        URLSearchParams: 'readonly',
+        fetch: 'readonly',
         TextEncoder: 'readonly',
         TextDecoder: 'readonly',
         btoa: 'readonly',

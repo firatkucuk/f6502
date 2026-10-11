@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Showcase — f6502</title>
+  <meta name="description" content="A C64Script showcase compiled in your browser and running live on the f6502 emulator.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Space+Grotesk:wght@300;400;500;600;700&family=Fira+Code:wght@400;500&family=VT323&display=swap">
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .pg-head { max-width: var(--max-w); margin: 0 auto; padding: 2.5rem 1.5rem 1rem; }
+    .hero-badge { display: inline-flex; align-items: center; padding: 6px 14px;
+                  background: rgba(106, 191, 198, 0.12); border: 1px solid rgba(106, 191, 198, 0.3);
+                  border-radius: 20px; font-family: var(--font-pixel); font-size: 8px;
+                  color: var(--accent); letter-spacing: 0.1em; text-decoration: none; }
+    .pg-head h1 { font-family: var(--font-pixel); font-size: 1.1rem; margin: 0.75rem 0 0.5rem; }
+    .pg-head p { color: var(--text-muted); margin: 0; }
+    .sc { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 1.25rem;
+          max-width: var(--max-w); margin: 0 auto; padding: 0 1.5rem 3rem; }
+    @media (max-width: 900px) { .sc { grid-template-columns: minmax(0, 1fr); } }
+    .sc-crt { background: #000; border: 1px solid var(--border-2); border-radius: 10px; padding: 12px; }
+    .sc-crt canvas { display: block; width: 100%; aspect-ratio: 384 / 272; image-rendering: pixelated;
+                     background: #000; }
+    .sc-status { margin-top: 0.6rem; min-height: 1.4em; font-family: var(--font-mono);
+                 font-size: 0.8rem; color: var(--text-muted); }
+    .sc-source { position: relative; max-height: 560px; overflow: auto; }
+    .sc-source pre { margin: 0; background: none; border: 0; padding: 0; }
+    .sc-source code { font-family: var(--font-mono); font-size: 0.8rem; line-height: 1.6; color: #c0c4e0; }
+    .sc-source .token.comment { color: #454770; font-style: italic; }
+    .sc-source .token.keyword { color: #887ecb; }
+    .sc-source .token.attr-name { color: #c9934a; }
+    .sc-source .token.class-name { color: #6abfc6; }
+    .sc-source .token.property { color: #50b8c8; }
+    .sc-source .token.function { color: #a090e8; }
+    .sc-source .token.boolean, .sc-source .token.number { color: #c9d487; }
+    .sc-source .token.string { color: #9ae29b; }
+    .sc-source .token.operator { color: #6070a0; }
+    .sc-source .token.punctuation { color: #4a4d70; }
+  </style>
+</head>
+<body>
+
+<!-- ── Navigation ──────────────────────────────────────────────── -->
+<nav class="nav" role="navigation" aria-label="Main">
+  <a class="nav-logo" href="index.html">f6502<span>.</span></a>
+  <ul class="nav-links">
+    <li><a href="index.html">Home</a></li>
+    <li><a href="architecture.html">Architecture</a></li>
+    <li><a href="usage.html">Usage</a></li>
+    <li><a href="c64script.html">C64Script</a></li>
+    <li><a href="playground.html">Playground</a></li>
+    <li><a href="showcases.html" aria-current="page">Showcases</a></li>
+  </ul>
+  <a class="nav-gh" href="https://github.com/firatkucuk/f6502" target="_blank" rel="noopener">
+    <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+    GitHub
+  </a>
+  <button class="nav-burger" aria-label="Menu" aria-expanded="false">☰</button>
+</nav>
+
+<div class="page">
+  <header class="pg-head">
+    <a class="hero-badge" href="showcases.html">&larr; SHOWCASES</a>
+    <h1 id="showcase-title">Loading…</h1>
+    <p id="showcase-blurb"></p>
+  </header>
+
+  <main class="sc">
+    <section aria-label="Emulator">
+      <div class="sc-crt">
+        <canvas id="showcase-canvas" width="384" height="272" tabindex="0"
+                aria-label="A Commodore 64 screen running the showcase"></canvas>
+      </div>
+      <div id="showcase-status" class="sc-status" role="status" aria-live="polite">Starting the emulator…</div>
+    </section>
+
+    <section aria-label="Source">
+      <div class="terminal">
+        <div class="terminal-bar">
+          <span class="terminal-dot red"></span>
+          <span class="terminal-dot yellow"></span>
+          <span class="terminal-dot green"></span>
+          <span class="terminal-title" id="showcase-file">showcase.c64s</span>
+          <span class="terminal-actions">
+            <a class="term-btn try" id="showcase-try" href="playground.html" target="_blank" rel="noopener"
+               title="Try it in the playground" aria-label="Try it in the playground (opens in a new tab)">
+              <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M5 3.2v9.6a.5.5 0 0 0 .76.43l7.6-4.8a.5.5 0 0 0 0-.86l-7.6-4.8A.5.5 0 0 0 5 3.2z"/></svg>
+            </a>
+          </span>
+        </div>
+        <div class="terminal-body sc-source">
+          <pre><code id="showcase-source"></code></pre>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div>
+      <div class="footer-brand">f6502</div>
+      <p class="footer-desc">A cycle-accurate Commodore 64 emulator in TypeScript. Apache-2.0.</p>
+    </div>
+    <nav class="footer-links" aria-label="Footer">
+      <a href="index.html">Home</a>
+      <a href="architecture.html">Architecture</a>
+      <a href="usage.html">Usage</a>
+      <a href="showcases.html">Showcases</a>
+      <a href="playground.html">Playground</a>
+      <a href="https://github.com/firatkucuk/f6502" target="_blank" rel="noopener">GitHub</a>
+    </nav>
+  </footer>
+
+</div><!-- /.page -->
+
+<script src="js/app.js"></script>
+<script src="dist/f6502.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"
+        integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg=="
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script type="module" src="js/showcase.js"></script>
+</body>
+</html>
