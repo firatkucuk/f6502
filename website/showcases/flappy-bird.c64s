@@ -1,4 +1,4 @@
-// Flappy Bird: press SPACE to flap, fly through the gaps. Click the screen first for keyboard focus.
+// Flappy Bird: press SPACE to flap, fly through the gaps.
 // The bird is sprite 0. The pipes are columns of solid-block characters that step left across the
 // screen, and the VIC-II tells us when the bird touches one (sprite-to-background collision).
 const SHAPE: u16 = 0x2000;   // the bird's sprite data. Not $1000..$1FFF: the VIC-II sees the character ROM there.

@@ -1,8 +1,7 @@
 // Space Invaders: a block of invaders marches sideways and drops a row each time it reaches an
 // edge. The cannon moves with A and D and fires one bullet at a time with SPACE. Shoot every
 // invader to win; let the block reach the cannon to lose. SPACE starts the next game.
-// The invaders are solid blocks coloured by row, the bullet is an asterisk. Click the screen first
-// for keyboard focus.
+// The invaders are solid blocks coloured by row, the bullet is an asterisk.
 
 const BLOCK: u8 = 0xA0;      // the solid block: an invader cell, a cannon cell
 const BLANK: u8 = 0x20;
