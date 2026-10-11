@@ -46,7 +46,7 @@ describe('character literals', () => {
     expect(c.peek(0x0401)).toBe(7);
   });
 
-  it('reject lowercase letters, naming the uppercase one', () => {
+  it('rejects lowercase letters, naming the uppercase one', () => {
     expectError(
       "program @ 0x0810 {\n  poke(0x0400, 'h');\n  loop {}\n}",
       'lex',
@@ -55,7 +55,7 @@ describe('character literals', () => {
     );
   });
 
-  it('reject empty, multi-character and unterminated literals', () => {
+  it('rejects empty, multi-character and unterminated literals', () => {
     expectError(
       "program @ 0x0810 {\n  poke(0x0400, '');\n  loop {}\n}",
       'lex',
@@ -71,7 +71,7 @@ describe('character literals', () => {
     expectError("program @ 0x0810 {\n  poke(0x0400, 'A);\n  loop {}\n}", 'lex', /unterminated/, 2);
   });
 
-  it('reject characters without a screen code and unknown escapes', () => {
+  it('rejects characters without a screen code and unknown escapes', () => {
     expectError(
       "program @ 0x0810 {\n  poke(0x0400, '~');\n  loop {}\n}",
       'lex',

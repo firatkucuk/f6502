@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { C64 } from '../../src/machine/c64';
 import { D64, petscii } from '../../src/machine/d64';
-import { D64Source } from '../../src/machine/container';
+import { D64Source } from '../../src/machine/sources';
 import { filled } from './helpers';
 
 function machine() {

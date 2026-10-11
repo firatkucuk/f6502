@@ -15,14 +15,14 @@ describe('parser — types', () => {
     if (d.tag === 'varDecl') {
       expect(d.name).toBe('x');
       expect(d.type).toEqual({ tag: 'u8' });
-      expect(d.annotation).toEqual({ kind: 'none' });
+      expect(d.annotation).toEqual({ tag: 'none' });
     }
   });
 
   it('parses @zp annotation', () => {
     const prog = p('let @zp frame: u8 = 0;');
     const d = prog.decls[0]!;
-    if (d.tag === 'varDecl') expect(d.annotation).toEqual({ kind: 'zp' });
+    if (d.tag === 'varDecl') expect(d.annotation).toEqual({ tag: 'zp' });
   });
 
   it('parses @addr annotation', () => {
@@ -30,7 +30,7 @@ describe('parser — types', () => {
     const d = prog.decls[0]!;
     if (d.tag === 'varDecl') {
       expect(d.annotation).toMatchObject({
-        kind: 'addr',
+        tag: 'addr',
         address: { tag: 'intLit', value: 0xd020 },
       });
     }

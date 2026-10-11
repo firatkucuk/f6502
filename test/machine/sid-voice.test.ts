@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { MODEL_6581, MODEL_8580 } from '../../src/machine/sid-model';
-import { Voice } from '../../src/machine/sid-voice';
+import { SidVoice as Voice } from '../../src/machine/sid-voice';
 
 function pair(): { a: Voice; b: Voice } {
   const a = new Voice();

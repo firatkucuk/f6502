@@ -7,6 +7,5 @@ export {
   LexError,
   ParseError,
   CodeGenError,
-  TypeError as C64ScriptTypeError,
-  type CompileOpts,
+  C64ScriptTypeError,
 } from './c64script';

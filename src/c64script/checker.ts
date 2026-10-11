@@ -1,4 +1,4 @@
-import { TypeError } from './errors';
+import { C64ScriptTypeError as TypeError } from './errors';
 import { COLOR_NAMES, builtinDecls } from './builtin';
 import { ZpAllocator } from './symbols';
 import type {
@@ -249,9 +249,9 @@ export function check(userProg: Program): CheckedProgram {
       throw new TypeError(`'${d.name}' already defined`, d.line, 0);
     }
 
-    if (d.isConst && ann.kind !== 'none') {
+    if (d.isConst && ann.tag !== 'none') {
       throw new TypeError(
-        `a const cannot have a ${ann.kind === 'zp' ? '@zp' : '@addr'} annotation (use let)`,
+        `a const cannot have a ${ann.tag === 'zp' ? '@zp' : '@addr'} annotation (use let)`,
         d.line,
         0,
       );
@@ -279,7 +279,7 @@ export function check(userProg: Program): CheckedProgram {
       isConst = true;
       constValue = isInt ? v & 0xff : v & 0xffff;
     } else {
-      if (ann.kind === 'addr') {
+      if (ann.tag === 'addr') {
         const a = foldConst(ann.address, lookup);
         if (a === null) {
           throw new TypeError(
@@ -385,7 +385,7 @@ export function check(userProg: Program): CheckedProgram {
 
   const dataAddrs = new Map<DataDecl, number>();
   for (const d of allDecls) {
-    if (d.tag !== 'data' || d.annotation.kind !== 'addr') continue;
+    if (d.tag !== 'data' || d.annotation.tag !== 'addr') continue;
     const a = foldConst(d.annotation.address, globalLookup);
     if (a === null) {
       throw new TypeError('@addr(...) must be a compile-time constant', d.line, 0);
@@ -442,7 +442,7 @@ export function check(userProg: Program): CheckedProgram {
             tag: 'varDecl',
             name: p.name,
             type: p.type,
-            annotation: { kind: 'none' },
+            annotation: { tag: 'none' },
             isConst: false,
             init: null,
             line: d.line,
@@ -617,7 +617,7 @@ export function check(userProg: Program): CheckedProgram {
       }
     };
     for (const item of s.items) {
-      if (item.kind === 'instr' && 'value' in item.operand) {
+      if (item.tag === 'instr' && 'value' in item.operand) {
         visit(item.operand.value, item.mnemonic === 'JSR' || item.mnemonic === 'JMP');
       }
     }

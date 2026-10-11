@@ -17,7 +17,7 @@ export const ADDRESS_NAMES = [
 function constDecl(name: string, value: number, type: 'u8' | 'u16'): VarDecl {
   return {
     tag: 'varDecl', name, type: { tag: type },
-    annotation: { kind: 'none' },
+    annotation: { tag: 'none' },
     isConst: true,
     init: { tag: 'intLit', value, line: 0 },
     line: 0,

@@ -1,8 +1,8 @@
 import type { IoChip } from './io';
-import { Envelope } from './sid-envelope';
+import { SidEnvelope as Envelope } from './sid-envelope';
 import { modelByName, type SidModelParams } from './sid-model';
 import { SampleRing } from './sid-output';
-import { Voice } from './sid-voice';
+import { SidVoice as Voice } from './sid-voice';
 
 export const SID_CLOCK = 985_248;
 const BUS_DECAY_CYCLES = 8192;

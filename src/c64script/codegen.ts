@@ -8,11 +8,11 @@ import { sizeOf } from './ast';
 import type { AsmExpr, AsmItem, Expr, Stmt } from './ast';
 
 export type FixupKind =
-  | { kind: 'branch8'; label: string }
-  | { kind: 'abs16'; label: string }
-  | { kind: 'zpByte'; varName: string }
-  | { kind: 'absHiByte'; label: string }
-  | { kind: 'absLoByte'; label: string };
+  | { tag: 'branch8'; label: string }
+  | { tag: 'abs16'; label: string }
+  | { tag: 'zpByte'; varName: string }
+  | { tag: 'absHiByte'; label: string }
+  | { tag: 'absLoByte'; label: string };
 
 export interface Fixup {
   offset: number;
@@ -345,7 +345,7 @@ export function generate(cp: CheckedProgram): CodeBuffer {
       scope = outer;
     } else {
       emit(0x20); // JSR
-      addFixup({ kind: 'abs16', label: `fn_${e.name}` }, 2);
+      addFixup({ tag: 'abs16', label: `fn_${e.name}` }, 2);
     }
   }
 
@@ -735,82 +735,82 @@ export function generate(cp: CheckedProgram): CodeBuffer {
       switch (op) {
         case '==':
           emit(0xd0);
-          addFixup({ kind: 'branch8', label }, 1);
+          addFixup({ tag: 'branch8', label }, 1);
           break; // BNE
         case '!=':
           emit(0xf0);
-          addFixup({ kind: 'branch8', label }, 1);
+          addFixup({ tag: 'branch8', label }, 1);
           break; // BEQ
         case '<':
           emit(0xb0);
-          addFixup({ kind: 'branch8', label }, 1);
+          addFixup({ tag: 'branch8', label }, 1);
           break; // BCS (skip when >=)
         case '>=':
           emit(0x90);
-          addFixup({ kind: 'branch8', label }, 1);
+          addFixup({ tag: 'branch8', label }, 1);
           break; // BCC (skip when <)
         case '>': {
           // FALSE when x <= k: C=0 (x<k) OR Z=1 (x==k) → BCC + BEQ both skip
           emit(0x90);
-          addFixup({ kind: 'branch8', label }, 1); // BCC
+          addFixup({ tag: 'branch8', label }, 1); // BCC
           emit(0xf0);
-          addFixup({ kind: 'branch8', label }, 1); // BEQ
+          addFixup({ tag: 'branch8', label }, 1); // BEQ
           break;
         }
         case '<=': {
           // FALSE when x > k: C=1 AND Z=0 → BCC skips to okLabel; BNE skips to label
           const okLabel = freshLabel('cmp_ok');
           emit(0x90);
-          addFixup({ kind: 'branch8', label: okLabel }, 1); // BCC → x<k → keep going
+          addFixup({ tag: 'branch8', label: okLabel }, 1); // BCC → x<k → keep going
           emit(0xd0);
-          addFixup({ kind: 'branch8', label }, 1); // BNE → x>k → skip
+          addFixup({ tag: 'branch8', label }, 1); // BNE → x>k → skip
           emitLabel(okLabel);
           break;
         }
         default:
           emit(0xf0);
-          addFixup({ kind: 'branch8', label }, 1);
+          addFixup({ tag: 'branch8', label }, 1);
           break;
       }
     } else {
       switch (op) {
         case '==':
           emit(0xf0);
-          addFixup({ kind: 'branch8', label }, 1);
+          addFixup({ tag: 'branch8', label }, 1);
           break; // BEQ
         case '!=':
           emit(0xd0);
-          addFixup({ kind: 'branch8', label }, 1);
+          addFixup({ tag: 'branch8', label }, 1);
           break; // BNE
         case '<':
           emit(0x90);
-          addFixup({ kind: 'branch8', label }, 1);
+          addFixup({ tag: 'branch8', label }, 1);
           break; // BCC
         case '>=':
           emit(0xb0);
-          addFixup({ kind: 'branch8', label }, 1);
+          addFixup({ tag: 'branch8', label }, 1);
           break; // BCS
         case '>': {
           // TRUE when C=1 AND Z=0: BEQ skips to notGt; BCS jumps when >
           const notGtLabel = freshLabel('cmp_skip');
           emit(0xf0);
-          addFixup({ kind: 'branch8', label: notGtLabel }, 1); // BEQ → equal → not >
+          addFixup({ tag: 'branch8', label: notGtLabel }, 1); // BEQ → equal → not >
           emit(0xb0);
-          addFixup({ kind: 'branch8', label }, 1); // BCS → C=1,Z=0 → is >
+          addFixup({ tag: 'branch8', label }, 1); // BCS → C=1,Z=0 → is >
           emitLabel(notGtLabel);
           break;
         }
         case '<=': {
           // TRUE when C=0 OR Z=1: BCC + BEQ both jump
           emit(0x90);
-          addFixup({ kind: 'branch8', label }, 1); // BCC → <
+          addFixup({ tag: 'branch8', label }, 1); // BCC → <
           emit(0xf0);
-          addFixup({ kind: 'branch8', label }, 1); // BEQ → =
+          addFixup({ tag: 'branch8', label }, 1); // BEQ → =
           break;
         }
         default:
           emit(0xd0);
-          addFixup({ kind: 'branch8', label }, 1);
+          addFixup({ tag: 'branch8', label }, 1);
           break;
       }
     }
@@ -838,7 +838,7 @@ export function generate(cp: CheckedProgram): CodeBuffer {
       emit(0xa5, ACC); // LDA a.lo
       r.load(0, 0xc9, 0xc5, 0xcd); // CMP b.lo
       emit(0xd0);
-      addFixup({ kind: 'branch8', label: ne }, 1); // BNE: Z is already clear
+      addFixup({ tag: 'branch8', label: ne }, 1); // BNE: Z is already clear
       emit(0xa5, ACC + 1); // LDA a.hi
       r.load(1, 0xc9, 0xc5, 0xcd); // CMP b.hi: Z set when equal
       emitLabel(ne);
@@ -882,17 +882,17 @@ export function generate(cp: CheckedProgram): CodeBuffer {
       gen16(cond);
       emit(0xa5, ACC, 0x05, ACC + 1); // LDA lo; ORA hi
       emit(invertForFalse ? 0xd0 : 0xf0); // BNE / BEQ over the jump
-      addFixup({ kind: 'branch8', label: stay }, 1);
+      addFixup({ tag: 'branch8', label: stay }, 1);
     } else {
       // Any other value is true when it is non-zero. CMP #0 makes the flags reflect A even
       // after a function call returned it.
       genExpr(cond);
       emit(0xc9, 0x00);
       emit(invertForFalse ? 0xd0 : 0xf0); // BNE / BEQ over the jump
-      addFixup({ kind: 'branch8', label: stay }, 1);
+      addFixup({ tag: 'branch8', label: stay }, 1);
     }
     emit(0x4c); // JMP label
-    addFixup({ kind: 'abs16', label }, 2);
+    addFixup({ tag: 'abs16', label }, 2);
     emitLabel(stay);
   }
 
@@ -981,7 +981,7 @@ export function generate(cp: CheckedProgram): CodeBuffer {
     const mangle = (name: string): string => `__asm${id}_${name}`;
     const defined = new Set<string>();
     for (const item of s.items) {
-      if (item.kind !== 'label') continue;
+      if (item.tag !== 'label') continue;
       if (defined.has(item.name)) {
         throw new CodeGenError(
           `label '${item.name}' is defined twice in this asm block`,
@@ -992,27 +992,27 @@ export function generate(cp: CheckedProgram): CodeBuffer {
       defined.add(item.name);
     }
     for (const item of s.items) {
-      if (item.kind === 'label') emitLabel(mangle(item.name));
+      if (item.tag === 'label') emitLabel(mangle(item.name));
       else genAsmInstr(item, defined, mangle);
     }
   }
 
   function genAsmInstr(
-    item: Extract<AsmItem, { kind: 'instr' }>,
+    item: Extract<AsmItem, { tag: 'instr' }>,
     defined: ReadonlySet<string>,
     mangle: (name: string) => string,
   ): void {
     const op = item.operand;
     const line = item.line;
     let shape: AsmShape;
-    switch (op.kind) {
+    switch (op.tag) {
       case 'none':
       case 'acc':
       case 'imm':
       case 'izx':
       case 'izy':
       case 'ind':
-        shape = op.kind;
+        shape = op.tag;
         break;
       case 'addr':
         shape = op.index === 'x' ? 'addrx' : op.index === 'y' ? 'addry' : 'addr';
@@ -1061,7 +1061,7 @@ export function generate(cp: CheckedProgram): CodeBuffer {
         if (resolved?.kind === 'byte') {
           emit(opcode);
           addFixup(
-            { kind: resolved.high ? 'absHiByte' : 'absLoByte', label: resolved.label },
+            { tag: resolved.high ? 'absHiByte' : 'absLoByte', label: resolved.label },
             1,
             line,
           );
@@ -1095,7 +1095,7 @@ export function generate(cp: CheckedProgram): CodeBuffer {
           throw new CodeGenError(`'${item.mnemonic}' needs a label to branch to`, line, 0);
         }
         emit(opcode);
-        addFixup({ kind: 'branch8', label: resolved.label }, 1, line);
+        addFixup({ tag: 'branch8', label: resolved.label }, 1, line);
         return;
       case 'abs':
       case 'abx':
@@ -1103,7 +1103,7 @@ export function generate(cp: CheckedProgram): CodeBuffer {
       case 'ind':
         if (resolved?.kind === 'label') {
           emit(opcode);
-          addFixup({ kind: 'abs16', label: resolved.label }, 2, line);
+          addFixup({ tag: 'abs16', label: resolved.label }, 2, line);
         } else if (resolved?.kind === 'value') {
           emit(opcode, resolved.value & 0xff, (resolved.value >> 8) & 0xff);
         } else {
@@ -1247,7 +1247,7 @@ export function generate(cp: CheckedProgram): CodeBuffer {
           genCondBranch(s.cond, skipLabel, true);
           genStmts(s.then);
           emit(0x4c);
-          addFixup({ kind: 'abs16', label: endIfLabel }, 2); // JMP to end
+          addFixup({ tag: 'abs16', label: endIfLabel }, 2); // JMP to end
           emitLabel(skipLabel);
         }
         // elif branches
@@ -1256,7 +1256,7 @@ export function generate(cp: CheckedProgram): CodeBuffer {
           genCondBranch(elif.cond, skipLabel, true);
           genStmts(elif.body);
           emit(0x4c);
-          addFixup({ kind: 'abs16', label: endIfLabel }, 2);
+          addFixup({ tag: 'abs16', label: endIfLabel }, 2);
           emitLabel(skipLabel);
         }
         // else branch
@@ -1273,7 +1273,7 @@ export function generate(cp: CheckedProgram): CodeBuffer {
         genStmts(s.body);
         loopStack.pop();
         emit(0x4c);
-        addFixup({ kind: 'abs16', label: topLabel }, 2);
+        addFixup({ tag: 'abs16', label: topLabel }, 2);
         emitLabel(endLabel);
         break;
       }
@@ -1285,7 +1285,7 @@ export function generate(cp: CheckedProgram): CodeBuffer {
         genStmts(s.body);
         loopStack.pop();
         emit(0x4c);
-        addFixup({ kind: 'abs16', label: topLabel }, 2);
+        addFixup({ tag: 'abs16', label: topLabel }, 2);
         emitLabel(endLabel);
         break;
       }
@@ -1302,7 +1302,7 @@ export function generate(cp: CheckedProgram): CodeBuffer {
         emitLabel(postLabel);
         genStmt(s.post);
         emit(0x4c);
-        addFixup({ kind: 'abs16', label: topLabel }, 2);
+        addFixup({ tag: 'abs16', label: topLabel }, 2);
         emitLabel(endLabel);
         break;
       }
@@ -1310,7 +1310,7 @@ export function generate(cp: CheckedProgram): CodeBuffer {
         const ctx = loopStack[loopStack.length - 1];
         if (ctx) {
           emit(0x4c);
-          addFixup({ kind: 'abs16', label: ctx.breakLabel }, 2);
+          addFixup({ tag: 'abs16', label: ctx.breakLabel }, 2);
         }
         break;
       }
@@ -1318,7 +1318,7 @@ export function generate(cp: CheckedProgram): CodeBuffer {
         const ctx = loopStack[loopStack.length - 1];
         if (ctx) {
           emit(0x4c);
-          addFixup({ kind: 'abs16', label: ctx.continueLabel }, 2);
+          addFixup({ tag: 'abs16', label: ctx.continueLabel }, 2);
         }
         break;
       }
@@ -1367,7 +1367,7 @@ export function generate(cp: CheckedProgram): CodeBuffer {
   }
 
   emit(0x4c);
-  addFixup({ kind: 'abs16', label: '__program_start' }, 2);
+  addFixup({ tag: 'abs16', label: '__program_start' }, 2);
 
   // ─── Non-inline functions ─────────────────────────────────────────────
   for (const [name, fn] of cp.fns) {
@@ -1387,7 +1387,7 @@ export function generate(cp: CheckedProgram): CodeBuffer {
   }> = [];
   for (const d of cp.program.decls) {
     if (d.tag !== 'data') continue;
-    if (d.annotation.kind !== 'addr') {
+    if (d.annotation.tag !== 'addr') {
       throw new CodeGenError('a data block needs an @addr(...) annotation', d.line, 0);
     }
     dataBlocks.push({ decl: d, addr: cp.dataAddrs.get(d) ?? 0 });

@@ -1,5 +1,6 @@
+import { CYCLES_PER_FRAME } from '../machine/c64';
+
 const CYCLES_PER_SECOND = 985_248;
-const CYCLES_PER_FRAME = 19_656;
 const MAX_FRAMES_PER_TICK = 5;
 const MAX_ELAPSED_MS = 100;
 

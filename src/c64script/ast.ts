@@ -38,9 +38,9 @@ export function sizeOf(t: PsType, structs: ReadonlyMap<string, StructDecl>): num
 
 // ── Annotations ────────────────────────────────────────────────────────
 export type VarAnnotation =
-  | { readonly kind: 'none' }
-  | { readonly kind: 'zp' }
-  | { readonly kind: 'addr'; readonly address: Expr };
+  | { readonly tag: 'none' }
+  | { readonly tag: 'zp' }
+  | { readonly tag: 'addr'; readonly address: Expr };
 
 // ── Hardware fields ────────────────────────────────────────────────────
 export type HardwareFieldAccess = 'rw' | 'readonly' | 'writeonly' | 'read_to_clear';
@@ -87,18 +87,18 @@ export type AsmExpr =
   | { readonly tag: 'add'; readonly lhs: AsmExpr; readonly offset: number; readonly line: number };
 
 export type AsmOperand =
-  | { readonly kind: 'none' }
-  | { readonly kind: 'acc' }
-  | { readonly kind: 'imm'; readonly value: AsmExpr }
-  | { readonly kind: 'addr'; readonly value: AsmExpr; readonly index: 'x' | 'y' | null }
-  | { readonly kind: 'izx'; readonly value: AsmExpr }
-  | { readonly kind: 'izy'; readonly value: AsmExpr }
-  | { readonly kind: 'ind'; readonly value: AsmExpr };
+  | { readonly tag: 'none' }
+  | { readonly tag: 'acc' }
+  | { readonly tag: 'imm'; readonly value: AsmExpr }
+  | { readonly tag: 'addr'; readonly value: AsmExpr; readonly index: 'x' | 'y' | null }
+  | { readonly tag: 'izx'; readonly value: AsmExpr }
+  | { readonly tag: 'izy'; readonly value: AsmExpr }
+  | { readonly tag: 'ind'; readonly value: AsmExpr };
 
 export type AsmItem =
-  | { readonly kind: 'label'; readonly name: string; readonly line: number }
+  | { readonly tag: 'label'; readonly name: string; readonly line: number }
   | {
-      readonly kind: 'instr';
+      readonly tag: 'instr';
       /** Upper-case mnemonic. */
       readonly mnemonic: string;
       readonly operand: AsmOperand;

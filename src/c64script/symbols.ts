@@ -1,31 +1,31 @@
-import { TypeError } from './errors';
+import { C64ScriptTypeError as TypeError } from './errors';
 
 export type SymbolKind =
-  | { kind: 'var';      zpAddr: number | null; absAddr: number | null; isConst: boolean }
-  | { kind: 'fn';       isInline: boolean }
-  | { kind: 'hardware'; base: number }
-  | { kind: 'struct' }
-  | { kind: 'color';    value: number };
+  | { tag: 'var';      zpAddr: number | null; absAddr: number | null; isConst: boolean }
+  | { tag: 'fn';       isInline: boolean }
+  | { tag: 'hardware'; base: number }
+  | { tag: 'struct' }
+  | { tag: 'color';    value: number };
 
-export interface Symbol {
+export interface C64Symbol {
   name: string;
   sym: SymbolKind;
   line: number;
 }
 
 export class SymbolTable {
-  private readonly scopes: Map<string, Symbol>[] = [new Map()];
+  private readonly scopes: Map<string, C64Symbol>[] = [new Map()];
 
   push(): void { this.scopes.push(new Map()); }
   pop(): void  { if (this.scopes.length > 1) this.scopes.pop(); }
 
-  define(sym: Symbol): void {
+  define(sym: C64Symbol): void {
     const top = this.scopes[this.scopes.length - 1]!;
     if (top.has(sym.name)) throw new TypeError(`'${sym.name}' already defined`, sym.line, 0);
     top.set(sym.name, sym);
   }
 
-  resolve(name: string): Symbol | undefined {
+  resolve(name: string): C64Symbol | undefined {
     for (let i = this.scopes.length - 1; i >= 0; i--) {
       const found = this.scopes[i]!.get(name);
       if (found) return found;

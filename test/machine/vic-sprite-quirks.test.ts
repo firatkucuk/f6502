@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { VicII } from '../../src/machine/vic';
-import { Sprites } from '../../src/machine/vic-sprites';
+import { VicSprites as Sprites } from '../../src/machine/vic-sprites';
 
 function rig() {
   const regs = new Uint8Array(0x40);

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { D64, petscii } from '../../src/machine/d64';
-import { D64Source, PrgSource } from '../../src/machine/container';
+import { D64Source, PrgSource } from '../../src/machine/sources';
 import { ImageDrive, parseFilename } from '../../src/machine/drive';
 
 function drive() {
