@@ -855,7 +855,7 @@ td:first-child { font-family: var(--font-mono); font-size: 0.85rem; color: var(-
 }
 .showcase-body { padding: 1.25rem; }
 .showcase-body h3 { font-size: 0.95rem; margin-bottom: 0.35rem; }
-.showcase-body p { font-size: 0.85rem; color: var(--text-muted); margin: 0; }
+.showcase-body p { font-size: 0.85rem; color: var(--text-muted); margin: 0; overflow-wrap: anywhere; }
 .coming-soon-badge {
   display: inline-block;
   margin-top: 0.75rem;
