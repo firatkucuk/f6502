@@ -1,6 +1,7 @@
 // Space Invaders: a block of invaders marches sideways and drops a row each time it reaches an
-// edge. The cannon moves with A and D and fires one bullet at a time with SPACE. Shoot every
-// invader to win; let the block reach the cannon to lose. SPACE starts the next game.
+// edge. The cannon moves with A and D or the arrow keys, and fires one bullet at a time with
+// SPACE. Shoot every invader to win; let the block reach the cannon to lose. SPACE starts the next
+// game.
 // The invaders are solid blocks coloured by row, the bullet is an asterisk.
 
 const BLOCK: u8 = 0xA0;      // the solid block: an invader cell, a cannon cell
@@ -41,17 +42,30 @@ fn frame(): void {
   while (VIC2.rasterLine == 200) {}
 }
 
-// The keyboard matrix: PA selects a row, PB reads the columns. A is row 1 column 2, D is row 2
-// column 2, SPACE is row 7 column 4. A key is down while its bit reads 0.
+// The keyboard matrix: PA selects a row, PB reads the columns. A key is down while its bit reads 0.
+// A is row 1 column 2, D is row 2 column 2, the cursor key (CRSR right) is row 0 column 2,
+// LEFT SHIFT is row 1 column 7, SPACE is row 7 column 4. The arrow keys in the browser arrive as
+// the cursor key, with SHIFT held for left, so the left arrow is cursor + SHIFT and right is cursor
+// alone.
 fn leftKey(): u8 {
   CIA1.portA = 0xFD;
-  if ((CIA1.portB & 0x04) == 0) { return 1; }
+  if ((CIA1.portB & 0x04) == 0) { return 1; }   // A
+  CIA1.portA = 0xFE;
+  if ((CIA1.portB & 0x04) == 0) {               // cursor key
+    CIA1.portA = 0xFD;
+    if ((CIA1.portB & 0x80) == 0) { return 1; } // with SHIFT
+  }
   return 0;
 }
 
 fn rightKey(): u8 {
   CIA1.portA = 0xFB;
-  if ((CIA1.portB & 0x04) == 0) { return 1; }
+  if ((CIA1.portB & 0x04) == 0) { return 1; }   // D
+  CIA1.portA = 0xFE;
+  if ((CIA1.portB & 0x04) == 0) {               // cursor key
+    CIA1.portA = 0xFD;
+    if ((CIA1.portB & 0x80) != 0) { return 1; } // without SHIFT
+  }
   return 0;
 }
 

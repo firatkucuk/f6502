@@ -381,6 +381,14 @@ describe('showcase: space-invaders', () => {
     run(c, frames);
     c.keyUp(key);
   };
+  /** Holds the cursor key, with LEFT SHIFT too for the browser's left arrow. */
+  const holdArrow = (c: C64, left: boolean, frames: number) => {
+    c.keyDown('CRSR_RIGHT');
+    if (left) c.keyDown('LSHIFT');
+    run(c, frames);
+    c.keyUp('CRSR_RIGHT');
+    if (left) c.keyUp('LSHIFT');
+  };
   /** The game on screen after SPACE starts it from the title. */
   const started = (): C64 => {
     const c = boot(source('space-invaders'), 10);
@@ -440,6 +448,16 @@ describe('showcase: space-invaders', () => {
     const left = cannonCentre(c);
     expect(left).toBeLessThan(x);
     tap(c, 'D', 8);
+    expect(cannonCentre(c)).toBeGreaterThan(left);
+  });
+
+  it('moves the cannon with the arrow keys as well as A and D', () => {
+    const c = started();
+    const x = cannonCentre(c);
+    holdArrow(c, true, 8);
+    const left = cannonCentre(c);
+    expect(left).toBeLessThan(x);
+    holdArrow(c, false, 8);
     expect(cannonCentre(c)).toBeGreaterThan(left);
   });
 

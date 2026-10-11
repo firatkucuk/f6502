@@ -30,7 +30,7 @@ export const SHOWCASES = [
     id: 'space-invaders',
     title: 'Space Invaders',
     blurb:
-      'Shoot the marching block before it reaches your cannon. A and D move, SPACE fires one bullet at a time. The invaders are solid characters, the score is drawn on the top row.',
-    hint: 'Press SPACE to start. A and D move the cannon.',
+      'Shoot the marching block before it reaches your cannon. A, D or the arrow keys move, SPACE fires one bullet at a time. The invaders are solid characters, the score is drawn on the top row.',
+    hint: 'Press SPACE to start. A, D or the arrow keys move the cannon.',
   },
 ];
