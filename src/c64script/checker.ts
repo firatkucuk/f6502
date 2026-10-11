@@ -1,7 +1,17 @@
 import { TypeError } from './errors';
 import { COLOR_NAMES, builtinDecls } from './builtin';
 import { ZpAllocator } from './symbols';
-import type { Program, Stmt, Expr, PsType, StructDecl, HardwareDecl, FnDecl, VarDecl } from './ast';
+import type {
+  Program,
+  Stmt,
+  Expr,
+  PsType,
+  StructDecl,
+  HardwareDecl,
+  FnDecl,
+  VarDecl,
+  AsmExpr,
+} from './ast';
 import { sizeOf } from './ast';
 
 export interface ResolvedVar {
@@ -48,6 +58,9 @@ const BUILTIN_FNS: ReadonlyMap<string, readonly [min: number, max: number]> = ne
   ['color', [2, 2]],
   ['puts', [3, 4]],
 ]);
+
+/** Register names accepted by `asm clobbers(…)`. */
+const CLOBBERABLE = new Set(['a', 'x', 'y', 'flags']);
 
 /** Text screen geometry, for screen(row, col) and color(row, col). */
 const SCREEN_RAM = 0x0400;
@@ -96,10 +109,18 @@ export function foldConst(
       const col = e.args[1] !== undefined ? foldConst(e.args[1], lookup) : null;
       if (row === null || col === null) return null;
       if (row >= SCREEN_ROWS) {
-        throw new TypeError(`${e.name}(): row ${row} is out of range 0..${SCREEN_ROWS - 1}`, e.line, 0);
+        throw new TypeError(
+          `${e.name}(): row ${row} is out of range 0..${SCREEN_ROWS - 1}`,
+          e.line,
+          0,
+        );
       }
       if (col >= SCREEN_COLS) {
-        throw new TypeError(`${e.name}(): column ${col} is out of range 0..${SCREEN_COLS - 1}`, e.line, 0);
+        throw new TypeError(
+          `${e.name}(): column ${col} is out of range 0..${SCREEN_COLS - 1}`,
+          e.line,
+          0,
+        );
       }
       return (e.name === 'screen' ? SCREEN_RAM : COLOR_RAM) + row * SCREEN_COLS + col;
     }
@@ -108,15 +129,24 @@ export function foldConst(
       const r = foldConst(e.rhs, lookup);
       if (l === null || r === null) return null;
       switch (e.op) {
-        case '+': return (l + r) & 0xffff;
-        case '-': return (l - r) & 0xffff;
-        case '*': return (l * r) & 0xffff;
-        case '&': return l & r;
-        case '|': return l | r;
-        case '^': return l ^ r;
-        case '<<': return (l << r) & 0xffff;
-        case '>>': return l >> r;
-        default: return null;
+        case '+':
+          return (l + r) & 0xffff;
+        case '-':
+          return (l - r) & 0xffff;
+        case '*':
+          return (l * r) & 0xffff;
+        case '&':
+          return l & r;
+        case '|':
+          return l | r;
+        case '^':
+          return l ^ r;
+        case '<<':
+          return (l << r) & 0xffff;
+        case '>>':
+          return l >> r;
+        default:
+          return null;
       }
     }
     default:
@@ -234,7 +264,15 @@ export function check(userProg: Program): CheckedProgram {
       }
     }
     if (scope !== null) blockNames[blockNames.length - 1]?.add(d.name);
-    vars.set(key, { type: d.type, zpAddr, absAddr, isConst, constValue, initValue, isGlobal: scope === null });
+    vars.set(key, {
+      type: d.type,
+      zpAddr,
+      absAddr,
+      isConst,
+      constValue,
+      initValue,
+      isGlobal: scope === null,
+    });
   }
 
   // Pass 2: globals, function signatures, the program block
@@ -246,7 +284,11 @@ export function check(userProg: Program): CheckedProgram {
         throw new TypeError(`function '${d.name}' already defined`, d.line, 0);
       }
       if (d.ret.tag === 'u16') {
-        throw new TypeError(`u16 return values are not supported yet (function '${d.name}')`, d.line, 0);
+        throw new TypeError(
+          `u16 return values are not supported yet (function '${d.name}')`,
+          d.line,
+          0,
+        );
       }
       fns.set(d.name, { decl: d, isInline: d.isInline });
     }
@@ -279,7 +321,15 @@ export function check(userProg: Program): CheckedProgram {
           );
         }
         declare(
-          { tag: 'varDecl', name: p.name, type: p.type, annotation: { kind: 'none' }, isConst: false, init: null, line: d.line },
+          {
+            tag: 'varDecl',
+            name: p.name,
+            type: p.type,
+            annotation: { kind: 'none' },
+            isConst: false,
+            init: null,
+            line: d.line,
+          },
           d.name,
         );
       }
@@ -398,8 +448,49 @@ export function check(userProg: Program): CheckedProgram {
           throw new TypeError(`'${s.tag}' outside of a loop`, s.line, 0);
         }
         break;
+      case 'asm':
+        checkAsm(s, scope);
+        break;
       default:
-        break; // asm: reported by the code generator
+        break;
+    }
+  }
+
+  /** clobbers() names are validated; `${…}` operands are resolved like any expression. */
+  function checkAsm(s: Extract<Stmt, { tag: 'asm' }>, scope: string): void {
+    for (const name of s.clobbers) {
+      if (!CLOBBERABLE.has(name.toLowerCase())) {
+        throw new TypeError(
+          `unknown register '${name}' in clobbers() (use A, X, Y or flags)`,
+          s.line,
+          0,
+        );
+      }
+    }
+    const visit = (e: AsmExpr): void => {
+      switch (e.tag) {
+        case 'sym': {
+          const ex = e.expr;
+          if (ex.tag === 'ident' && fns.has(ex.name)) {
+            calls.get(scope)?.push({ to: ex.name, line: e.line });
+            return;
+          }
+          checkExpr(ex, 'read', scope, null);
+          return;
+        }
+        case 'lo':
+        case 'hi':
+          visit(e.arg);
+          return;
+        case 'add':
+          visit(e.lhs);
+          return;
+        default:
+          return;
+      }
+    };
+    for (const item of s.items) {
+      if (item.kind === 'instr' && 'value' in item.operand) visit(item.operand.value);
     }
   }
 
@@ -429,7 +520,11 @@ export function check(userProg: Program): CheckedProgram {
     }
     const colour = colourE !== undefined ? foldConst(colourE, lookup) : null;
     if (colour !== null && colour > 15) {
-      throw new TypeError(`puts(): colour ${colour} is out of range 0..15 (use COLOR_*)`, e.line, 0);
+      throw new TypeError(
+        `puts(): colour ${colour} is out of range 0..15 (use COLOR_*)`,
+        e.line,
+        0,
+      );
     }
   }
 
@@ -473,10 +568,18 @@ export function check(userProg: Program): CheckedProgram {
         const f = hw.fields.find((field) => field.name === e.field);
         if (f) {
           if (access === 'write' && (f.access === 'readonly' || f.access === 'read_to_clear')) {
-            throw new TypeError(`cannot write to readonly field '${e.obj.name}.${e.field}'`, e.line, 0);
+            throw new TypeError(
+              `cannot write to readonly field '${e.obj.name}.${e.field}'`,
+              e.line,
+              0,
+            );
           }
           if (access === 'read' && f.access === 'writeonly') {
-            throw new TypeError(`cannot read from writeonly field '${e.obj.name}.${e.field}'`, e.line, 0);
+            throw new TypeError(
+              `cannot read from writeonly field '${e.obj.name}.${e.field}'`,
+              e.line,
+              0,
+            );
           }
         }
         break;
