@@ -962,3 +962,22 @@ kbd {
 
 /* ── Focus ──────────────────────────────────────────────────────── */
 :focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; border-radius: 4px; }
+
+/* ── "Try now" button on C64Script samples ─────────────────────────────── */
+.try-now-host { position: relative; }
+.try-now {
+  position: absolute;
+  top: 0.6rem;
+  right: 5rem; /* leaves room for the copy button */
+  z-index: 2;
+  padding: 0.3rem 0.7rem;
+  font-family: var(--font-pixel);
+  font-size: 8px;
+  letter-spacing: 0.08em;
+  color: var(--bg);
+  background: var(--accent);
+  border-radius: 4px;
+  text-decoration: none;
+  opacity: 0.9;
+}
+.try-now:hover { opacity: 1; }

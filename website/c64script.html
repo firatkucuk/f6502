@@ -98,7 +98,7 @@
       <span class="lang-feature-icon">🔤</span>
       <div class="lang-feature-body">
         <h4>Familiar TypeScript-like syntax</h4>
-        <p>Variable declarations, typed parameters, if/else, loops, functions — the structure you already know, targeting 8-bit hardware from 1982.</p>
+        <p>Variable declarations, typed globals, if/else, loops, functions — the structure you already know, targeting 8-bit hardware from 1982.</p>
       </div>
     </div>
 
@@ -114,7 +114,7 @@
       <span class="lang-feature-icon">🔌</span>
       <div class="lang-feature-body">
         <h4>Hardware register access <code>@addr</code></h4>
-        <p>Pin any variable to a specific memory address. The C64's built-in <code>c64.*</code> fields use this — they are just variables bound to VIC-II and SID registers, not magic.</p>
+        <p>Pin any variable to a specific memory address. The built-in <code>VIC2.*</code>, <code>SID.*</code>, <code>CIA1.*</code> and <code>CIA2.*</code> fields use this — they are just fields bound to chip registers, not magic.</p>
       </div>
     </div>
 
@@ -122,7 +122,7 @@
       <span class="lang-feature-icon">🎨</span>
       <div class="lang-feature-body">
         <h4>Color constants</h4>
-        <p>All 16 C64 colors are built-in constants: <code>BLACK</code>, <code>WHITE</code>, <code>RED</code>, <code>CYAN</code>, <code>PURPLE</code>, <code>GREEN</code>, <code>BLUE</code>, <code>YELLOW</code>, <code>ORANGE</code>, <code>BROWN</code>, <code>LIGHT_RED</code>, <code>DARK_GRAY</code>, <code>GRAY</code>, <code>LIGHT_GREEN</code>, <code>LIGHT_BLUE</code>, <code>LIGHT_GRAY</code>. They fold to immediate values at compile time — no runtime cost.</p>
+        <p>All 16 C64 colors are built-in constants: <code>BLACK</code>, <code>WHITE</code>, <code>RED</code>, <code>CYAN</code>, <code>PURPLE</code>, <code>GREEN</code>, <code>BLUE</code>, <code>YELLOW</code>, <code>ORANGE</code>, <code>BROWN</code>, <code>LIGHT_RED</code>, <code>DARK_GREY</code>, <code>MEDIUM_GREY</code>, <code>LIGHT_GREEN</code>, <code>LIGHT_BLUE</code>, <code>LIGHT_GREY</code>. They fold to immediate values at compile time — no runtime cost.</p>
       </div>
     </div>
 
@@ -138,7 +138,7 @@
       <span class="lang-feature-icon">🧩</span>
       <div class="lang-feature-body">
         <h4>Functions</h4>
-        <p>Define reusable <code>fn</code> blocks with typed parameters and return values. The compiler inlines JSR/RTS calls — no dynamic dispatch overhead.</p>
+        <p>Define reusable <code>fn</code> blocks with a return type. Calls compile to <code>JSR</code>/<code>RTS</code>, or inline the body when marked <code>@inline</code>. Parameters are not reliable yet — share data through global variables.</p>
       </div>
     </div>
   </section>
@@ -156,20 +156,22 @@
         <span class="terminal-title">rainbow-border.c64s</span>
       </div>
       <div class="terminal-body">
-        <pre><span class="cm">// Flash the border through all 16 C64 colours</span>
-<span class="kw">program</span>(<span class="nu">0x0810</span>) {
-  <span class="kw">var</span> <span class="ty">color</span>: <span class="ty">byte</span> <span class="an">@zp</span> = <span class="nu">0</span>;
-  <span class="kw">var</span> <span class="ty">delay</span>: <span class="ty">byte</span> <span class="an">@zp</span> = <span class="nu">0</span>;
+        <pre data-try><span class="cm">// Cycle the border through all 16 C64 colours</span>
+<span class="kw">let</span> <span class="an">@zp</span> color: <span class="ty">u8</span> = <span class="nu">0</span>;
+<span class="kw">let</span> <span class="an">@zp</span> ticks: <span class="ty">u8</span> = <span class="nu">0</span>;
 
+<span class="kw">program</span> <span class="an">@</span> <span class="nu">0x0810</span> {
   <span class="kw">loop</span> {
-    <span class="kw">c64</span>.border = color;
-    color = color + <span class="nu">1</span>;
-    <span class="kw">if</span> (color == <span class="nu">16</span>) { color = <span class="nu">0</span>; }
+    <span class="cm">// wait for one video frame</span>
+    <span class="kw">while</span> (VIC2.rasterLine != <span class="nu">200</span>) {}
+    <span class="kw">while</span> (VIC2.rasterLine == <span class="nu">200</span>) {}
 
-    <span class="cm">// inner delay loop — burn ~50,000 cycles per colour</span>
-    delay = <span class="nu">0</span>;
-    <span class="kw">while</span> (delay &lt; <span class="nu">200</span>) {
-      delay = delay + <span class="nu">1</span>;
+    ticks = ticks + <span class="nu">1</span>;
+    <span class="kw">if</span> (ticks == <span class="nu">5</span>) {
+      ticks = <span class="nu">0</span>;
+      color = color + <span class="nu">1</span>;
+      <span class="kw">if</span> (color == <span class="nu">16</span>) { color = <span class="nu">0</span>; }
+      VIC2.borderColor = color;
     }
   }
 }</pre>
@@ -177,7 +179,7 @@
     </div>
 
     <p style="margin:1.5rem 0 1rem;color:var(--text-muted);font-size:0.9rem">
-      Use a function to keep the main loop clean:
+      Use a function to keep the main loop clean. Functions take no parameters today; share data through global variables:
     </p>
 
     <div class="terminal reveal">
@@ -185,22 +187,23 @@
         <span class="terminal-dot red"></span>
         <span class="terminal-dot yellow"></span>
         <span class="terminal-dot green"></span>
-        <span class="terminal-title">clamp-demo.c64s</span>
+        <span class="terminal-title">function.c64s</span>
       </div>
       <div class="terminal-body">
-        <pre><span class="cm">// Function with typed parameters and return value</span>
-<span class="kw">fn</span> <span class="fn">clamp</span>(val: <span class="ty">byte</span>, max: <span class="ty">byte</span>): <span class="ty">byte</span> {
-  <span class="kw">if</span> (val &gt; max) { <span class="kw">return</span> max; }
-  <span class="kw">return</span> val;
+        <pre data-try><span class="cm">// A function without parameters, called from the main loop</span>
+<span class="kw">let</span> <span class="an">@zp</span> shade: <span class="ty">u8</span> = <span class="nu">0</span>;
+
+<span class="kw">fn</span> <span class="fn">nextShade</span>(): <span class="ty">void</span> {
+  shade = shade + <span class="nu">1</span>;
+  <span class="kw">if</span> (shade == <span class="nu">16</span>) { shade = <span class="nu">0</span>; }
 }
 
-<span class="kw">program</span>(<span class="nu">0x0810</span>) {
-  <span class="kw">var</span> x: <span class="ty">byte</span> <span class="an">@zp</span> = <span class="nu">0</span>;
-
+<span class="kw">program</span> <span class="an">@</span> <span class="nu">0x0810</span> {
   <span class="kw">loop</span> {
-    <span class="kw">c64</span>.border     = <span class="fn">clamp</span>(x, <span class="nu">15</span>);
-    <span class="kw">c64</span>.background = <span class="fn">clamp</span>(x &amp; <span class="nu">7</span>, <span class="nu">7</span>);
-    x = x + <span class="nu">1</span>;
+    <span class="kw">while</span> (VIC2.rasterLine != <span class="nu">200</span>) {}
+    <span class="kw">while</span> (VIC2.rasterLine == <span class="nu">200</span>) {}
+    <span class="fn">nextShade</span>();
+    VIC2.bgColor0 = shade;
   }
 }</pre>
       </div>
@@ -225,9 +228,10 @@
         <span class="terminal-title">colors.c64s</span>
       </div>
       <div class="terminal-body">
-        <pre><span class="kw">program</span>(<span class="nu">0x0810</span>) {
-  <span class="kw">c64</span>.border     = BLUE;        <span class="cm">// → LDA #6 ; STA $D020</span>
-  <span class="kw">c64</span>.background = LIGHT_BLUE;  <span class="cm">// → LDA #14; STA $D021</span>
+        <pre data-try><span class="cm">// Colour constants compile to immediates</span>
+<span class="kw">program</span> <span class="an">@</span> <span class="nu">0x0810</span> {
+  VIC2.borderColor = BLUE;       <span class="cm">// → LDA #6 ; STA $D020</span>
+  VIC2.bgColor0    = LIGHT_BLUE; <span class="cm">// → LDA #14; STA $D021</span>
 
   <span class="kw">loop</span> {}  <span class="cm">// run forever</span>
 }</pre>
@@ -247,16 +251,16 @@
         </thead>
         <tbody>
           <tr>
-            <td><code>byte</code></td>
+            <td><code>u8</code></td>
             <td>8-bit</td>
             <td>0 – 255</td>
             <td style="color:var(--text-muted)">Maps to the 6502 accumulator. All arithmetic is modulo 256.</td>
           </tr>
           <tr>
-            <td><code>word</code></td>
+            <td><code>u16</code></td>
             <td>16-bit</td>
             <td>0 – 65535</td>
-            <td style="color:var(--text-muted)">Partial support — use for addresses and loop counters.</td>
+            <td style="color:var(--text-muted)">Partial support — declare it and read it with <code>lo()</code> / <code>hi()</code>; arithmetic on it is incomplete.</td>
           </tr>
         </tbody>
       </table>
@@ -274,8 +278,8 @@
             <td style="color:var(--text-muted)">Place variable in zero page ($00–$FF). Generates shorter, faster opcodes. Max 256 bytes total across all <code>@zp</code> vars.</td>
           </tr>
           <tr>
-            <td><code>@addr(0xD020)</code></td>
-            <td style="color:var(--text-muted)">Bind variable to a fixed memory address. Used internally for all <code>c64.*</code> hardware fields.</td>
+            <td><code>@addr(0x0D40)</code></td>
+            <td style="color:var(--text-muted)">Place a <code>data</code> block (<code>data @addr(0x0D40) { … }</code>) at a fixed address. The built-in <code>VIC2</code>, <code>SID</code>, <code>CIA1</code> and <code>CIA2</code> hardware fields are bound to chip registers the same way.</td>
           </tr>
         </tbody>
       </table>
@@ -319,8 +323,9 @@
     <p class="section-label">Hardware</p>
     <h2 class="section-title">Built-in C64 API</h2>
     <p class="section-lead">
-      The <code>c64</code> object provides direct access to VIC-II hardware
-      registers. All fields are write-only unless noted.
+      The <code>VIC2</code> object provides direct access to VIC-II registers;
+      <code>SID</code>, <code>CIA1</code> and <code>CIA2</code> work the same way.
+      Fields are read/write unless noted.
     </p>
 
     <div class="table-wrap reveal">
@@ -330,16 +335,64 @@
         </thead>
         <tbody>
           <tr>
-            <td><code>c64.border</code></td>
+            <td><code>VIC2.borderColor</code></td>
             <td class="api-addr">$D020</td>
-            <td><span class="tag tag-accent">write</span></td>
+            <td><span class="tag tag-accent">read/write</span></td>
             <td style="color:var(--text-muted)">Border colour (0–15)</td>
           </tr>
           <tr>
-            <td><code>c64.background</code></td>
+            <td><code>VIC2.bgColor0</code></td>
             <td class="api-addr">$D021</td>
-            <td><span class="tag tag-accent">write</span></td>
+            <td><span class="tag tag-accent">read/write</span></td>
             <td style="color:var(--text-muted)">Background colour (0–15)</td>
+          </tr>
+          <tr>
+            <td><code>VIC2.rasterLine</code></td>
+            <td class="api-addr">$D012</td>
+            <td><span class="tag tag-accent">read</span></td>
+            <td style="color:var(--text-muted)">Current raster line (low 8 bits)</td>
+          </tr>
+          <tr>
+            <td><code>VIC2.ctrl1</code></td>
+            <td class="api-addr">$D011</td>
+            <td><span class="tag tag-accent">read/write</span></td>
+            <td style="color:var(--text-muted)">Control register 1</td>
+          </tr>
+          <tr>
+            <td><code>VIC2.ctrl2</code></td>
+            <td class="api-addr">$D016</td>
+            <td><span class="tag tag-accent">read/write</span></td>
+            <td style="color:var(--text-muted)">Control register 2</td>
+          </tr>
+          <tr>
+            <td><code>VIC2.memPointers</code></td>
+            <td class="api-addr">$D018</td>
+            <td><span class="tag tag-accent">read/write</span></td>
+            <td style="color:var(--text-muted)">Screen / character memory pointers</td>
+          </tr>
+          <tr>
+            <td><code>VIC2.spriteEnable</code></td>
+            <td class="api-addr">$D015</td>
+            <td><span class="tag tag-accent">read/write</span></td>
+            <td style="color:var(--text-muted)">Sprite enable bits</td>
+          </tr>
+          <tr>
+            <td><code>VIC2.sprite0x</code></td>
+            <td class="api-addr">$D000</td>
+            <td><span class="tag tag-accent">read/write</span></td>
+            <td style="color:var(--text-muted)">Sprite 0 X position</td>
+          </tr>
+          <tr>
+            <td><code>VIC2.sprite0y</code></td>
+            <td class="api-addr">$D001</td>
+            <td><span class="tag tag-accent">read/write</span></td>
+            <td style="color:var(--text-muted)">Sprite 0 Y position</td>
+          </tr>
+          <tr>
+            <td><code>VIC2.sprite0color</code></td>
+            <td class="api-addr">$D027</td>
+            <td><span class="tag tag-accent">read/write</span></td>
+            <td style="color:var(--text-muted)">Sprite 0 colour</td>
           </tr>
         </tbody>
       </table>
@@ -347,7 +400,7 @@
 
     <h3 style="margin-top:2rem">Color constants</h3>
     <p style="color:var(--text-muted);font-size:0.9rem;margin-bottom:1rem">
-      All 16 C64 colors are pre-defined. They are plain <code>byte</code>
+      All 16 C64 colors are pre-defined. They are plain <code>u8</code>
       constants that fold away at compile time — using <code>CYAN</code>
       generates exactly the same code as writing <code>3</code>.
     </p>
@@ -361,11 +414,11 @@
           <tr><td><code>BLACK</code></td><td style="color:var(--text-muted)">0</td><td><code>ORANGE</code></td><td style="color:var(--text-muted)">8</td></tr>
           <tr><td><code>WHITE</code></td><td style="color:var(--text-muted)">1</td><td><code>BROWN</code></td><td style="color:var(--text-muted)">9</td></tr>
           <tr><td><code>RED</code></td><td style="color:var(--text-muted)">2</td><td><code>LIGHT_RED</code></td><td style="color:var(--text-muted)">10</td></tr>
-          <tr><td><code>CYAN</code></td><td style="color:var(--text-muted)">3</td><td><code>DARK_GRAY</code></td><td style="color:var(--text-muted)">11</td></tr>
-          <tr><td><code>PURPLE</code></td><td style="color:var(--text-muted)">4</td><td><code>GRAY</code></td><td style="color:var(--text-muted)">12</td></tr>
+          <tr><td><code>CYAN</code></td><td style="color:var(--text-muted)">3</td><td><code>DARK_GREY</code></td><td style="color:var(--text-muted)">11</td></tr>
+          <tr><td><code>PURPLE</code></td><td style="color:var(--text-muted)">4</td><td><code>MEDIUM_GREY</code></td><td style="color:var(--text-muted)">12</td></tr>
           <tr><td><code>GREEN</code></td><td style="color:var(--text-muted)">5</td><td><code>LIGHT_GREEN</code></td><td style="color:var(--text-muted)">13</td></tr>
           <tr><td><code>BLUE</code></td><td style="color:var(--text-muted)">6</td><td><code>LIGHT_BLUE</code></td><td style="color:var(--text-muted)">14</td></tr>
-          <tr><td><code>YELLOW</code></td><td style="color:var(--text-muted)">7</td><td><code>LIGHT_GRAY</code></td><td style="color:var(--text-muted)">15</td></tr>
+          <tr><td><code>YELLOW</code></td><td style="color:var(--text-muted)">7</td><td><code>LIGHT_GREY</code></td><td style="color:var(--text-muted)">15</td></tr>
         </tbody>
       </table>
     </div>
@@ -481,11 +534,11 @@
         <span class="terminal-title">compile-and-run.ts</span>
       </div>
       <div class="terminal-body">
-        <pre><span class="kw">import</span> { compile, LexError, ParseError, TypeError, CodeGenError } <span class="kw">from</span> <span class="str">'f6502'</span>;
+        <pre><span class="kw">import</span> { compile, C64ScriptError } <span class="kw">from</span> <span class="str">'f6502'</span>;
 
 <span class="kw">const</span> source = <span class="str">`
-  program(0x0810) {
-    loop { c64.border = c64.border + 1; }
+  program @ 0x0810 {
+    loop { VIC2.borderColor = VIC2.borderColor + 1; }
   }
 `</span>;
 
@@ -494,15 +547,19 @@
   <span class="cm">// prg is a valid .prg file (load address + machine code)</span>
   <span class="kw">await</span> player.<span class="fn">load</span>(prg);
 } <span class="kw">catch</span> (err) {
-  <span class="kw">if</span> (err <span class="kw">instanceof</span> LexError)     console.error(<span class="str">'Lex error:'</span>,     err.message);
-  <span class="kw">if</span> (err <span class="kw">instanceof</span> ParseError)   console.error(<span class="str">'Parse error:'</span>,   err.message);
-  <span class="kw">if</span> (err <span class="kw">instanceof</span> TypeError)    console.error(<span class="str">'Type error:'</span>,    err.message);
-  <span class="kw">if</span> (err <span class="kw">instanceof</span> CodeGenError) console.error(<span class="str">'CodeGen error:'</span>, err.message);
+  <span class="kw">if</span> (err <span class="kw">instanceof</span> C64ScriptError) {
+    <span class="cm">// every compiler error carries the source position</span>
+    console.error(<span class="str">`${err.name} at ${err.line}:${err.col}:`</span>, err.message);
+  }
 }</pre>
       </div>
     </div>
 
     <h3 style="margin-top:2rem">Error types</h3>
+    <p style="color:var(--text-muted);font-size:0.9rem;margin-bottom:1rem">
+      All of them extend <code>C64ScriptError</code>, which carries <code>line</code> and <code>col</code>.
+      In a plain <code>&lt;script&gt;</code> tag the compiler is <code>F6502.compile</code>.
+    </p>
     <div class="table-wrap reveal">
       <table>
         <thead>
@@ -518,7 +575,7 @@
             <td style="color:var(--text-muted)">Unexpected token, missing semicolon, malformed expression</td>
           </tr>
           <tr>
-            <td><code>TypeError</code></td>
+            <td><code>C64ScriptTypeError</code></td>
             <td style="color:var(--text-muted)">Undefined variable or function, type mismatch, write to read-only field, missing <code>program</code> block</td>
           </tr>
           <tr>
@@ -549,7 +606,7 @@
         <div class="chip-card-num">NO ARRAYS</div>
         <h3>No arrays or pointers</h3>
         <p class="chip-label">Design in progress</p>
-        <p>Indexed addressing (e.g. <code>LDA $C000,X</code>) is powerful on 6502, but mapping it to a safe language construct is non-trivial. Planned for a future version.</p>
+        <p>Indexed addressing (e.g. <code>LDA $C000,X</code>) is powerful on 6502, but mapping it to a safe language construct is non-trivial. Array and <code>asm {}</code> syntax parses, but the compiler does not emit code for them yet.</p>
       </div>
       <div class="chip-card">
         <div class="chip-card-num">NO STRINGS</div>
@@ -559,9 +616,21 @@
       </div>
       <div class="chip-card">
         <div class="chip-card-num">PARTIAL</div>
-        <h3>word type is partial</h3>
+        <h3>u16 type is partial</h3>
         <p class="chip-label">16-bit operations need more work</p>
-        <p>You can declare <code>word</code> variables, but arithmetic on them is incomplete. Stick to <code>byte</code> for anything that needs to work reliably today.</p>
+        <p>You can declare <code>u16</code> variables, but arithmetic on them is incomplete. Stick to <code>u8</code> for anything that needs to work reliably today.</p>
+      </div>
+      <div class="chip-card">
+        <div class="chip-card-num">CONST ADDR</div>
+        <h3>poke() needs a constant address</h3>
+        <p class="chip-label">No computed addresses yet</p>
+        <p><code>poke(0x0400 + 495, value)</code> works and <code>value</code> can be any expression, but the address must be known at compile time. A computed address is a compile error.</p>
+      </div>
+      <div class="chip-card">
+        <div class="chip-card-num">FN ARGS</div>
+        <h3>Function parameters are unreliable</h3>
+        <p class="chip-label">Share data through globals</p>
+        <p>Functions can return a value, but parameters are not bound properly yet. Pass data through <code>let @zp</code> globals, as in the example above. Prefer <code>while</code> and <code>loop</code>; the <code>for</code> statement does not accept an assignment as its initialiser.</p>
       </div>
     </div>
 
@@ -591,5 +660,6 @@
 </div><!-- /.page -->
 
 <script src="js/app.js"></script>
+<script type="module" src="js/try-now.js"></script>
 </body>
 </html>
