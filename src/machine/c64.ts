@@ -45,7 +45,7 @@ export class C64 {
   private readonly traps: KernalTraps;
   private readonly keyboard = new Keyboard();
   private restoreCountdown = 0;
-  private credit = 0;
+  private pendingCycles = 0;
   private readonly typeQueue: number[] = [];
   private pendingLoad: { prg: Prg; options: LoadPrgOptions } | null = null;
 
@@ -131,7 +131,7 @@ export class C64 {
     this.typeQueue.length = 0;
     this.pendingLoad = null;
     this.restoreCountdown = 0;
-    this.credit = 0;
+    this.pendingCycles = 0;
     this.cpu.reset();
     this.traps?.reset();
     this.traps?.refresh();
@@ -139,8 +139,8 @@ export class C64 {
 
   runCycles(n: number): void {
     this.traps.refresh();
-    this.credit += n;
-    while (this.credit > 0) this.credit -= this.stepCpu();
+    this.pendingCycles += n;
+    while (this.pendingCycles > 0) this.pendingCycles -= this.stepCpu();
   }
 
   /** Runs until the VIC completes one frame. */
