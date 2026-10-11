@@ -25,6 +25,8 @@
                      background: #000; }
     .sc-status { margin-top: 0.6rem; min-height: 1.4em; font-family: var(--font-mono);
                  font-size: 0.8rem; color: var(--text-muted); }
+    .sc-hint { margin: 0.4rem 0 0; font-size: 0.82rem; color: var(--text-dim); }
+    .sc-hint:empty { display: none; }
     .sc-source { position: relative; max-height: 560px; overflow: auto; }
     .sc-source pre { margin: 0; background: none; border: 0; padding: 0; }
     .sc-source code { font-family: var(--font-mono); font-size: 0.8rem; line-height: 1.6; color: #c0c4e0; }
@@ -74,6 +76,7 @@
                 aria-label="A Commodore 64 screen running the showcase"></canvas>
       </div>
       <div id="showcase-status" class="sc-status" role="status" aria-live="polite">Starting the emulator…</div>
+      <p id="showcase-hint" class="sc-hint"></p>
     </section>
 
     <section aria-label="Source">

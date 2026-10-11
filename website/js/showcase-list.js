@@ -19,4 +19,11 @@ export const SHOWCASES = [
     blurb:
       'Eight hardware sprites share one shape and chase each other around a figure of eight. The path is read from a sine table with a few lines of inline assembly.',
   },
+  {
+    id: 'flappy-bird',
+    title: 'Flappy Bird',
+    blurb:
+      'Fly through the gaps. The bird is a hardware sprite, the pipes are columns of solid characters, and the VIC-II reports the crash.',
+    hint: 'Click the screen to give it keyboard focus, then press SPACE to flap.',
+  },
 ];

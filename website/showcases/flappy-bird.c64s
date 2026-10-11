@@ -1,0 +1,262 @@
+// Flappy Bird: press SPACE to flap, fly through the gaps. Click the screen first for keyboard focus.
+// The bird is sprite 0. The pipes are columns of solid-block characters that step left across the
+// screen, and the VIC-II tells us when the bird touches one (sprite-to-background collision).
+const SHAPE: u16 = 0x2000;   // the bird's sprite data. Not $1000..$1FFF: the VIC-II sees the character ROM there.
+
+data @addr(SHAPE) {
+  bird: [u8; 63] = [
+    0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00,
+    0x01, 0xFC, 0x00,
+    0x07, 0xFF, 0x00,
+    0x0F, 0xFF, 0x80,
+    0x1F, 0xFC, 0xC0,
+    0x3F, 0xFC, 0xE0,
+    0x3F, 0xFF, 0xFF,
+    0x3F, 0xFF, 0xFF,
+    0x79, 0xFF, 0xFF,
+    0x3C, 0x3F, 0xFF,
+    0x3F, 0xFF, 0xE0,
+    0x3F, 0xFF, 0xE0,
+    0x1F, 0xFF, 0xC0,
+    0x0F, 0xFF, 0x80,
+    0x07, 0xFF, 0x00,
+    0x01, 0xFC, 0x00,
+    0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00,
+  ];
+}
+
+let @zp cell: u16;            // moves down screen RAM inside column()
+let @zp y: u8 = 100;          // the bird's height (sprite Y)
+let @zp rise: u8 = 0;         // frames of climbing left after a flap
+let @zp speed: u8 = 1;        // fall speed, grows while falling
+let @zp ticks: u8 = 0;        // counts frames to speed the fall up
+let @zp held: u8 = 0;         // SPACE was down on the previous frame
+let @zp moveTick: u8 = 0;     // frames since the pipes last stepped
+let @zp qa: u8 = 43;          // pipe A: leftmost column + 2 (43 = just off the right edge)
+let @zp ga: u8 = 6;           // pipe A: first row of its gap
+let @zp qb: u8 = 65;          // pipe B, half a screen behind
+let @zp gb: u8 = 9;
+let @zp tens: u8 = 0;
+let @zp ones: u8 = 0;
+let @zp rng: u8 = 77;
+let @zp alive: u8 = 0;
+let @zp dead: u8 = 0;         // the VIC-II collision register, read once per frame
+let @zp title: u8 = 1;        // 1 until the first game starts: only then show the title
+
+// Wait for one video frame.
+fn frame(): void {
+  while (VIC2.rasterLine != 200) {}
+  while (VIC2.rasterLine == 200) {}
+}
+
+// 1 while SPACE is held: the keyboard matrix has SPACE on row 7 (PA7), column 4 (PB4).
+fn space(): u8 {
+  CIA1.portA = 0x7F;
+  if ((CIA1.portB & 0x10) == 0) { return 1; }
+  return 0;
+}
+
+// Writes `ch` down screen column `col`, rows 1..21 (row 0 is the score), leaving an 8-row hole
+// that starts at `gap`.
+fn column(col: u8, gap: u8, ch: u8): void {
+  asm {
+    lda #lo(${SCREEN_RAM + 40})
+    clc
+    adc ${col}
+    sta ${cell}
+    lda #hi(${SCREEN_RAM + 40})
+    adc #0
+    sta ${cell} + 1
+    ldx #1                  // row
+  next:
+    cpx ${gap}
+    bcc draw                // above the hole
+    txa
+    sec
+    sbc ${gap}
+    cmp #8
+    bcc skip                // inside the hole
+  draw:
+    ldy #0
+    lda ${ch}
+    sta (${cell}),y
+  skip:
+    clc
+    lda ${cell}
+    adc #40
+    sta ${cell}
+    bcc same
+    inc ${cell} + 1
+  same:
+    inx
+    cpx #22
+    bne next
+  }
+}
+
+// Moves a pipe one column left: draw its new left column, erase the column it just left.
+fn movePipe(q: u8, gap: u8): u8 {
+  let n: u8 = q - 1;
+  if (n >= 2) {
+    if (n < 42) { column(n - 2, gap, 0xA0); }
+  }
+  if (n < 40) { column(n, gap, 0x20); }
+  return n;
+}
+
+// A gap row from 3 to 10, stirred by where the bird is.
+fn nextGap(): u8 {
+  let g: u8 = y + rng;
+  rng = rng + g;
+  rng = rng + 11;
+  g = g & 7;
+  return g + 3;
+}
+
+fn addScore(): void {
+  ones = ones + 1;
+  if (ones == 10) {
+    ones = 0;
+    tens = tens + 1;
+    if (tens == 10) { tens = 0; }
+  }
+  poke(screen(0, 38), tens + 0x30);
+  poke(screen(0, 39), ones + 0x30);
+}
+
+program @ 0x0810 {
+  VIC2.ctrl1 = 0x1B;          // screen on, 25 rows, text mode
+  VIC2.memPointers = 0x15;    // screen RAM at $0400
+  poke(0x3FFF, 0);            // the VIC-II draws this byte in the border; non-zero would count as a hit
+  CIA1.ddrA = 0xFF;           // keyboard: columns out, rows in
+  CIA1.ddrB = 0x00;
+  VIC2.borderColor = COLOR_BLACK;
+  VIC2.bgColor0 = COLOR_LIGHT_BLUE;
+  poke(SPRITE_PTRS, spritePtr(SHAPE));
+  VIC2.sprite0color = COLOR_YELLOW;
+  VIC2.sprite0x = 80;
+  VIC2.spriteEnable = 1;
+
+  loop {
+    // ── a new game ──
+    clrscr();
+    asm {
+      lda #${COLOR_GREEN}      // all colour RAM green: pipes only need the character
+      ldx #0
+    sky:
+      sta ${COLOR_RAM},x
+      sta ${COLOR_RAM + 0x100},x
+      sta ${COLOR_RAM + 0x200},x
+      sta ${COLOR_RAM + 0x2E8},x
+      inx
+      bne sky
+
+      lda #$A0                // the ground: rows 22..24
+      ldx #119
+    ground:
+      sta ${SCREEN_RAM + 880},x
+      dex
+      bpl ground
+      lda #${COLOR_BROWN}
+      ldx #119
+    soil:
+      sta ${COLOR_RAM + 880},x
+      dex
+      bpl soil
+    }
+    y = 100;
+    rise = 0;
+    speed = 1;
+    ticks = 0;
+    moveTick = 0;
+    qa = 43;
+    qb = 65;
+    ga = 6;
+    gb = 9;
+    tens = 0;
+    ones = 0;
+    VIC2.sprite0y = y;
+    puts(0, 31, "SCORE", COLOR_WHITE);
+    puts(0, 38, "00", COLOR_WHITE);
+
+    if (title == 1) {
+      puts(7, 14, "FLAPPY BIRD", COLOR_WHITE);
+      puts(11, 14, "PRESS SPACE", COLOR_WHITE);
+      while (space() == 1) { frame(); }
+      while (space() == 0) {
+        frame();
+        rng = rng + 1;
+      }
+      puts(7, 14, "           ", COLOR_WHITE);
+      puts(11, 14, "           ", COLOR_WHITE);
+      title = 0;
+    }
+
+    // ── play ──
+    held = 1;
+    rise = 8;
+    dead = VIC2.spBgCol;      // reading clears it
+    alive = 1;
+    while (alive == 1) {
+      frame();
+
+      if (space() == 1) {
+        if (held == 0) {
+          rise = 8;
+          speed = 1;
+          ticks = 0;
+        }
+        held = 1;
+      } else {
+        held = 0;
+      }
+
+      if (rise > 0) {
+        rise = rise - 1;
+        if (y < 54) { y = 50; } else { y = y - 3; }
+      } else {
+        ticks = ticks + 1;
+        if (ticks == 6) {
+          ticks = 0;
+          if (speed < 4) { speed = speed + 1; }
+        }
+        y = y + speed;
+      }
+      VIC2.sprite0y = y;
+
+      moveTick = moveTick + 1;
+      if (moveTick == 5) {
+        moveTick = 0;
+        if (qa == 0) { qa = 43; ga = nextGap(); }
+        if (qb == 0) { qb = 43; gb = nextGap(); }
+        qa = movePipe(qa, ga);
+        qb = movePipe(qb, gb);
+        if (qa == 7) { addScore(); }
+        if (qb == 7) { addScore(); }
+      }
+
+      dead = VIC2.spBgCol;
+      if ((dead & 1) != 0) { alive = 0; }
+      if (y > 204) { alive = 0; }
+    }
+
+    // ── game over ──
+    puts(9, 15, "GAME OVER", COLOR_WHITE);
+    puts(11, 13, "SPACE TO RETRY", COLOR_WHITE);
+    ticks = 0;
+    while (ticks < 40) {
+      frame();
+      ticks = ticks + 1;
+    }
+    // SPACE starts the next game straight away
+    while (space() == 1) { frame(); }
+    while (space() == 0) {
+      frame();
+      rng = rng + 1;
+    }
+  }
+}
