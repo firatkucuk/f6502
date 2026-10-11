@@ -627,14 +627,20 @@
           <tr>
             <td><code>u8</code></td>
             <td>8-bit</td>
-            <td>0 – 255</td>
-            <td style="color:var(--text-muted)">Maps to the 6502 accumulator. All arithmetic is modulo 256.</td>
+            <td style="white-space:nowrap">0 – 255</td>
+            <td style="color:var(--text-muted)">Maps to the 6502 accumulator. All arithmetic is modulo 256, and comparisons are unsigned.</td>
           </tr>
           <tr>
             <td><code>u16</code></td>
             <td>16-bit</td>
-            <td>0 – 65535</td>
-            <td style="color:var(--text-muted)">Partial support — declare it and read it with <code>lo()</code> / <code>hi()</code>; arithmetic on it is incomplete.</td>
+            <td style="white-space:nowrap">0 – 65535</td>
+            <td style="color:var(--text-muted)">Can be assigned, copied, incremented and read with <code>lo()</code> / <code>hi()</code>. Arithmetic and comparison on it are compile errors for now; use <code>u8</code>, or <code>asm</code>.</td>
+          </tr>
+          <tr>
+            <td><code>bool</code></td>
+            <td>8-bit</td>
+            <td style="white-space:nowrap">true / false</td>
+            <td style="color:var(--text-muted)">Stored as 1 and 0. Usable directly as a condition, and negated with <code>!</code>.</td>
           </tr>
         </tbody>
       </table>
