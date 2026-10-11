@@ -104,7 +104,18 @@ fn addScore(): void {
   poke(screen(0, 39), ones + 0x30);
 }
 
-program @ 0x0810 {
+// Waits until SPACE has been released and pressed again. The random seed keeps stirring meanwhile,
+// so every game gets different gaps.
+fn waitForSpace(): void {
+  while (space() == 1) { frame(); }
+  while (space() == 0) {
+    frame();
+    rng = rng + 1;
+  }
+}
+
+// One-time hardware setup: video mode, keyboard, colours and the bird sprite.
+fn setup(): void {
   VIC2.ctrl1 = 0x1B;          // screen on, 25 rows, text mode
   VIC2.memPointers = 0x15;    // screen RAM at $0400
   poke(0x3FFF, 0);            // the VIC-II draws this byte in the border; non-zero would count as a hit
@@ -116,108 +127,134 @@ program @ 0x0810 {
   VIC2.sprite0color = COLOR_YELLOW;
   VIC2.sprite0x = 80;
   VIC2.spriteEnable = 1;
+}
 
+// Clears the screen, makes all colour RAM green (pipes only need the character) and lays the ground.
+fn drawField(): void {
+  clrscr();
+  for (let r: u8 = 0; r < 25; r++) {
+    for (let c: u8 = 0; c < 40; c++) { poke(color(r, c), COLOR_GREEN); }
+  }
+  for (let r: u8 = 22; r < 25; r++) {      // the ground: rows 22..24
+    for (let c: u8 = 0; c < 40; c++) {
+      poke(screen(r, c), 0xA0);
+      poke(color(r, c), COLOR_BROWN);
+    }
+  }
+}
+
+// Puts the bird and both pipes back at their starting positions and zeroes the score.
+fn resetGame(): void {
+  y = 100;
+  rise = 0;
+  speed = 1;
+  ticks = 0;
+  moveTick = 0;
+  qa = 43;
+  qb = 65;
+  ga = 6;
+  gb = 9;
+  tens = 0;
+  ones = 0;
+  VIC2.sprite0y = y;
+  puts(0, 31, "SCORE", COLOR_WHITE);
+  puts(0, 38, "00", COLOR_WHITE);
+}
+
+// Shown once, before the first game.
+fn showTitle(): void {
+  puts(7, 14, "FLAPPY BIRD", COLOR_WHITE);
+  puts(11, 14, "PRESS SPACE", COLOR_WHITE);
+  waitForSpace();
+  puts(7, 14, "           ", COLOR_WHITE);
+  puts(11, 14, "           ", COLOR_WHITE);
+}
+
+// A fresh SPACE press (not a held key) starts a flap.
+fn readFlap(): void {
+  if (space() == 1) {
+    if (held == 0) {
+      rise = 8;
+      speed = 1;
+      ticks = 0;
+    }
+    held = 1;
+  } else {
+    held = 0;
+  }
+}
+
+// Climb while `rise` lasts, otherwise fall a little faster every 6 frames.
+fn moveBird(): void {
+  if (rise > 0) {
+    rise = rise - 1;
+    if (y < 54) { y = 50; } else { y = y - 3; }
+  } else {
+    ticks = ticks + 1;
+    if (ticks == 6) {
+      ticks = 0;
+      if (speed < 4) { speed = speed + 1; }
+    }
+    y = y + speed;
+  }
+  VIC2.sprite0y = y;
+}
+
+// Steps both pipes left, recycles one that left the screen, scores one that passed the bird.
+fn movePipes(): void {
+  if (qa == 0) { qa = 43; ga = nextGap(); }
+  if (qb == 0) { qb = 43; gb = nextGap(); }
+  qa = movePipe(qa, ga);
+  qb = movePipe(qb, gb);
+  if (qa == 7) { addScore(); }
+  if (qb == 7) { addScore(); }
+}
+
+// Plays one game and returns when the bird hits a pipe or the ground.
+fn play(): void {
+  held = 1;
+  rise = 8;
+  dead = VIC2.spBgCol;      // reading clears it
+  alive = 1;
+  while (alive == 1) {
+    frame();
+    readFlap();
+    moveBird();
+
+    moveTick = moveTick + 1;
+    if (moveTick == 5) {
+      moveTick = 0;
+      movePipes();
+    }
+
+    dead = VIC2.spBgCol;
+    if ((dead & 1) != 0) { alive = 0; }
+    if (y > 204) { alive = 0; }
+  }
+}
+
+// Message, a short pause so a flap in progress can't skip it, then wait for SPACE.
+fn gameOver(): void {
+  puts(9, 15, "GAME OVER", COLOR_WHITE);
+  puts(11, 13, "SPACE TO RETRY", COLOR_WHITE);
+  ticks = 0;
+  while (ticks < 40) {
+    frame();
+    ticks = ticks + 1;
+  }
+  waitForSpace();
+}
+
+program @ 0x0810 {
+  setup();
   loop {
-    // ── a new game ──
-    clrscr();
-    for (let r: u8 = 0; r < 25; r++) {       // all colour RAM green: pipes only need the character
-      for (let c: u8 = 0; c < 40; c++) { poke(color(r, c), COLOR_GREEN); }
-    }
-    for (let r: u8 = 22; r < 25; r++) {      // the ground: rows 22..24
-      for (let c: u8 = 0; c < 40; c++) {
-        poke(screen(r, c), 0xA0);
-        poke(color(r, c), COLOR_BROWN);
-      }
-    }
-    y = 100;
-    rise = 0;
-    speed = 1;
-    ticks = 0;
-    moveTick = 0;
-    qa = 43;
-    qb = 65;
-    ga = 6;
-    gb = 9;
-    tens = 0;
-    ones = 0;
-    VIC2.sprite0y = y;
-    puts(0, 31, "SCORE", COLOR_WHITE);
-    puts(0, 38, "00", COLOR_WHITE);
-
+    drawField();
+    resetGame();
     if (title == 1) {
-      puts(7, 14, "FLAPPY BIRD", COLOR_WHITE);
-      puts(11, 14, "PRESS SPACE", COLOR_WHITE);
-      while (space() == 1) { frame(); }
-      while (space() == 0) {
-        frame();
-        rng = rng + 1;
-      }
-      puts(7, 14, "           ", COLOR_WHITE);
-      puts(11, 14, "           ", COLOR_WHITE);
+      showTitle();
       title = 0;
     }
-
-    // ── play ──
-    held = 1;
-    rise = 8;
-    dead = VIC2.spBgCol;      // reading clears it
-    alive = 1;
-    while (alive == 1) {
-      frame();
-
-      if (space() == 1) {
-        if (held == 0) {
-          rise = 8;
-          speed = 1;
-          ticks = 0;
-        }
-        held = 1;
-      } else {
-        held = 0;
-      }
-
-      if (rise > 0) {
-        rise = rise - 1;
-        if (y < 54) { y = 50; } else { y = y - 3; }
-      } else {
-        ticks = ticks + 1;
-        if (ticks == 6) {
-          ticks = 0;
-          if (speed < 4) { speed = speed + 1; }
-        }
-        y = y + speed;
-      }
-      VIC2.sprite0y = y;
-
-      moveTick = moveTick + 1;
-      if (moveTick == 5) {
-        moveTick = 0;
-        if (qa == 0) { qa = 43; ga = nextGap(); }
-        if (qb == 0) { qb = 43; gb = nextGap(); }
-        qa = movePipe(qa, ga);
-        qb = movePipe(qb, gb);
-        if (qa == 7) { addScore(); }
-        if (qb == 7) { addScore(); }
-      }
-
-      dead = VIC2.spBgCol;
-      if ((dead & 1) != 0) { alive = 0; }
-      if (y > 204) { alive = 0; }
-    }
-
-    // ── game over ──
-    puts(9, 15, "GAME OVER", COLOR_WHITE);
-    puts(11, 13, "SPACE TO RETRY", COLOR_WHITE);
-    ticks = 0;
-    while (ticks < 40) {
-      frame();
-      ticks = ticks + 1;
-    }
-    // SPACE starts the next game straight away
-    while (space() == 1) { frame(); }
-    while (space() == 0) {
-      frame();
-      rng = rng + 1;
-    }
+    play();
+    gameOver();
   }
 }
