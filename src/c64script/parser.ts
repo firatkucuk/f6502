@@ -69,7 +69,7 @@ export function parse(tokens: Token[]): Program {
     if (name === 'zp') return { kind: 'zp' };
     if (name === 'addr') {
       eat('lparen');
-      const addr = parseIntLit(eat('int_lit').text);
+      const addr = parseExpr();
       eat('rparen');
       return { kind: 'addr', address: addr };
     }
@@ -188,7 +188,7 @@ export function parse(tokens: Token[]): Program {
   function parseProgramDecl(line: number): Decl {
     eat('program');
     eat('at');
-    const address = parseIntLit(eat('int_lit').text);
+    const address = parseExpr();
     const body = parseBlock();
     return { tag: 'program', address, body, line };
   }

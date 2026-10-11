@@ -1104,7 +1104,7 @@ export function generate(cp: CheckedProgram): CodeBuffer {
     if (d.annotation.kind !== 'addr') {
       throw new CodeGenError('a data block needs an @addr(...) annotation', d.line, 0);
     }
-    dataBlocks.push({ decl: d, addr: d.annotation.address });
+    dataBlocks.push({ decl: d, addr: cp.dataAddrs.get(d) ?? 0 });
   }
   dataBlocks.sort((a, b) => a.addr - b.addr);
 

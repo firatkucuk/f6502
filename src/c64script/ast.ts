@@ -40,7 +40,7 @@ export function sizeOf(t: PsType, structs: ReadonlyMap<string, StructDecl>): num
 export type VarAnnotation =
   | { readonly kind: 'none' }
   | { readonly kind: 'zp' }
-  | { readonly kind: 'addr'; readonly address: number };
+  | { readonly kind: 'addr'; readonly address: Expr };
 
 // ── Hardware fields ────────────────────────────────────────────────────
 export type HardwareFieldAccess = 'rw' | 'readonly' | 'writeonly' | 'read_to_clear';
@@ -208,7 +208,8 @@ export interface DataDecl {
 
 export interface ProgramDecl {
   readonly tag: 'program';
-  readonly address: number;
+  /** A constant expression; folded to a number by the checker. */
+  readonly address: Expr;
   readonly body: readonly Stmt[];
   readonly line: number;
 }

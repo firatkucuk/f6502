@@ -11,6 +11,8 @@ import type {
   FnDecl,
   VarDecl,
   AsmExpr,
+  DataDecl,
+  ProgramDecl,
 } from './ast';
 import { sizeOf } from './ast';
 
@@ -41,6 +43,8 @@ export interface CheckedProgram {
   readonly structs: ReadonlyMap<string, StructDecl>;
   readonly hardware: ReadonlyMap<string, HardwareDecl>;
   readonly zpUsed: number;
+  /** Resolved address of every `data @addr(…)` block. */
+  readonly dataAddrs: ReadonlyMap<DataDecl, number>;
 }
 
 /** Scope name of the `program { … }` block; functions use their own name. */
@@ -165,6 +169,7 @@ export function check(userProg: Program): CheckedProgram {
   const zp = new ZpAllocator();
   let loadAddr = 0;
   let hasProgramDecl = false;
+  let programDecl: ProgramDecl | null = null;
 
   const resolveVar = (scope: string | null, name: string): ResolvedVar | undefined =>
     (scope !== null ? vars.get(scopedName(scope, name)) : undefined) ?? vars.get(name);
@@ -250,8 +255,20 @@ export function check(userProg: Program): CheckedProgram {
       isConst = true;
       constValue = isInt ? v & 0xff : v & 0xffff;
     } else {
-      if (ann.kind === 'addr') absAddr = ann.address;
-      else zpAddr = zp.alloc(sizeOf(d.type, structs), d.line);
+      if (ann.kind === 'addr') {
+        const a = foldConst(ann.address, lookup);
+        if (a === null) {
+          throw new TypeError(
+            '@addr(...) must be a compile-time constant (a const declared above this line)',
+            d.line,
+            0,
+          );
+        }
+        if (a > 0xffff) {
+          throw new TypeError(`address ${a} is out of range 0..65535`, d.line, 0);
+        }
+        absAddr = a;
+      } else zpAddr = zp.alloc(sizeOf(d.type, structs), d.line);
       if (d.init !== null) {
         const v = foldConst(d.init, lookup);
         if (v !== null) {
@@ -309,13 +326,41 @@ export function check(userProg: Program): CheckedProgram {
       if (hasProgramDecl) {
         throw new TypeError('only one program block is allowed', d.line, 0);
       }
-      loadAddr = d.address;
+      programDecl = d;
       hasProgramDecl = true;
     }
   }
 
-  if (!hasProgramDecl) {
+  if (!hasProgramDecl || programDecl === null) {
     throw new TypeError('program block is required', 0, 0);
+  }
+
+  // Addresses are folded once every global is known, so a `const` may sit below `program @ …`.
+  const globalLookup = (n: string) => vars.get(n);
+  const programAddr = foldConst(programDecl.address, globalLookup);
+  if (programAddr === null) {
+    throw new TypeError('program address must be a compile-time constant', programDecl.line, 0);
+  }
+  if (programAddr > 0xffff) {
+    throw new TypeError(
+      `program address ${programAddr} is out of range 0..65535`,
+      programDecl.line,
+      0,
+    );
+  }
+  loadAddr = programAddr;
+
+  const dataAddrs = new Map<DataDecl, number>();
+  for (const d of allDecls) {
+    if (d.tag !== 'data' || d.annotation.kind !== 'addr') continue;
+    const a = foldConst(d.annotation.address, globalLookup);
+    if (a === null) {
+      throw new TypeError('@addr(...) must be a compile-time constant', d.line, 0);
+    }
+    if (a > 0xffff) {
+      throw new TypeError(`address ${a} is out of range 0..65535`, d.line, 0);
+    }
+    dataAddrs.set(d, a);
   }
 
   // Pass 3: parameters, locals, name resolution
@@ -395,7 +440,16 @@ export function check(userProg: Program): CheckedProgram {
     }
   }
 
-  return { program: userProg, loadAddr, vars, fns, structs, hardware, zpUsed: zp.used() };
+  return {
+    program: userProg,
+    loadAddr,
+    vars,
+    fns,
+    structs,
+    hardware,
+    zpUsed: zp.used(),
+    dataAddrs,
+  };
 
   // ─── statement / expression walk ─────────────────────────────────────
 
