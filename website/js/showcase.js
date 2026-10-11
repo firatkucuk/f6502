@@ -74,7 +74,9 @@ async function run() {
 
 function wireControls(player, file) {
   const syncPause = () => {
-    pauseBtn.textContent = player.running ? 'Pause' : 'Resume';
+    const label = player.running ? 'Pause' : 'Resume';
+    pauseBtn.title = label;
+    pauseBtn.setAttribute('aria-label', label);
     pauseBtn.setAttribute('aria-pressed', String(!player.running));
   };
   pauseBtn.disabled = false;
@@ -108,7 +110,11 @@ function wireControls(player, file) {
     else crtEl.requestFullscreen();
   });
   document.addEventListener('fullscreenchange', () => {
-    fullscreenBtn.textContent = document.fullscreenElement ? 'Exit fullscreen' : 'Fullscreen';
+    const on = Boolean(document.fullscreenElement);
+    const label = on ? 'Exit fullscreen' : 'Fullscreen';
+    fullscreenBtn.title = label;
+    fullscreenBtn.setAttribute('aria-label', label);
+    fullscreenBtn.setAttribute('aria-pressed', String(on));
   });
 }
 
