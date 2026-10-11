@@ -252,10 +252,10 @@
           <tr><th>Top-level item</th><th>What it is</th></tr>
         </thead>
         <tbody>
-          <tr><td><code>program @ 0x0810 { … }</code></td><td style="color:var(--text-muted)">Required, once. The address is where the code is loaded and started. The body runs top to bottom and then <strong>starts over</strong>; end it with <code>loop {}</code> to hold the final state.</td></tr>
+          <tr><td><code>program @ 0x0810 { … }</code></td><td style="color:var(--text-muted)">Required, once. The address (a number, or a constant expression) is where the code is loaded and started. The body runs top to bottom and then <strong>starts over</strong>; end it with <code>loop {}</code> to hold the final state.</td></tr>
           <tr><td><code>let</code> / <code>const</code></td><td style="color:var(--text-muted)">Global variables and constants.</td></tr>
           <tr><td><code>fn name(…): type { … }</code></td><td style="color:var(--text-muted)">Functions. They can be declared before or after the place they are used.</td></tr>
-          <tr><td><code>data @addr(0x0D40) { name: [u8; 63] = [ … ]; }</code></td><td style="color:var(--text-muted)">Bytes placed at a fixed address: sprite shapes, lookup tables. A block that would overlap the code is a compile error.</td></tr>
+          <tr><td><code>data @addr(0x0D40) { name: [u8; 63] = [ … ]; }</code></td><td style="color:var(--text-muted)">Bytes placed at a fixed address (a number or a constant): sprite shapes, lookup tables. A block that would overlap the code is a compile error.</td></tr>
           <tr><td><code>hardware NAME @ 0xD000 { field: u8 @ 0x20 }</code></td><td style="color:var(--text-muted)">A register block like <code>VIC2</code>. Put <code>readonly</code>, <code>writeonly</code> or <code>read_to_clear</code> before a field to restrict access.</td></tr>
           <tr><td><code>struct</code></td><td style="color:var(--text-muted)">Reserved: it parses but cannot be used yet.</td></tr>
         </tbody>
@@ -296,7 +296,7 @@
         <tbody>
           <tr><td><code>let x: u8 = 5;</code></td><td style="color:var(--text-muted)">A variable. It is placed in zero page for you and is 0 when no initial value is given. A global's initial value must be a constant expression.</td></tr>
           <tr><td><code>let @zp x: u8;</code></td><td style="color:var(--text-muted)">The same, spelled out.</td></tr>
-          <tr><td><code>let @addr(0x0400) cell: u8;</code></td><td style="color:var(--text-muted)">A name for a fixed address: no storage is allocated. This is how hardware registers are declared.</td></tr>
+          <tr><td><code>let @addr(0x0400) cell: u8;</code></td><td style="color:var(--text-muted)">A name for a fixed address (a number or a constant declared above): no storage is allocated. This is how hardware registers are declared.</td></tr>
           <tr><td><code>const MAX: u8 = 200;</code></td><td style="color:var(--text-muted)">A compile-time constant: no memory, folded into the code, usable in other constants and in initialisers.</td></tr>
         </tbody>
       </table>
@@ -336,6 +336,43 @@
     n++;
   }
   VIC2.borderColor = total &amp; <span class="nu">15</span>;
+  <span class="kw">loop</span> {}
+}</pre>
+      </div>
+    </div>
+    <h3 style="margin-top:2rem">Naming an address</h3>
+    <p style="color:var(--text-muted);font-size:0.9rem;margin-bottom:1rem">
+      A <code>u16</code> constant is an address you can name once and reuse. It works wherever a
+      number does, including the places that need an address: <code>program @ START</code>,
+      <code>data @addr(TABLE)</code>, <code>let @addr(CELL) x: u8;</code> and
+      <code>${TABLE}</code> in assembly. <code>program</code> and <code>data</code> addresses
+      may use a constant declared anywhere in the file; a <code>let @addr(…)</code> needs its
+      constant declared above it.
+    </p>
+    <div class="terminal reveal" style="margin-top:1rem">
+      <div class="terminal-bar">
+        <span class="terminal-dot red"></span>
+        <span class="terminal-dot yellow"></span>
+        <span class="terminal-dot green"></span>
+        <span class="terminal-title">addresses.c64s</span>
+      </div>
+      <div class="terminal-body">
+        <pre data-try><span class="cm">// Name an address once, use it everywhere.</span>
+<span class="kw">const</span> TABLE: <span class="ty">u16</span> = <span class="nu">0x0C00</span>;
+
+<span class="kw">data</span> <span class="an">@addr</span>(TABLE) {
+  shades: [<span class="ty">u8</span>; <span class="nu">4</span>] = [COLOR_RED, COLOR_ORANGE, COLOR_YELLOW, COLOR_WHITE];
+}
+
+<span class="kw">program</span> @ <span class="nu">0x0810</span> {
+  <span class="kw">asm</span> {
+    ldx #<span class="nu">3</span>
+  next:
+    lda ${TABLE},x         <span class="cm">// read the table back</span>
+    sta <span class="nu">$D020</span>              <span class="cm">// counting down, so it ends on the first entry: red</span>
+    dex
+    bpl next
+  }
   <span class="kw">loop</span> {}
 }</pre>
       </div>
