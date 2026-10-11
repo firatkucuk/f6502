@@ -29,6 +29,11 @@ export interface CodeBuffer {
 
 type LoopContext = { breakLabel: string; continueLabel: string };
 
+/** Zero page the compiler keeps for itself ($F8–$FF are outside the allocator's range). */
+const ACC = 0xf8; // 16-bit accumulator: low at $F8, high at $F9; also the pointer for (zp),Y
+const TMP2 = 0xfa; // second 16-bit temporary ($FA/$FB)
+const TMP = 0xfc; // byte temporary
+
 export function generate(cp: CheckedProgram): CodeBuffer {
   const bytes: number[] = [];
   const labels = new Map<string, number>();
@@ -363,6 +368,11 @@ export function generate(cp: CheckedProgram): CodeBuffer {
         return;
       }
     }
+    if (isU16(arg)) {
+      gen16(arg);
+      emit(0xa5, ACC + (high ? 1 : 0));
+      return;
+    }
     throw new CodeGenError(`${high ? 'hi' : 'lo'}() needs a variable or a constant`, line, 0);
   }
 
@@ -463,6 +473,88 @@ export function generate(cp: CheckedProgram): CodeBuffer {
       return;
     }
     throw new CodeGenError(RHS_HINT, rhs.line, 0);
+  }
+
+  /** A right-hand operand of 16-bit math: loads byte 0 (low) or 1 (high) with the given opcodes. */
+  interface Operand16 {
+    load(byte: 0 | 1, imm: number, zp: number, abs: number): void;
+  }
+
+  function operand16(rhs: Expr): Operand16 {
+    const c = evalConst(rhs);
+    if (c !== null) {
+      return { load: (b, imm) => emit(imm, b === 0 ? c & 0xff : (c >> 8) & 0xff) };
+    }
+    if (rhs.tag === 'ident') {
+      const v = lookup(rhs.name);
+      if (v && (v.zpAddr !== null || v.absAddr !== null)) {
+        const wide = v.type.tag === 'u16';
+        return {
+          load: (b, imm, zp, abs) => {
+            if (b === 1 && !wide) emit(imm, 0);
+            else if (v.zpAddr !== null) emit(zp, v.zpAddr + b);
+            else {
+              const a = (v.absAddr as number) + b;
+              emit(abs, a & 0xff, (a >> 8) & 0xff);
+            }
+          },
+        };
+      }
+    }
+    if (rhs.tag === 'field' && rhs.obj.tag === 'ident') {
+      const addr = hwAddr(rhs.obj.name, rhs.field, rhs.line);
+      return {
+        load: (b, imm, _zp, abs) => {
+          if (b === 1) emit(imm, 0);
+          else emit(abs, addr & 0xff, (addr >> 8) & 0xff);
+        },
+      };
+    }
+    throw new CodeGenError(RHS_HINT, rhs.line, 0);
+  }
+
+  /** Evaluates `e` as a 16-bit value into ACC (low) / ACC+1 (high). */
+  function gen16(e: Expr): void {
+    const c = evalConst(e);
+    if (c !== null) {
+      emit(0xa9, c & 0xff, 0x85, ACC, 0xa9, (c >> 8) & 0xff, 0x85, ACC + 1);
+      return;
+    }
+    if (e.tag === 'ident') {
+      const v = lookup(e.name);
+      if (v && v.type.tag === 'u16' && !v.isConst) {
+        for (const b of [0, 1] as const) {
+          if (v.zpAddr !== null) emit(0xa5, v.zpAddr + b);
+          else if (v.absAddr !== null) {
+            const a = v.absAddr + b;
+            emit(0xad, a & 0xff, (a >> 8) & 0xff);
+          } else throw new CodeGenError(`cannot read '${e.name}'`, e.line, 0);
+          emit(0x85, ACC + b);
+        }
+        return;
+      }
+    }
+    if (e.tag === 'cast' && e.toType.tag === 'u16') {
+      gen16(e.expr);
+      return;
+    }
+    if (e.tag === 'binary' && (e.op === '+' || e.op === '-') && isU16(e)) {
+      gen16(e.lhs);
+      const r = operand16(e.rhs);
+      const add = e.op === '+';
+      const [imm, zp, abs] = add ? [0x69, 0x65, 0x6d] : [0xe9, 0xe5, 0xed];
+      emit(0xa5, ACC, add ? 0x18 : 0x38); // LDA lo; CLC | SEC
+      r.load(0, imm!, zp!, abs!);
+      emit(0x85, ACC, 0xa5, ACC + 1); // STA lo; LDA hi
+      r.load(1, imm!, zp!, abs!);
+      emit(0x85, ACC + 1);
+      return;
+    }
+    if (isU16(e)) {
+      throw new CodeGenError('this 16-bit expression is not supported yet', e.line, 0);
+    }
+    genExpr(e); // an 8-bit value: zero-extend
+    emit(0x85, ACC, 0xa9, 0x00, 0x85, ACC + 1);
   }
 
   function genBinary(e: Extract<Expr, { tag: 'binary' }>): void {
@@ -895,7 +987,12 @@ export function generate(cp: CheckedProgram): CodeBuffer {
       }
     }
     if (isU16(value)) {
-      throw new CodeGenError('16-bit arithmetic is not supported yet', line, 0);
+      gen16(value);
+      emit(0xa5, ACC);
+      store(0);
+      emit(0xa5, ACC + 1);
+      store(1);
+      return;
     }
     genExpr(value); // an 8-bit value: zero-extend
     store(0);
