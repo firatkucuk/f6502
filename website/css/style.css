@@ -855,7 +855,7 @@ td:first-child { font-family: var(--font-mono); font-size: 0.85rem; color: var(-
 }
 .showcase-body { padding: 1.25rem; }
 .showcase-body h3 { font-size: 0.95rem; margin-bottom: 0.35rem; }
-.showcase-body p { font-size: 0.85rem; color: var(--text-muted); margin: 0; }
+.showcase-body p { font-size: 0.85rem; color: var(--text-muted); margin: 0; overflow-wrap: anywhere; }
 .coming-soon-badge {
   display: inline-block;
   margin-top: 0.75rem;
@@ -963,21 +963,20 @@ kbd {
 /* ── Focus ──────────────────────────────────────────────────────── */
 :focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; border-radius: 4px; }
 
-/* ── "Try now" button on C64Script samples ─────────────────────────────── */
-.try-now-host { position: relative; }
+/* ── "Try now" link on C64Script samples ──────────────────────────────── */
+/* Floats beside .copy-btn (same box metrics) so the two always share a baseline. */
 .try-now {
-  position: absolute;
-  top: 0.6rem;
-  right: 5rem; /* leaves room for the copy button */
-  z-index: 2;
-  padding: 0.3rem 0.7rem;
-  font-family: var(--font-pixel);
-  font-size: 8px;
-  letter-spacing: 0.08em;
-  color: var(--bg);
+  float: right;
+  margin: -2px 0.4rem 0 0;
+  padding: 3px 8px;
+  border: 1px solid var(--accent);
+  border-radius: 5px;
   background: var(--accent);
-  border-radius: 4px;
+  color: var(--bg);
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  line-height: normal;
   text-decoration: none;
-  opacity: 0.9;
+  transition: all 0.2s;
 }
-.try-now:hover { opacity: 1; }
+.try-now:hover { filter: brightness(1.15); }

@@ -74,7 +74,8 @@ async function run(focusScreen = false) {
 }
 
 function useSource(source) {
-  editor.value = source;
+  // A trailing newline would show up as an empty numbered last line.
+  editor.value = source.replace(/\n+$/, '');
   render(0);
 }
 

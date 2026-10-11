@@ -4,22 +4,23 @@ import { tryNowUrl } from './code-hash.js';
 // page keeps a single copy of each sample. Works from any page depth.
 const playground = new URL('../playground.html', import.meta.url).href;
 
-/** The block's code, without UI that other scripts inject into it (the copy button). */
+/** The block's code, without UI that scripts inject into it (copy button, Try-now link). */
 function sourceOf(pre) {
   const clone = pre.cloneNode(true);
-  for (const extra of clone.querySelectorAll('button')) extra.remove();
+  for (const extra of clone.querySelectorAll('button, a.try-now')) extra.remove();
   return clone.textContent.replace(/\s+$/, '') + '\n';
 }
 
 for (const pre of document.querySelectorAll('pre[data-try]')) {
-  const host = pre.parentElement;
-  if (!host || host.querySelector(':scope > .try-now')) continue;
+  if (pre.querySelector('a.try-now')) continue;
   const link = document.createElement('a');
   link.className = 'try-now';
   link.textContent = '▶ Try now';
   link.target = '_blank';
   link.rel = 'noopener';
   link.href = tryNowUrl(sourceOf(pre), playground);
-  host.classList.add('try-now-host');
-  host.append(link);
+  // Sit directly after the copy button (both float right) so the two always line up.
+  const copy = pre.querySelector('.copy-btn');
+  if (copy) copy.after(link);
+  else pre.prepend(link);
 }

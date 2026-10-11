@@ -28,6 +28,12 @@ describe('editor-render', () => {
     expect(html).toContain('&lt;x&gt;');
   });
 
+  it('numbers only real source lines: the scroll padding is marked and not counted', () => {
+    const html = renderLines('a\nb', 0, null);
+    expect(html.match(/<span class="ln">/g)).toHaveLength(2);
+    expect(html.match(/<span class="ln pad">/g)).toHaveLength(2);
+  });
+
   it('keeps empty lines at full height', () => {
     expect(renderLines('', 0, null)).toContain('<span class="ln"> </span>');
   });
