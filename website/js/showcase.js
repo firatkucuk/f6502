@@ -20,6 +20,7 @@ const hintEl = document.getElementById('showcase-hint');
 const crtEl = document.getElementById('showcase-crt');
 const pauseBtn = document.getElementById('showcase-pause');
 const rebootBtn = document.getElementById('showcase-reboot');
+const soundBtn = document.getElementById('showcase-sound');
 const fullscreenBtn = document.getElementById('showcase-fullscreen');
 
 function escapeHtml(text) {
@@ -78,6 +79,7 @@ async function run() {
     pauseBtn,
     rebootBtn,
     fullscreenBtn,
+    soundBtn,
     reboot: async () => {
       try {
         player.reset();
