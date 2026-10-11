@@ -355,9 +355,148 @@ describe('showcase: flappy-bird', () => {
 });
 
 describe('showcases are written in plain C64Script', () => {
-  for (const id of ['character-art', 'sprite-dance', 'flappy-bird', 'rainbow-border']) {
+  for (const id of [
+    'character-art',
+    'sprite-dance',
+    'flappy-bird',
+    'rainbow-border',
+    'space-invaders',
+  ]) {
     it(`${id} has no inline assembly`, () => {
       expect(source(id)).not.toMatch(/\basm\b\s*(clobbers\s*\([^)]*\)\s*)?\{/);
     });
   }
+});
+
+describe('showcase: space-invaders', () => {
+  const BLOCK = 0xa0;
+  const SHOT = 0x2a;
+  const cell = (c: C64, r: number, col: number) => c.peek(0x0400 + r * 40 + col);
+  const colour = (c: C64, r: number, col: number) => c.peek(0xd800 + r * 40 + col) & 15;
+  const run = (c: C64, frames: number) => {
+    for (let i = 0; i < frames; i++) c.runFrame();
+  };
+  const tap = (c: C64, key: 'A' | 'D' | 'SPACE', frames = 1) => {
+    c.keyDown(key);
+    run(c, frames);
+    c.keyUp(key);
+  };
+  /** The game on screen after SPACE starts it from the title. */
+  const started = (): C64 => {
+    const c = boot(source('space-invaders'), 10);
+    tap(c, 'SPACE', 3);
+    run(c, 2);
+    return c;
+  };
+  const blocks = (c: C64, rows: number[]) =>
+    rows.reduce(
+      (n, r) =>
+        n +
+        Array.from({ length: 40 }, (_, col) => col).filter((col) => cell(c, r, col) === BLOCK)
+          .length,
+      0,
+    );
+  const cannonCentre = (c: C64) => {
+    const left = Array.from({ length: 40 }, (_, col) => col).find(
+      (col) => cell(c, 22, col) === BLOCK,
+    );
+    return left === undefined ? -1 : left + 1;
+  };
+  const score = (c: C64) => (cell(c, 0, 38) - 0x30) * 10 + (cell(c, 0, 39) - 0x30);
+  const INVADER_ROWS = [3, 5, 7, 9, 11];
+
+  it('draws five rows of eight invaders, each row in its own colour, and the cannon', () => {
+    const c = boot(source('space-invaders'), 10);
+    expect(blocks(c, INVADER_ROWS)).toBe(120);
+    expect(cell(c, 3, 0)).toBe(BLOCK);
+    expect(cell(c, 3, 2)).toBe(BLOCK);
+    expect(cell(c, 3, 3)).toBe(0x20); // the gap after an invader
+    expect(colour(c, 3, 0)).toBe(2); // red
+    expect(colour(c, 5, 0)).toBe(8); // orange
+    expect(colour(c, 11, 0)).toBe(3); // cyan
+    expect(blocks(c, [22])).toBe(3); // the cannon: three block characters
+    expect(colour(c, 22, 20)).toBe(5); // green
+  });
+
+  it('shows the title until SPACE starts the game', () => {
+    const c = boot(source('space-invaders'), 10);
+    expect(cell(c, 13, 12)).toBe(19); // S of SPACE INVADERS
+    expect(cell(c, 15, 12)).toBe(16); // P of PRESS SPACE
+    tap(c, 'SPACE', 3);
+    run(c, 2);
+    expect(cell(c, 13, 12)).toBe(0x20);
+    expect(cell(c, 15, 12)).toBe(0x20);
+  });
+
+  it('marches the block sideways and the cannon follows A and D', () => {
+    const c = started();
+    const row3 = () => Array.from({ length: 40 }, (_, col) => cell(c, 3, col)).join();
+    const before = row3();
+    run(c, 30);
+    expect(row3()).not.toBe(before);
+
+    const x = cannonCentre(c);
+    tap(c, 'A', 3);
+    expect(cannonCentre(c)).toBeLessThan(x);
+    tap(c, 'D', 6);
+    expect(cannonCentre(c)).toBeGreaterThan(x);
+  });
+
+  it('fires one bullet at a time and the bullet climbs', () => {
+    const c = started();
+    const shots = () => {
+      let n = 0;
+      for (let r = 1; r < 22; r++)
+        for (let col = 0; col < 40; col++) if (cell(c, r, col) === SHOT) n++;
+      return n;
+    };
+    c.keyDown('SPACE');
+    run(c, 1);
+    c.keyUp('SPACE');
+    run(c, 1);
+    expect(shots()).toBe(1);
+    c.keyDown('SPACE');
+    run(c, 5); // holding SPACE does not add bullets while one is in flight
+    c.keyUp('SPACE');
+    expect(shots()).toBe(1);
+  });
+
+  it('a shot that hits an invader removes it and adds to the score', () => {
+    const c = started();
+    let hit = false;
+    for (let attempt = 0; attempt < 40 && !hit; attempt++) {
+      const bottom = Array.from({ length: 40 }, (_, col) => col).find(
+        (col) => cell(c, 11, col) === BLOCK,
+      );
+      if (bottom === undefined) break;
+      for (let i = 0; i < 60 && cannonCentre(c) !== bottom + 1; i++) {
+        tap(c, cannonCentre(c) < bottom + 1 ? 'D' : 'A');
+      }
+      const before = score(c);
+      const alive = blocks(c, INVADER_ROWS);
+      tap(c, 'SPACE');
+      run(c, 22); // the bullet has climbed off the top by now
+      hit = score(c) > before;
+      if (hit) expect(blocks(c, INVADER_ROWS)).toBeLessThan(alive);
+    }
+    expect(hit).toBe(true);
+    expect(score(c)).toBeGreaterThanOrEqual(1);
+  });
+
+  it('loses when the block reaches the cannon, shows GAME OVER and restarts on SPACE', () => {
+    const c = started();
+    let frames = 0;
+    while (cell(c, 13, 14) !== 7 && frames < 4000) {
+      run(c, 50);
+      frames += 50;
+    }
+    expect(cell(c, 13, 14)).toBe(7); // G of GAME OVER
+    expect(cell(c, 13, 15)).toBe(1); // A
+    run(c, 130); // the message stays for a while, then the game waits for SPACE
+    tap(c, 'SPACE');
+    run(c, 8); // the new block is drawn over a few frames, before its first step
+    expect(cell(c, 13, 14)).toBe(0x20);
+    expect(blocks(c, INVADER_ROWS)).toBe(120); // a fresh block of 40
+    expect(score(c)).toBe(0);
+  });
 });
