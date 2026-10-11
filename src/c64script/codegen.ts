@@ -693,6 +693,47 @@ export function generate(cp: CheckedProgram): CodeBuffer {
   }
 
   /**
+   * Compares two 16-bit values and leaves the flags for `jumpOp16(op)`:
+   *   == / !=  → Z (equal)        < / >=  → C (a >= b)
+   *   > / <=   → the operands are swapped, so C is clear when a > b.
+   */
+  function genCompare16(cond: Extract<Expr, { tag: 'binary' }>): void {
+    const op = cond.op;
+    gen16(cond.lhs);
+    const r = operand16(cond.rhs);
+    if (op === '>' || op === '<=') {
+      // b - a: C is clear when b < a, i.e. a > b.
+      r.load(0, 0xa9, 0xa5, 0xad); // LDA b.lo
+      emit(0xc5, ACC); // CMP a.lo
+      r.load(1, 0xa9, 0xa5, 0xad); // LDA b.hi
+      emit(0xe5, ACC + 1); // SBC a.hi
+      return;
+    }
+    if (op === '==' || op === '!=') {
+      const ne = freshLabel('cmp16_ne');
+      emit(0xa5, ACC); // LDA a.lo
+      r.load(0, 0xc9, 0xc5, 0xcd); // CMP b.lo
+      emit(0xd0);
+      addFixup({ kind: 'branch8', label: ne }, 1); // BNE: Z is already clear
+      emit(0xa5, ACC + 1); // LDA a.hi
+      r.load(1, 0xc9, 0xc5, 0xcd); // CMP b.hi: Z set when equal
+      emitLabel(ne);
+      return;
+    }
+    emit(0xa5, ACC); // LDA a.lo
+    r.load(0, 0xc9, 0xc5, 0xcd); // CMP b.lo
+    emit(0xa5, ACC + 1); // LDA a.hi
+    r.load(1, 0xe9, 0xe5, 0xed); // SBC b.hi: C set when a >= b
+  }
+
+  /** The 8-bit condition whose branch test matches the flags left by `genCompare16`. */
+  function jumpOp16(op: string): string {
+    if (op === '>') return '<'; // C clear after the swapped subtraction
+    if (op === '<=') return '>=';
+    return op;
+  }
+
+  /**
    * Emits code that continues at `label` when the condition is false (`invertForFalse`) or
    * true (otherwise). A 6502 branch reaches only ±127 bytes, so this never branches to `label`
    * directly: it branches the opposite way over a JMP, which can go anywhere.
@@ -704,16 +745,21 @@ export function generate(cp: CheckedProgram): CodeBuffer {
     const stay = freshLabel('cond_stay');
     if (cond.tag === 'binary' && COMPARE_OPS.has(cond.op)) {
       if (isU16(cond.lhs) || isU16(cond.rhs)) {
-        throw new CodeGenError('16-bit comparison is not supported yet', cond.line, 0);
+        genCompare16(cond);
+        emitCondJump(jumpOp16(cond.op), stay, !invertForFalse);
+      } else {
+        genExpr(cond.lhs);
+        genCmpRhs(cond.rhs);
+        // Stay (fall into the body / loop) when the jump to `label` is NOT wanted.
+        emitCondJump(cond.op, stay, !invertForFalse);
       }
-      genExpr(cond.lhs);
-      genCmpRhs(cond.rhs);
-      // Stay (fall into the body / loop) when the jump to `label` is NOT wanted.
-      emitCondJump(cond.op, stay, !invertForFalse);
+    } else if (isU16(cond)) {
+      // A 16-bit value is true when either byte is non-zero.
+      gen16(cond);
+      emit(0xa5, ACC, 0x05, ACC + 1); // LDA lo; ORA hi
+      emit(invertForFalse ? 0xd0 : 0xf0); // BNE / BEQ over the jump
+      addFixup({ kind: 'branch8', label: stay }, 1);
     } else {
-      if (isU16(cond)) {
-        throw new CodeGenError('16-bit comparison is not supported yet', cond.line, 0);
-      }
       // Any other value is true when it is non-zero. CMP #0 makes the flags reflect A even
       // after a function call returned it.
       genExpr(cond);

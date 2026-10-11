@@ -130,13 +130,11 @@ describe('logic', () => {
     expect(background(d)).toBe(5);
   });
 
-  it('a u16 used as a condition is rejected, not tested by its low byte', () => {
-    expectError(
+  it('a u16 used as a condition tests both bytes, not just the low one', () => {
+    const c = boot(
       'let @zp w: u16 = 0x0100;\nprogram @ 0x0810 {\n  if (w) { VIC2.borderColor = 1; }\n  loop {}\n}',
-      'codegen',
-      /16-bit/,
-      3,
     );
+    expect(c.peek(0xd020) & 15).toBe(1); // the low byte is 0, the high byte is not
   });
 
   it('break and continue outside a loop are errors', () => {

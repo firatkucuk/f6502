@@ -377,6 +377,36 @@
 }</pre>
       </div>
     </div>
+      <h3 style="margin-top:2rem">16-bit values</h3>
+    <p style="color:var(--text-muted);font-size:0.9rem;margin-bottom:1rem">
+      A <code>u16</code> can be added to and subtracted from (<code>+</code>, <code>-</code>,
+      <code>+=</code>, <code>-=</code>, with <code>u8</code> values mixed in), compared with
+      <code>==</code>, <code>!=</code>, <code>&lt;</code>, <code>&gt;</code>, <code>&lt;=</code> and
+      <code>&gt;=</code>, and used as a loop counter. Results wrap at 16 bits. A 16-bit value is
+      stored in a <code>u8</code> with <code>lo()</code>, <code>hi()</code> or <code>as u8</code>.
+    </p>
+    <div class="terminal reveal" style="margin-top:1rem">
+      <div class="terminal-bar">
+        <span class="terminal-dot red"></span>
+        <span class="terminal-dot yellow"></span>
+        <span class="terminal-dot green"></span>
+        <span class="terminal-title">sixteen-bit.c64s</span>
+      </div>
+      <div class="terminal-body">
+        <pre data-try><span class="cm">// 16-bit values: add, subtract, compare, and count past 255.</span>
+<span class="kw">const</span> TOTAL: <span class="ty">u16</span> = <span class="nu">1000</span>;
+
+<span class="kw">let</span> <span class="an">@addr</span>(<span class="nu">0x0900</span>) sum: <span class="ty">u16</span>;
+
+<span class="kw">program</span> @ <span class="nu">0x0810</span> {
+  <span class="kw">for</span> (<span class="kw">let</span> i: <span class="ty">u16</span> = <span class="nu">0</span>; i &lt; TOTAL; i++) {
+    sum += <span class="nu">3</span>;                 <span class="cm">// 3000 fits in a u16</span>
+  }
+  VIC2.borderColor = COLOR_GREEN;
+  <span class="kw">loop</span> {}
+}</pre>
+      </div>
+    </div>
   </section>
 
   <!-- ── Literals and expressions ──────────────────────────────────────────── -->
@@ -1196,8 +1226,8 @@
       <div class="chip-card">
         <div class="chip-card-num">PARTIAL</div>
         <h3>u16 type is partial</h3>
-        <p class="chip-label">16-bit operations need more work</p>
-        <p><code>u16</code> variables can be assigned, copied, incremented, added to and subtracted from (<code>+</code>, <code>-</code>, <code>+=</code>, <code>-=</code>, mixing in <code>u8</code> values) and read with <code>lo()</code> / <code>hi()</code>. Comparison on them is a compile error until 16-bit comparison lands; use <code>u8</code> for that.</p>
+        <p class="chip-label">16-bit add, subtract and compare</p>
+        <p><code>u16</code> variables can be assigned, copied, incremented, added to and subtracted from (<code>+</code>, <code>-</code>, <code>+=</code>, <code>-=</code>, mixing in <code>u8</code> values) and read with <code>lo()</code> / <code>hi()</code>. They compare as 16-bit values (<code>==</code> … <code>&gt;=</code>) and work as <code>for</code> / <code>while</code> loop counters. <code>*</code>, <code>/</code>, <code>%</code>, shifts and the bitwise operators are not available on them.</p>
       </div>
       <div class="chip-card">
         <div class="chip-card-num">CONST ADDR</div>

@@ -229,3 +229,19 @@ describe('named addresses', () => {
     );
   });
 });
+
+describe('16-bit values in the guide', () => {
+  it('the sixteen-bit sample sums to 3000 and finishes', () => {
+    const at = html.indexOf('sixteen-bit.c64s');
+    expect(at).toBeGreaterThan(0);
+    const pre = html.slice(html.indexOf('<pre', at), html.indexOf('</pre>', at));
+    const src = pre
+      .replace(/<[^>]+>/g, '')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&amp;/g, '&');
+    const c = boot(src, 60);
+    expect(c.peek(0x0900) | (c.peek(0x0901) << 8)).toBe(3000);
+    expect(c.peek(0xd020) & 15).toBe(5);
+  });
+});
