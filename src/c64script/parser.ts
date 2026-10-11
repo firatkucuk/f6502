@@ -1,24 +1,45 @@
+import { isMnemonic, takesOperand } from './asm';
 import { ParseError } from './errors';
 import type { Token, TokenKind } from './token';
 import type {
-  Program, Decl, Stmt, Expr, PsType, VarAnnotation,
-  HardwareField, HardwareFieldAccess, AsmInstr, AsmInterp,
+  Program,
+  Decl,
+  Stmt,
+  Expr,
+  PsType,
+  VarAnnotation,
+  HardwareField,
+  HardwareFieldAccess,
+  AsmExpr,
+  AsmItem,
+  AsmOperand,
 } from './ast';
 
 export function parse(tokens: Token[]): Program {
   let pos = 0;
 
-  function peek(offset = 0): Token { return tokens[pos + offset] ?? tokens[tokens.length - 1]!; }
-  function at(kind: TokenKind): boolean { return peek().kind === kind; }
+  function peek(offset = 0): Token {
+    return tokens[pos + offset] ?? tokens[tokens.length - 1]!;
+  }
+  function at(kind: TokenKind): boolean {
+    return peek().kind === kind;
+  }
   function eat(kind: TokenKind): Token {
-    if (!at(kind)) throw new ParseError(`expected ${kind}, got ${peek().kind} ('${peek().text}')`, peek().line, peek().col);
+    if (!at(kind))
+      throw new ParseError(
+        `expected ${kind}, got ${peek().kind} ('${peek().text}')`,
+        peek().line,
+        peek().col,
+      );
     return tokens[pos++]!;
   }
-  function maybe(kind: TokenKind): Token | null { return at(kind) ? tokens[pos++]! : null; }
+  function maybe(kind: TokenKind): Token | null {
+    return at(kind) ? tokens[pos++]! : null;
+  }
 
   function parseType(): PsType {
-    if (maybe('u8'))   return { tag: 'u8' };
-    if (maybe('u16'))  return { tag: 'u16' };
+    if (maybe('u8')) return { tag: 'u8' };
+    if (maybe('u16')) return { tag: 'u16' };
     if (maybe('bool')) return { tag: 'bool' };
     if (maybe('void')) return { tag: 'void' };
     if (maybe('ptr')) {
@@ -56,23 +77,25 @@ export function parse(tokens: Token[]): Program {
   }
 
   function parseHardwareAccess(): HardwareFieldAccess {
-    if (maybe('readonly'))      return 'readonly';
-    if (maybe('writeonly'))     return 'writeonly';
+    if (maybe('readonly')) return 'readonly';
+    if (maybe('writeonly')) return 'writeonly';
     if (maybe('read_to_clear')) return 'read_to_clear';
     return 'rw';
   }
 
   function parseDecl(): Decl {
-    const l = peek().line, c = peek().col;
+    const l = peek().line,
+      c = peek().col;
     if (at('at') && peek(1).text === 'inline') {
-      eat('at'); eat('inline');
+      eat('at');
+      eat('inline');
       return parseFnDecl(true, l);
     }
-    if (at('fn'))       return parseFnDecl(false, l);
-    if (at('struct'))   return parseStructDecl(l);
+    if (at('fn')) return parseFnDecl(false, l);
+    if (at('struct')) return parseStructDecl(l);
     if (at('hardware')) return parseHardwareDecl(l);
-    if (at('data'))     return parseDataDecl(l);
-    if (at('program'))  return parseProgramDecl(l);
+    if (at('data')) return parseDataDecl(l);
+    if (at('program')) return parseProgramDecl(l);
     if (at('const') || at('let') || at('at')) return parseVarDecl(l);
     throw new ParseError(`unexpected token ${peek().kind}`, l, c);
   }
@@ -192,19 +215,43 @@ export function parse(tokens: Token[]): Program {
 
   function parseStmt(): Stmt {
     const l = peek().line;
-    if (at('if'))       return parseIf(l);
-    if (at('while'))    return parseWhile(l);
-    if (at('for'))      return parseFor(l);
-    if (at('loop'))     return parseLoop(l);
-    if (at('break'))    { eat('break');    eat('semicolon'); return { tag: 'break',    line: l }; }
-    if (at('continue')) { eat('continue'); eat('semicolon'); return { tag: 'continue', line: l }; }
-    if (at('return'))   return parseReturn(l);
-    if (at('asm'))      return parseAsm(l);
-    if (at('let') || at('const') || (at('at') && (peek(1).text === 'zp' || peek(1).text === 'addr'))) {
+    if (at('if')) return parseIf(l);
+    if (at('while')) return parseWhile(l);
+    if (at('for')) return parseFor(l);
+    if (at('loop')) return parseLoop(l);
+    if (at('break')) {
+      eat('break');
+      eat('semicolon');
+      return { tag: 'break', line: l };
+    }
+    if (at('continue')) {
+      eat('continue');
+      eat('semicolon');
+      return { tag: 'continue', line: l };
+    }
+    if (at('return')) return parseReturn(l);
+    if (at('asm')) return parseAsm(l);
+    if (
+      at('let') ||
+      at('const') ||
+      (at('at') && (peek(1).text === 'zp' || peek(1).text === 'addr'))
+    ) {
       return parseVarDecl(l) as unknown as Stmt;
     }
     const lhsExpr = parseExpr();
-    const assignOps = ['eq','pluseq','minuseq','stareq','slasheq','percenteq','ampeq','pipeeq','careteq','ltlteq','gtgteq'];
+    const assignOps = [
+      'eq',
+      'pluseq',
+      'minuseq',
+      'stareq',
+      'slasheq',
+      'percenteq',
+      'ampeq',
+      'pipeeq',
+      'careteq',
+      'ltlteq',
+      'gtgteq',
+    ];
     if (assignOps.includes(peek().kind)) {
       const op = tokens[pos++]!.text;
       const rhs = parseExpr();
@@ -280,7 +327,10 @@ export function parse(tokens: Token[]): Program {
 
   function parseReturn(line: number): Stmt {
     eat('return');
-    if (at('semicolon')) { eat('semicolon'); return { tag: 'return', value: null, line }; }
+    if (at('semicolon')) {
+      eat('semicolon');
+      return { tag: 'return', value: null, line };
+    }
     const value = parseExpr();
     eat('semicolon');
     return { tag: 'return', value, line };
@@ -298,31 +348,117 @@ export function parse(tokens: Token[]): Program {
       eat('rparen');
     }
     eat('lbrace');
-    const instrs: AsmInstr[] = [];
-    let raw = '';
-    const interpList: AsmInterp[] = [];
-    while (!at('rbrace') && !at('eof')) {
-      const tok = tokens[pos++]!;
-      if (tok.kind === 'dollar_lbrace') {
-        const first = eat('ident').text;
-        if (at('dot')) {
-          eat('dot');
-          const field = eat('ident').text;
-          eat('rbrace');
-          raw += '${' + first + '.' + field + '}';
-          interpList.push({ kind: 'field', obj: first, field });
-        } else {
-          eat('rbrace');
-          raw += '${' + first + '}';
-          interpList.push({ kind: 'var', name: first });
-        }
-      } else {
-        raw += tok.text + ' ';
-      }
-    }
+    const items: AsmItem[] = [];
+    while (!at('rbrace') && !at('eof')) items.push(parseAsmItem());
     eat('rbrace');
-    if (raw.trim()) instrs.push({ raw: raw.trim(), interps: interpList });
-    return { tag: 'asm', clobbers, instrs, line };
+    return { tag: 'asm', clobbers, items, line };
+  }
+
+  /** Any identifier-shaped token, including C64Script keywords: `loop:` is a very common label. */
+  const isWord = (t: Token): boolean =>
+    t.kind !== 'int_lit' && t.kind !== 'eof' && /^[A-Za-z_][A-Za-z0-9_]*$/.test(t.text);
+
+  function parseAsmItem(): AsmItem {
+    const t = peek();
+    if (!isWord(t)) {
+      throw new ParseError(`expected an instruction or a label, got ${t.kind}`, t.line, t.col);
+    }
+    pos++;
+    if (at('colon')) {
+      pos++;
+      if (isMnemonic(t.text)) {
+        throw new ParseError(
+          `'${t.text}' is an instruction and cannot be used as a label`,
+          t.line,
+          t.col,
+        );
+      }
+      return { kind: 'label', name: t.text, line: t.line };
+    }
+    const mnemonic = t.text.toUpperCase();
+    return { kind: 'instr', mnemonic, operand: parseAsmOperand(mnemonic, t.line), line: t.line };
+  }
+
+  /** The operand must start on the instruction's own line, so `dex` ⏎ `bne x` stays two items. */
+  function parseAsmOperand(mnemonic: string, line: number): AsmOperand {
+    const next = peek();
+    if (next.line !== line || next.kind === 'rbrace' || next.kind === 'eof')
+      return { kind: 'none' };
+    if (isMnemonic(mnemonic) && !takesOperand(mnemonic)) return { kind: 'none' };
+    if (isWord(next) && next.text.toLowerCase() !== 'a' && isMnemonic(next.text)) {
+      return { kind: 'none' }; // `asl bne …` on one line: the next word starts a new instruction
+    }
+
+    if (at('hash')) {
+      pos++;
+      return { kind: 'imm', value: parseAsmExpr() };
+    }
+    if (at('lparen')) {
+      pos++;
+      const value = parseAsmExpr();
+      if (maybe('comma')) {
+        const reg = eat('ident');
+        if (reg.text.toLowerCase() !== 'x') {
+          throw new ParseError(`expected 'x' in (address,x), got '${reg.text}'`, reg.line, reg.col);
+        }
+        eat('rparen');
+        return { kind: 'izx', value };
+      }
+      eat('rparen');
+      if (maybe('comma')) {
+        const reg = eat('ident');
+        if (reg.text.toLowerCase() !== 'y') {
+          throw new ParseError(`expected 'y' in (address),y, got '${reg.text}'`, reg.line, reg.col);
+        }
+        return { kind: 'izy', value };
+      }
+      return { kind: 'ind', value };
+    }
+    if (at('ident') && peek().text.toLowerCase() === 'a') {
+      pos++;
+      return { kind: 'acc' };
+    }
+    const value = parseAsmExpr();
+    if (maybe('comma')) {
+      const reg = eat('ident');
+      const r = reg.text.toLowerCase();
+      if (r !== 'x' && r !== 'y') {
+        throw new ParseError(`expected x or y after ',', got '${reg.text}'`, reg.line, reg.col);
+      }
+      return { kind: 'addr', value, index: r };
+    }
+    return { kind: 'addr', value, index: null };
+  }
+
+  function parseAsmExpr(): AsmExpr {
+    let e = parseAsmTerm();
+    while (at('plus') || at('minus')) {
+      const sign = tokens[pos++]!.kind === 'plus' ? 1 : -1;
+      const n = eat('int_lit');
+      e = { tag: 'add', lhs: e, offset: sign * parseIntLit(n.text), line: n.line };
+    }
+    return e;
+  }
+
+  function parseAsmTerm(): AsmExpr {
+    const t = peek();
+    pos++;
+    if (t.kind === 'int_lit') return { tag: 'num', value: parseIntLit(t.text), line: t.line };
+    if (t.kind === 'dollar_lbrace') {
+      const expr = parseExpr();
+      eat('rbrace');
+      return { tag: 'sym', expr, line: t.line };
+    }
+    if (isWord(t)) {
+      if ((t.text === 'lo' || t.text === 'hi') && at('lparen')) {
+        pos++;
+        const arg = parseAsmExpr();
+        eat('rparen');
+        return { tag: t.text, arg, line: t.line };
+      }
+      return { tag: 'label', name: t.text, line: t.line };
+    }
+    throw new ParseError(`unexpected ${t.kind} in an instruction operand`, t.line, t.col);
   }
 
   function parseExpr(minPrec = 0): Expr {
@@ -345,18 +481,38 @@ export function parse(tokens: Token[]): Program {
 
   function binPrec(kind: TokenKind): number {
     switch (kind) {
-      case 'pipepipe':                              return 1;
-      case 'ampamp':                                return 2;
-      case 'pipe':                                  return 3;
-      case 'caret':                                 return 4;
-      case 'amp':                                   return 5;
-      case 'eqeq': case 'bangeq':                   return 6;
-      case 'lt': case 'gt': case 'lteq': case 'gteq': return 7;
-      case 'ltlt': case 'gtgt':                     return 8;
-      case 'plus': case 'minus':                    return 9;
-      case 'star': case 'slash': case 'percent':    return 10;
-      case 'as':                                    return 11;
-      default:                                      return -1;
+      case 'pipepipe':
+        return 1;
+      case 'ampamp':
+        return 2;
+      case 'pipe':
+        return 3;
+      case 'caret':
+        return 4;
+      case 'amp':
+        return 5;
+      case 'eqeq':
+      case 'bangeq':
+        return 6;
+      case 'lt':
+      case 'gt':
+      case 'lteq':
+      case 'gteq':
+        return 7;
+      case 'ltlt':
+      case 'gtgt':
+        return 8;
+      case 'plus':
+      case 'minus':
+        return 9;
+      case 'star':
+      case 'slash':
+      case 'percent':
+        return 10;
+      case 'as':
+        return 11;
+      default:
+        return -1;
     }
   }
 
@@ -388,11 +544,12 @@ export function parse(tokens: Token[]): Program {
   }
 
   function parsePrimary(): Expr {
-    const t = peek(); pos++;
+    const t = peek();
+    pos++;
     if (t.kind === 'int_lit') return { tag: 'intLit', value: parseIntLit(t.text), line: t.line };
     if (t.kind === 'str_lit') return { tag: 'strLit', codes: t.codes ?? [], line: t.line };
-    if (t.kind === 'true')    return { tag: 'boolLit', value: true,  line: t.line };
-    if (t.kind === 'false')   return { tag: 'boolLit', value: false, line: t.line };
+    if (t.kind === 'true') return { tag: 'boolLit', value: true, line: t.line };
+    if (t.kind === 'false') return { tag: 'boolLit', value: false, line: t.line };
     if (t.kind === 'lparen') {
       const e = parseExpr();
       eat('rparen');

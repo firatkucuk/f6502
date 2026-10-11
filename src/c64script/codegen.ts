@@ -1,17 +1,24 @@
 import { CodeGenError } from './errors';
 import { PROGRAM_SCOPE, foldConst, scopedName } from './checker';
 import type { CheckedProgram, ResolvedVar } from './checker';
+import { OPS } from '../core';
+import { chooseMode, opcodeFor } from './asm';
+import type { AsmShape } from './asm';
 import { sizeOf } from './ast';
-import type { Expr, Stmt } from './ast';
+import type { AsmExpr, AsmItem, Expr, Stmt } from './ast';
 
 export type FixupKind =
-  | { kind: 'branch8';   label: string }
-  | { kind: 'abs16';     label: string }
-  | { kind: 'zpByte';    varName: string }
+  | { kind: 'branch8'; label: string }
+  | { kind: 'abs16'; label: string }
+  | { kind: 'zpByte'; varName: string }
   | { kind: 'absHiByte'; label: string }
   | { kind: 'absLoByte'; label: string };
 
-export interface Fixup { offset: number; kind: FixupKind; }
+export interface Fixup {
+  offset: number;
+  kind: FixupKind;
+  line?: number;
+}
 
 export interface CodeBuffer {
   bytes: number[];
@@ -65,7 +72,7 @@ export function generate(cp: CheckedProgram): CodeBuffer {
   }
 
   function emit(...bs: number[]): void {
-    for (const b of bs) bytes.push(b & 0xFF);
+    for (const b of bs) bytes.push(b & 0xff);
   }
 
   function emitLabel(name: string): void {
@@ -76,15 +83,17 @@ export function generate(cp: CheckedProgram): CodeBuffer {
     return `__${prefix}_${labelCounter++}`;
   }
 
-  function addFixup(kind: FixupKind, n: number): void {
-    fixups.push({ offset: bytes.length, kind });
+  function addFixup(kind: FixupKind, n: number, line?: number): void {
+    fixups.push(
+      line === undefined ? { offset: bytes.length, kind } : { offset: bytes.length, kind, line },
+    );
     for (let i = 0; i < n; i++) emit(0x00);
   }
 
   function hwAddr(hwName: string, fieldName: string, line = 0): number {
     const hw = cp.hardware.get(hwName);
     if (!hw) throw new CodeGenError(`unknown hardware '${hwName}'`, line, 0);
-    const f = hw.fields.find(field => field.name === fieldName);
+    const f = hw.fields.find((field) => field.name === fieldName);
     if (!f) throw new CodeGenError(`unknown field '${fieldName}' on '${hwName}'`, line, 0);
     return hw.base + f.offset;
   }
@@ -95,13 +104,13 @@ export function generate(cp: CheckedProgram): CodeBuffer {
       if (v && v.zpAddr !== null) {
         emit(0x85, v.zpAddr);
       } else if (v && v.absAddr !== null) {
-        emit(0x8D, v.absAddr & 0xFF, (v.absAddr >> 8) & 0xFF);
+        emit(0x8d, v.absAddr & 0xff, (v.absAddr >> 8) & 0xff);
       } else {
         throw new CodeGenError(`cannot assign to '${lhs.name}'`, lhs.line, 0);
       }
     } else if (lhs.tag === 'field' && lhs.obj.tag === 'ident') {
       const addr = hwAddr(lhs.obj.name, lhs.field, lhs.line);
-      emit(0x8D, addr & 0xFF, (addr >> 8) & 0xFF);
+      emit(0x8d, addr & 0xff, (addr >> 8) & 0xff);
     } else if (lhs.tag === 'index') {
       throw new CodeGenError('array indexing is not supported yet', lhs.line, 0);
     } else {
@@ -118,29 +127,29 @@ export function generate(cp: CheckedProgram): CodeBuffer {
         }
         const z = v.zpAddr;
         if (op === '++') {
-          emit(0xE6, z, 0xD0, 0x02, 0xE6, z + 1); // INC lo; BNE +2; INC hi
+          emit(0xe6, z, 0xd0, 0x02, 0xe6, z + 1); // INC lo; BNE +2; INC hi
         } else {
-          emit(0xA5, z, 0xD0, 0x02, 0xC6, z + 1, 0xC6, z); // LDA lo; BNE +2; DEC hi; DEC lo
+          emit(0xa5, z, 0xd0, 0x02, 0xc6, z + 1, 0xc6, z); // LDA lo; BNE +2; DEC hi; DEC lo
         }
       } else if (v && v.zpAddr !== null) {
-        emit(op === '++' ? 0xE6 : 0xC6, v.zpAddr);
+        emit(op === '++' ? 0xe6 : 0xc6, v.zpAddr);
       } else if (v && v.absAddr !== null) {
-        emit(op === '++' ? 0xEE : 0xCE, v.absAddr & 0xFF, (v.absAddr >> 8) & 0xFF);
+        emit(op === '++' ? 0xee : 0xce, v.absAddr & 0xff, (v.absAddr >> 8) & 0xff);
       } else {
         throw new CodeGenError(`cannot modify '${lhs.name}'`, lhs.line, 0);
       }
     } else if (lhs.tag === 'field' && lhs.obj.tag === 'ident') {
       const addr = hwAddr(lhs.obj.name, lhs.field, lhs.line);
       // Never INC/DEC on hardware registers — use LDA/ADC(SBC)/STA instead
-      emit(0xAD, addr & 0xFF, (addr >> 8) & 0xFF); // LDA abs
+      emit(0xad, addr & 0xff, (addr >> 8) & 0xff); // LDA abs
       if (op === '++') {
         emit(0x18); // CLC
         emit(0x69, 0x01); // ADC #1
       } else {
         emit(0x38); // SEC
-        emit(0xE9, 0x01); // SBC #1
+        emit(0xe9, 0x01); // SBC #1
       }
-      emit(0x8D, addr & 0xFF, (addr >> 8) & 0xFF); // STA abs
+      emit(0x8d, addr & 0xff, (addr >> 8) & 0xff); // STA abs
     } else {
       throw new CodeGenError(`cannot apply '${op}' here`, lhs.line, 0);
     }
@@ -154,36 +163,36 @@ export function generate(cp: CheckedProgram): CodeBuffer {
   // ─── Built-in: clrscr() — clears screen RAM + color RAM ────────────────
   function genClrscr(): void {
     // Fill screen RAM $0400-$07E7 with spaces (0x20)
-    emit(0xA9, 0x20);                        // LDA #' '
-    emit(0xA2, 0x00);                        // LDX #0
+    emit(0xa9, 0x20); // LDA #' '
+    emit(0xa2, 0x00); // LDX #0
     const scrLoop = bytes.length;
-    emit(0x9D, 0x00, 0x04);                  // STA $0400,X
-    emit(0x9D, 0x00, 0x05);                  // STA $0500,X
-    emit(0x9D, 0x00, 0x06);                  // STA $0600,X
-    emit(0xE8);                              // INX
-    emit(0xD0, (scrLoop - bytes.length - 2) & 0xFF); // BNE scrLoop
+    emit(0x9d, 0x00, 0x04); // STA $0400,X
+    emit(0x9d, 0x00, 0x05); // STA $0500,X
+    emit(0x9d, 0x00, 0x06); // STA $0600,X
+    emit(0xe8); // INX
+    emit(0xd0, (scrLoop - bytes.length - 2) & 0xff); // BNE scrLoop
     // Last partial page: $0700-$07E7 (232 bytes), avoid sprite ptrs $07F8-$07FF
     // BNE (not BPL): X starts above 127, so N would be set after the first DEX.
     // STA $06FF,X with X = 232..1 covers $07E7 down to $0700.
-    emit(0xA2, 232);                         // LDX #232
+    emit(0xa2, 232); // LDX #232
     const scrLoop2 = bytes.length;
-    emit(0x9D, 0xFF, 0x06);                  // STA $06FF,X
-    emit(0xCA);                              // DEX
-    emit(0xD0, (scrLoop2 - bytes.length - 2) & 0xFF); // BNE scrLoop2
+    emit(0x9d, 0xff, 0x06); // STA $06FF,X
+    emit(0xca); // DEX
+    emit(0xd0, (scrLoop2 - bytes.length - 2) & 0xff); // BNE scrLoop2
     // Fill color RAM $D800-$DBFF with black (0)
-    emit(0xA9, 0x00);                        // LDA #0
-    emit(0xA2, 0x00);                        // LDX #0
+    emit(0xa9, 0x00); // LDA #0
+    emit(0xa2, 0x00); // LDX #0
     const colLoop = bytes.length;
-    emit(0x9D, 0x00, 0xD8);                  // STA $D800,X
-    emit(0x9D, 0x00, 0xD9);                  // STA $D900,X
-    emit(0x9D, 0x00, 0xDA);                  // STA $DA00,X
-    emit(0xE8);                              // INX
-    emit(0xD0, (colLoop - bytes.length - 2) & 0xFF); // BNE colLoop
-    emit(0xA2, 232);                         // LDX #232
+    emit(0x9d, 0x00, 0xd8); // STA $D800,X
+    emit(0x9d, 0x00, 0xd9); // STA $D900,X
+    emit(0x9d, 0x00, 0xda); // STA $DA00,X
+    emit(0xe8); // INX
+    emit(0xd0, (colLoop - bytes.length - 2) & 0xff); // BNE colLoop
+    emit(0xa2, 232); // LDX #232
     const colLoop2 = bytes.length;
-    emit(0x9D, 0xFF, 0xDA);                  // STA $DAFF,X  (covers $DB00..$DBE7)
-    emit(0xCA);                              // DEX
-    emit(0xD0, (colLoop2 - bytes.length - 2) & 0xFF); // BNE colLoop2
+    emit(0x9d, 0xff, 0xda); // STA $DAFF,X  (covers $DB00..$DBE7)
+    emit(0xca); // DEX
+    emit(0xd0, (colLoop2 - bytes.length - 2) & 0xff); // BNE colLoop2
   }
 
   function genCall(e: Extract<Expr, { tag: 'call' }>): void {
@@ -204,13 +213,16 @@ export function generate(cp: CheckedProgram): CodeBuffer {
       }
       assertFits8(valueExpr, e.line, 'a byte');
       const byteVal = evalConst(valueExpr);
-      if (byteVal !== null) emit(0xA9, byteVal & 0xFF);
+      if (byteVal !== null) emit(0xa9, byteVal & 0xff);
       else genExpr(valueExpr);
-      emit(0x8D, addrVal & 0xFF, (addrVal >> 8) & 0xFF);
+      emit(0x8d, addrVal & 0xff, (addrVal >> 8) & 0xff);
       return;
     }
     // ── built-in: clrscr() ────────────────────────────────────────────────
-    if (e.name === 'clrscr') { genClrscr(); return; }
+    if (e.name === 'clrscr') {
+      genClrscr();
+      return;
+    }
 
     // ── built-in: puts(row, col, "TEXT" [, colour]) — constant stores ─────────
     if (e.name === 'puts') {
@@ -235,16 +247,16 @@ export function generate(cp: CheckedProgram): CodeBuffer {
       const cell = row * 40 + col;
       let loaded = -1;
       textE.codes.forEach((code, i) => {
-        if (code !== loaded) emit(0xA9, code); // LDA #code (skipped when A already holds it)
+        if (code !== loaded) emit(0xa9, code); // LDA #code (skipped when A already holds it)
         loaded = code;
         const a = 0x0400 + cell + i;
-        emit(0x8D, a & 0xFF, (a >> 8) & 0xFF); // STA screen cell
+        emit(0x8d, a & 0xff, (a >> 8) & 0xff); // STA screen cell
       });
       if (colour !== null) {
-        emit(0xA9, colour & 0x0F); // LDA #colour
+        emit(0xa9, colour & 0x0f); // LDA #colour
         for (let i = 0; i < textE.codes.length; i++) {
-          const a = 0xD800 + cell + i;
-          emit(0x8D, a & 0xFF, (a >> 8) & 0xFF); // STA colour cell
+          const a = 0xd800 + cell + i;
+          emit(0x8d, a & 0xff, (a >> 8) & 0xff); // STA colour cell
         }
       }
       return;
@@ -261,7 +273,7 @@ export function generate(cp: CheckedProgram): CodeBuffer {
           0,
         );
       }
-      emit(0xA9, address & 0xFF);
+      emit(0xa9, address & 0xff);
       return;
     }
 
@@ -315,21 +327,25 @@ export function generate(cp: CheckedProgram): CodeBuffer {
   function genByteOf(arg: Expr, high: boolean, line: number): void {
     const c = evalConst(arg);
     if (c !== null) {
-      emit(0xA9, (high ? c >> 8 : c) & 0xFF);
+      emit(0xa9, (high ? c >> 8 : c) & 0xff);
       return;
     }
     if (arg.tag === 'ident') {
       const v = lookup(arg.name);
       if (high && v && v.type.tag !== 'u16') {
-        throw new CodeGenError(`hi() needs a 16-bit value, but '${arg.name}' is ${v.type.tag}`, line, 0);
+        throw new CodeGenError(
+          `hi() needs a 16-bit value, but '${arg.name}' is ${v.type.tag}`,
+          line,
+          0,
+        );
       }
       if (v && v.zpAddr !== null) {
-        emit(0xA5, v.zpAddr + (high ? 1 : 0));
+        emit(0xa5, v.zpAddr + (high ? 1 : 0));
         return;
       }
       if (v && v.absAddr !== null) {
         const a = v.absAddr + (high ? 1 : 0);
-        emit(0xAD, a & 0xFF, (a >> 8) & 0xFF);
+        emit(0xad, a & 0xff, (a >> 8) & 0xff);
         return;
       }
     }
@@ -339,19 +355,19 @@ export function generate(cp: CheckedProgram): CodeBuffer {
   function genExpr(e: Expr): void {
     switch (e.tag) {
       case 'intLit':
-        emit(0xA9, e.value & 0xFF);
+        emit(0xa9, e.value & 0xff);
         break;
       case 'boolLit':
-        emit(0xA9, e.value ? 0x01 : 0x00);
+        emit(0xa9, e.value ? 0x01 : 0x00);
         break;
       case 'ident': {
         const v = lookup(e.name);
         if (v && v.isConst && v.constValue !== null) {
-          emit(0xA9, v.constValue & 0xFF);
+          emit(0xa9, v.constValue & 0xff);
         } else if (v && v.zpAddr !== null) {
-          emit(0xA5, v.zpAddr);
+          emit(0xa5, v.zpAddr);
         } else if (v && v.absAddr !== null) {
-          emit(0xAD, v.absAddr & 0xFF, (v.absAddr >> 8) & 0xFF);
+          emit(0xad, v.absAddr & 0xff, (v.absAddr >> 8) & 0xff);
         } else {
           throw new CodeGenError(`cannot read '${e.name}'`, e.line, 0);
         }
@@ -359,10 +375,14 @@ export function generate(cp: CheckedProgram): CodeBuffer {
       }
       case 'field': {
         if (e.obj.tag !== 'ident') {
-          throw new CodeGenError('only hardware fields can be read (e.g. VIC2.borderColor)', e.line, 0);
+          throw new CodeGenError(
+            'only hardware fields can be read (e.g. VIC2.borderColor)',
+            e.line,
+            0,
+          );
         }
         const addr = hwAddr(e.obj.name, e.field, e.line);
-        emit(0xAD, addr & 0xFF, (addr >> 8) & 0xFF);
+        emit(0xad, addr & 0xff, (addr >> 8) & 0xff);
         break;
       }
       case 'unary':
@@ -371,14 +391,14 @@ export function generate(cp: CheckedProgram): CodeBuffer {
         }
         genExpr(e.rhs);
         // !x is 1 when x is 0, else 0 — for any u8, not just 0/1:
-        emit(0xC9, 0x01); // CMP #1   (carry set when x >= 1)
-        emit(0xA9, 0x00); // LDA #0
-        emit(0x2A);       // ROL A    (A = 1 when x was non-zero)
+        emit(0xc9, 0x01); // CMP #1   (carry set when x >= 1)
+        emit(0xa9, 0x00); // LDA #0
+        emit(0x2a); // ROL A    (A = 1 when x was non-zero)
         emit(0x49, 0x01); // EOR #1
         break;
       case 'binary': {
         const folded = evalConst(e);
-        if (folded !== null) emit(0xA9, folded & 0xFF);
+        if (folded !== null) emit(0xa9, folded & 0xff);
         else genBinary(e);
         break;
       }
@@ -401,14 +421,15 @@ export function generate(cp: CheckedProgram): CodeBuffer {
     }
   }
 
-  const RHS_HINT = 'right-hand operand must be a literal, a variable or a hardware register ' +
+  const RHS_HINT =
+    'right-hand operand must be a literal, a variable or a hardware register ' +
     '(assign the sub-expression to a variable first)';
 
   /** Emits `<op> operand` for the right side of a binary operation, choosing imm/zp/abs mode. */
   function genOperand(rhs: Expr, immOp: number, zpOp: number, absOp: number): void {
     const c = evalConst(rhs);
     if (c !== null) {
-      emit(immOp, c & 0xFF);
+      emit(immOp, c & 0xff);
       return;
     }
     if (rhs.tag === 'ident') {
@@ -418,13 +439,13 @@ export function generate(cp: CheckedProgram): CodeBuffer {
         return;
       }
       if (v && v.absAddr !== null) {
-        emit(absOp, v.absAddr & 0xFF, (v.absAddr >> 8) & 0xFF);
+        emit(absOp, v.absAddr & 0xff, (v.absAddr >> 8) & 0xff);
         return;
       }
     }
     if (rhs.tag === 'field' && rhs.obj.tag === 'ident') {
       const addr = hwAddr(rhs.obj.name, rhs.field, rhs.line);
-      emit(absOp, addr & 0xFF, (addr >> 8) & 0xFF);
+      emit(absOp, addr & 0xff, (addr >> 8) & 0xff);
       return;
     }
     throw new CodeGenError(RHS_HINT, rhs.line, 0);
@@ -451,31 +472,31 @@ export function generate(cp: CheckedProgram): CodeBuffer {
       case '+':
         genExpr(e.lhs);
         emit(0x18); // CLC (after the left side: it may itself have left a carry)
-        genOperand(e.rhs, 0x69, 0x65, 0x6D); // ADC #imm, ADC zp, ADC abs
+        genOperand(e.rhs, 0x69, 0x65, 0x6d); // ADC #imm, ADC zp, ADC abs
         break;
       case '-':
         genExpr(e.lhs);
         emit(0x38); // SEC
-        genOperand(e.rhs, 0xE9, 0xE5, 0xED); // SBC #imm, SBC zp, SBC abs
+        genOperand(e.rhs, 0xe9, 0xe5, 0xed); // SBC #imm, SBC zp, SBC abs
         break;
       case '&':
         genExpr(e.lhs);
-        genOperand(e.rhs, 0x29, 0x25, 0x2D); // AND #imm, AND zp, AND abs
+        genOperand(e.rhs, 0x29, 0x25, 0x2d); // AND #imm, AND zp, AND abs
         break;
       case '|':
         genExpr(e.lhs);
-        genOperand(e.rhs, 0x09, 0x05, 0x0D); // ORA #imm, ORA zp, ORA abs
+        genOperand(e.rhs, 0x09, 0x05, 0x0d); // ORA #imm, ORA zp, ORA abs
         break;
       case '^':
         genExpr(e.lhs);
-        genOperand(e.rhs, 0x49, 0x45, 0x4D); // EOR #imm, EOR zp, EOR abs
+        genOperand(e.rhs, 0x49, 0x45, 0x4d); // EOR #imm, EOR zp, EOR abs
         break;
     }
   }
 
   // Emit the CMP operand, choosing imm/zp/abs mode based on rhs type
   function genCmpRhs(rhs: Expr): void {
-    genOperand(rhs, 0xC9, 0xC5, 0xCD); // CMP #imm, CMP zp, CMP abs
+    genOperand(rhs, 0xc9, 0xc5, 0xcd); // CMP #imm, CMP zp, CMP abs
   }
 
   // Emit branch instruction(s) for a comparison operator.
@@ -484,47 +505,85 @@ export function generate(cp: CheckedProgram): CodeBuffer {
   function emitCondJump(op: string, label: string, invertForFalse: boolean): void {
     if (invertForFalse) {
       switch (op) {
-        case '==': emit(0xD0); addFixup({ kind: 'branch8', label }, 1); break; // BNE
-        case '!=': emit(0xF0); addFixup({ kind: 'branch8', label }, 1); break; // BEQ
-        case '<':  emit(0xB0); addFixup({ kind: 'branch8', label }, 1); break; // BCS (skip when >=)
-        case '>=': emit(0x90); addFixup({ kind: 'branch8', label }, 1); break; // BCC (skip when <)
+        case '==':
+          emit(0xd0);
+          addFixup({ kind: 'branch8', label }, 1);
+          break; // BNE
+        case '!=':
+          emit(0xf0);
+          addFixup({ kind: 'branch8', label }, 1);
+          break; // BEQ
+        case '<':
+          emit(0xb0);
+          addFixup({ kind: 'branch8', label }, 1);
+          break; // BCS (skip when >=)
+        case '>=':
+          emit(0x90);
+          addFixup({ kind: 'branch8', label }, 1);
+          break; // BCC (skip when <)
         case '>': {
           // FALSE when x <= k: C=0 (x<k) OR Z=1 (x==k) → BCC + BEQ both skip
-          emit(0x90); addFixup({ kind: 'branch8', label }, 1); // BCC
-          emit(0xF0); addFixup({ kind: 'branch8', label }, 1); // BEQ
+          emit(0x90);
+          addFixup({ kind: 'branch8', label }, 1); // BCC
+          emit(0xf0);
+          addFixup({ kind: 'branch8', label }, 1); // BEQ
           break;
         }
         case '<=': {
           // FALSE when x > k: C=1 AND Z=0 → BCC skips to okLabel; BNE skips to label
           const okLabel = freshLabel('cmp_ok');
-          emit(0x90); addFixup({ kind: 'branch8', label: okLabel }, 1); // BCC → x<k → keep going
-          emit(0xD0); addFixup({ kind: 'branch8', label }, 1);          // BNE → x>k → skip
+          emit(0x90);
+          addFixup({ kind: 'branch8', label: okLabel }, 1); // BCC → x<k → keep going
+          emit(0xd0);
+          addFixup({ kind: 'branch8', label }, 1); // BNE → x>k → skip
           emitLabel(okLabel);
           break;
         }
-        default: emit(0xF0); addFixup({ kind: 'branch8', label }, 1); break;
+        default:
+          emit(0xf0);
+          addFixup({ kind: 'branch8', label }, 1);
+          break;
       }
     } else {
       switch (op) {
-        case '==': emit(0xF0); addFixup({ kind: 'branch8', label }, 1); break; // BEQ
-        case '!=': emit(0xD0); addFixup({ kind: 'branch8', label }, 1); break; // BNE
-        case '<':  emit(0x90); addFixup({ kind: 'branch8', label }, 1); break; // BCC
-        case '>=': emit(0xB0); addFixup({ kind: 'branch8', label }, 1); break; // BCS
+        case '==':
+          emit(0xf0);
+          addFixup({ kind: 'branch8', label }, 1);
+          break; // BEQ
+        case '!=':
+          emit(0xd0);
+          addFixup({ kind: 'branch8', label }, 1);
+          break; // BNE
+        case '<':
+          emit(0x90);
+          addFixup({ kind: 'branch8', label }, 1);
+          break; // BCC
+        case '>=':
+          emit(0xb0);
+          addFixup({ kind: 'branch8', label }, 1);
+          break; // BCS
         case '>': {
           // TRUE when C=1 AND Z=0: BEQ skips to notGt; BCS jumps when >
           const notGtLabel = freshLabel('cmp_skip');
-          emit(0xF0); addFixup({ kind: 'branch8', label: notGtLabel }, 1); // BEQ → equal → not >
-          emit(0xB0); addFixup({ kind: 'branch8', label }, 1);              // BCS → C=1,Z=0 → is >
+          emit(0xf0);
+          addFixup({ kind: 'branch8', label: notGtLabel }, 1); // BEQ → equal → not >
+          emit(0xb0);
+          addFixup({ kind: 'branch8', label }, 1); // BCS → C=1,Z=0 → is >
           emitLabel(notGtLabel);
           break;
         }
         case '<=': {
           // TRUE when C=0 OR Z=1: BCC + BEQ both jump
-          emit(0x90); addFixup({ kind: 'branch8', label }, 1); // BCC → <
-          emit(0xF0); addFixup({ kind: 'branch8', label }, 1); // BEQ → =
+          emit(0x90);
+          addFixup({ kind: 'branch8', label }, 1); // BCC → <
+          emit(0xf0);
+          addFixup({ kind: 'branch8', label }, 1); // BEQ → =
           break;
         }
-        default: emit(0xD0); addFixup({ kind: 'branch8', label }, 1); break;
+        default:
+          emit(0xd0);
+          addFixup({ kind: 'branch8', label }, 1);
+          break;
       }
     }
   }
@@ -554,17 +613,238 @@ export function generate(cp: CheckedProgram): CodeBuffer {
       // Any other value is true when it is non-zero. CMP #0 makes the flags reflect A even
       // after a function call returned it.
       genExpr(cond);
-      emit(0xC9, 0x00);
-      emit(invertForFalse ? 0xD0 : 0xF0); // BNE / BEQ over the jump
+      emit(0xc9, 0x00);
+      emit(invertForFalse ? 0xd0 : 0xf0); // BNE / BEQ over the jump
       addFixup({ kind: 'branch8', label: stay }, 1);
     }
-    emit(0x4C); // JMP label
+    emit(0x4c); // JMP label
     addFixup({ kind: 'abs16', label }, 2);
     emitLabel(stay);
   }
 
+  // ─── asm {} ─────────────────────────────────────────────────────────────
+  let asmCounter = 0;
+
+  type AsmValue =
+    | { kind: 'value'; value: number; fromConst: boolean; fromVar: boolean }
+    | { kind: 'label'; label: string }
+    | { kind: 'byte'; label: string; high: boolean };
+
+  function resolveAsm(
+    e: AsmExpr,
+    defined: ReadonlySet<string>,
+    mangle: (name: string) => string,
+  ): AsmValue {
+    switch (e.tag) {
+      case 'num':
+        return { kind: 'value', value: e.value, fromConst: false, fromVar: false };
+      case 'label':
+        if (!defined.has(e.name)) {
+          throw new CodeGenError(`undefined label '${e.name}'`, e.line, 0);
+        }
+        return { kind: 'label', label: mangle(e.name) };
+      case 'sym': {
+        const ex = e.expr;
+        if (ex.tag === 'ident') {
+          const v = lookup(ex.name);
+          if (v) {
+            if (v.isConst && v.constValue !== null) {
+              // A u8/bool constant is a data value: storing to "its address" is almost
+              // certainly a mistake. A u16 constant (or any constant expression) is an
+              // address, which is how asm uses them: `sta ${TABLE},x`.
+              const isData = v.type.tag === 'u8' || v.type.tag === 'bool';
+              return { kind: 'value', value: v.constValue, fromConst: isData, fromVar: false };
+            }
+            const addr = v.zpAddr ?? v.absAddr;
+            if (addr !== null)
+              return { kind: 'value', value: addr, fromConst: false, fromVar: true };
+          }
+          const fn = cp.fns.get(ex.name);
+          if (fn) {
+            if (fn.isInline) {
+              throw new CodeGenError(`'${ex.name}' is @inline and has no address`, e.line, 0);
+            }
+            return { kind: 'label', label: `fn_${ex.name}` };
+          }
+        }
+        const c = evalConst(ex);
+        if (c === null) {
+          throw new CodeGenError(
+            '${…} must be a variable, a function or a compile-time constant',
+            e.line,
+            0,
+          );
+        }
+        return { kind: 'value', value: c, fromConst: false, fromVar: false };
+      }
+      case 'lo':
+      case 'hi': {
+        const inner = resolveAsm(e.arg, defined, mangle);
+        if (inner.kind === 'value') {
+          const v = e.tag === 'hi' ? inner.value >> 8 : inner.value;
+          return { kind: 'value', value: v & 0xff, fromConst: inner.fromConst, fromVar: false };
+        }
+        if (inner.kind === 'label')
+          return { kind: 'byte', label: inner.label, high: e.tag === 'hi' };
+        throw new CodeGenError(`${e.tag}() cannot be nested`, e.line, 0);
+      }
+      case 'add': {
+        const inner = resolveAsm(e.lhs, defined, mangle);
+        if (inner.kind !== 'value') {
+          throw new CodeGenError(
+            'an offset cannot be added to a label or function address',
+            e.line,
+            0,
+          );
+        }
+        return { ...inner, value: inner.value + e.offset };
+      }
+    }
+  }
+
+  function genAsm(s: Extract<Stmt, { tag: 'asm' }>): void {
+    const id = asmCounter++; // per emission: an @inline function may be expanded many times
+    const mangle = (name: string): string => `__asm${id}_${name}`;
+    const defined = new Set<string>();
+    for (const item of s.items) {
+      if (item.kind !== 'label') continue;
+      if (defined.has(item.name)) {
+        throw new CodeGenError(
+          `label '${item.name}' is defined twice in this asm block`,
+          item.line,
+          0,
+        );
+      }
+      defined.add(item.name);
+    }
+    for (const item of s.items) {
+      if (item.kind === 'label') emitLabel(mangle(item.name));
+      else genAsmInstr(item, defined, mangle);
+    }
+  }
+
+  function genAsmInstr(
+    item: Extract<AsmItem, { kind: 'instr' }>,
+    defined: ReadonlySet<string>,
+    mangle: (name: string) => string,
+  ): void {
+    const op = item.operand;
+    const line = item.line;
+    let shape: AsmShape;
+    switch (op.kind) {
+      case 'none':
+      case 'acc':
+      case 'imm':
+      case 'izx':
+      case 'izy':
+      case 'ind':
+        shape = op.kind;
+        break;
+      case 'addr':
+        shape = op.index === 'x' ? 'addrx' : op.index === 'y' ? 'addry' : 'addr';
+        break;
+    }
+    const resolved = 'value' in op ? resolveAsm(op.value, defined, mangle) : null;
+    const known = resolved !== null && resolved.kind === 'value' ? resolved.value : null;
+
+    const choice = chooseMode(item.mnemonic, shape, known);
+    if ('error' in choice) throw new CodeGenError(choice.error, line, 0);
+    const mode = choice.mode;
+    const opcode = opcodeFor(item.mnemonic, mode)!;
+
+    if (resolved && resolved.kind === 'value') {
+      if (mode === 'imm' && resolved.fromVar) {
+        throw new CodeGenError(
+          "'#' needs a constant, but the operand is the address of a variable; " +
+            'use lo(${…}) or hi(${…}) for one byte of it',
+          line,
+          0,
+        );
+      }
+      const kind = OPS[opcode]!.kind;
+      // `sta (${PTR}),y` stores THROUGH the pointer, not to the constant itself.
+      const throughPointer = mode === 'izx' || mode === 'izy';
+      if (
+        resolved.fromConst &&
+        mode !== 'imm' &&
+        !throughPointer &&
+        (kind === 'write' || kind === 'rmw')
+      ) {
+        throw new CodeGenError(
+          `cannot write to constant: '${item.mnemonic}' stores to it`,
+          line,
+          0,
+        );
+      }
+    }
+
+    switch (mode) {
+      case 'imp':
+      case 'acc':
+        emit(opcode);
+        return;
+      case 'imm':
+        if (resolved?.kind === 'byte') {
+          emit(opcode);
+          addFixup(
+            { kind: resolved.high ? 'absHiByte' : 'absLoByte', label: resolved.label },
+            1,
+            line,
+          );
+          return;
+        }
+        if (resolved?.kind === 'label') {
+          throw new CodeGenError(
+            "'#' needs lo(...) or hi(...) of an address, not the address itself",
+            line,
+            0,
+          );
+        }
+        emit(opcode, (known ?? 0) & 0xff);
+        return;
+      case 'zp':
+      case 'zpx':
+      case 'zpy':
+      case 'izx':
+      case 'izy':
+        if (known === null) {
+          throw new CodeGenError(
+            `'${item.mnemonic}' needs a zero-page address, not a label or function`,
+            line,
+            0,
+          );
+        }
+        emit(opcode, known & 0xff);
+        return;
+      case 'rel':
+        if (resolved?.kind !== 'label') {
+          throw new CodeGenError(`'${item.mnemonic}' needs a label to branch to`, line, 0);
+        }
+        emit(opcode);
+        addFixup({ kind: 'branch8', label: resolved.label }, 1, line);
+        return;
+      case 'abs':
+      case 'abx':
+      case 'aby':
+      case 'ind':
+        if (resolved?.kind === 'label') {
+          emit(opcode);
+          addFixup({ kind: 'abs16', label: resolved.label }, 2, line);
+        } else if (resolved?.kind === 'value') {
+          emit(opcode, resolved.value & 0xff, (resolved.value >> 8) & 0xff);
+        } else {
+          throw new CodeGenError(`'${item.mnemonic}' needs an address`, line, 0);
+        }
+        return;
+    }
+  }
+
   const COMPOUND_OPS: Record<string, string> = {
-    '+=': '+', '-=': '-', '&=': '&', '|=': '|', '^=': '^',
+    '+=': '+',
+    '-=': '-',
+    '&=': '&',
+    '|=': '|',
+    '^=': '^',
   };
 
   /** Stores `rhs` into the 16-bit variable `target` (low byte first), widening a u8 value. */
@@ -573,16 +853,16 @@ export function generate(cp: CheckedProgram): CodeBuffer {
     if (base === null) throw new CodeGenError(`cannot assign to '${name}'`, line, 0);
     const store = (offset: number): void => {
       if (target.zpAddr !== null) emit(0x85, target.zpAddr + offset);
-      else emit(0x8D, (base + offset) & 0xFF, ((base + offset) >> 8) & 0xFF);
+      else emit(0x8d, (base + offset) & 0xff, ((base + offset) >> 8) & 0xff);
     };
     let value = rhs;
     while (value.tag === 'cast' && value.toType.tag === 'u16') value = value.expr;
 
     const c = evalConst(value);
     if (c !== null) {
-      emit(0xA9, c & 0xFF);
+      emit(0xa9, c & 0xff);
       store(0);
-      emit(0xA9, (c >> 8) & 0xFF);
+      emit(0xa9, (c >> 8) & 0xff);
       store(1);
       return;
     }
@@ -590,10 +870,10 @@ export function generate(cp: CheckedProgram): CodeBuffer {
       const src = lookup(value.name);
       if (src && src.type.tag === 'u16' && !src.isConst) {
         for (const offset of [0, 1]) {
-          if (src.zpAddr !== null) emit(0xA5, src.zpAddr + offset);
+          if (src.zpAddr !== null) emit(0xa5, src.zpAddr + offset);
           else if (src.absAddr !== null) {
             const a = src.absAddr + offset;
-            emit(0xAD, a & 0xFF, (a >> 8) & 0xFF);
+            emit(0xad, a & 0xff, (a >> 8) & 0xff);
           }
           store(offset);
         }
@@ -605,7 +885,7 @@ export function generate(cp: CheckedProgram): CodeBuffer {
     }
     genExpr(value); // an 8-bit value: zero-extend
     store(0);
-    emit(0xA9, 0x00);
+    emit(0xa9, 0x00);
     store(1);
   }
 
@@ -633,7 +913,7 @@ export function generate(cp: CheckedProgram): CodeBuffer {
           // Declaration without a value: start at zero, like globals do.
           if (v.zpAddr !== null) {
             const size = sizeOf(v.type, cp.structs);
-            emit(0xA9, 0x00);
+            emit(0xa9, 0x00);
             for (let i = 0; i < size; i++) emit(0x85, v.zpAddr + i);
           }
           break;
@@ -680,7 +960,8 @@ export function generate(cp: CheckedProgram): CodeBuffer {
           const skipLabel = freshLabel('if_skip');
           genCondBranch(s.cond, skipLabel, true);
           genStmts(s.then);
-          emit(0x4C); addFixup({ kind: 'abs16', label: endIfLabel }, 2); // JMP to end
+          emit(0x4c);
+          addFixup({ kind: 'abs16', label: endIfLabel }, 2); // JMP to end
           emitLabel(skipLabel);
         }
         // elif branches
@@ -688,7 +969,8 @@ export function generate(cp: CheckedProgram): CodeBuffer {
           const skipLabel = freshLabel('if_skip');
           genCondBranch(elif.cond, skipLabel, true);
           genStmts(elif.body);
-          emit(0x4C); addFixup({ kind: 'abs16', label: endIfLabel }, 2);
+          emit(0x4c);
+          addFixup({ kind: 'abs16', label: endIfLabel }, 2);
           emitLabel(skipLabel);
         }
         // else branch
@@ -704,7 +986,7 @@ export function generate(cp: CheckedProgram): CodeBuffer {
         loopStack.push({ breakLabel: endLabel, continueLabel: topLabel });
         genStmts(s.body);
         loopStack.pop();
-        emit(0x4C);
+        emit(0x4c);
         addFixup({ kind: 'abs16', label: topLabel }, 2);
         emitLabel(endLabel);
         break;
@@ -716,7 +998,7 @@ export function generate(cp: CheckedProgram): CodeBuffer {
         loopStack.push({ breakLabel: endLabel, continueLabel: topLabel });
         genStmts(s.body);
         loopStack.pop();
-        emit(0x4C);
+        emit(0x4c);
         addFixup({ kind: 'abs16', label: topLabel }, 2);
         emitLabel(endLabel);
         break;
@@ -733,23 +1015,30 @@ export function generate(cp: CheckedProgram): CodeBuffer {
         loopStack.pop();
         emitLabel(postLabel);
         genStmt(s.post);
-        emit(0x4C);
+        emit(0x4c);
         addFixup({ kind: 'abs16', label: topLabel }, 2);
         emitLabel(endLabel);
         break;
       }
       case 'break': {
         const ctx = loopStack[loopStack.length - 1];
-        if (ctx) { emit(0x4C); addFixup({ kind: 'abs16', label: ctx.breakLabel }, 2); }
+        if (ctx) {
+          emit(0x4c);
+          addFixup({ kind: 'abs16', label: ctx.breakLabel }, 2);
+        }
         break;
       }
       case 'continue': {
         const ctx = loopStack[loopStack.length - 1];
-        if (ctx) { emit(0x4C); addFixup({ kind: 'abs16', label: ctx.continueLabel }, 2); }
+        if (ctx) {
+          emit(0x4c);
+          addFixup({ kind: 'abs16', label: ctx.continueLabel }, 2);
+        }
         break;
       }
       case 'asm':
-        throw new CodeGenError('asm {} blocks are not supported yet', s.line, 0);
+        genAsm(s);
+        break;
     }
   }
 
@@ -766,29 +1055,32 @@ export function generate(cp: CheckedProgram): CodeBuffer {
       const size = sizeOf(v.type, cp.structs);
       const value = v.initValue ?? 0;
       for (let i = 0; i < size; i++) {
-        emit(0xA9, i === 0 ? value & 0xFF : i === 1 ? (value >> 8) & 0xFF : 0x00);
+        emit(0xa9, i === 0 ? value & 0xff : i === 1 ? (value >> 8) & 0xff : 0x00);
         emit(0x85, v.zpAddr + i);
       }
     } else if (v.absAddr !== null && v.initValue !== null) {
       const size = v.type.tag === 'u16' ? 2 : 1;
       for (let i = 0; i < size; i++) {
         const a = v.absAddr + i;
-        emit(0xA9, (v.initValue >> (8 * i)) & 0xFF);
-        emit(0x8D, a & 0xFF, (a >> 8) & 0xFF);
+        emit(0xa9, (v.initValue >> (8 * i)) & 0xff);
+        emit(0x8d, a & 0xff, (a >> 8) & 0xff);
       }
     }
   }
 
   // ─── Program block ────────────────────────────────────────────────────
   emitLabel('__program_start');
-  emit(0xD8); // CLD — 6502 NMOS decimal mode must be off
+  emit(0xd8); // CLD — 6502 NMOS decimal mode must be off
 
   scope = PROGRAM_SCOPE;
   for (const d of cp.program.decls) {
-    if (d.tag === 'program') { genStmts(d.body); break; }
+    if (d.tag === 'program') {
+      genStmts(d.body);
+      break;
+    }
   }
 
-  emit(0x4C);
+  emit(0x4c);
   addFixup({ kind: 'abs16', label: '__program_start' }, 2);
 
   // ─── Non-inline functions ─────────────────────────────────────────────
@@ -803,7 +1095,10 @@ export function generate(cp: CheckedProgram): CodeBuffer {
 
   // ─── Data sections (placed at absolute addresses via padding) ──────────
   const hex4 = (n: number): string => `$${n.toString(16).toUpperCase().padStart(4, '0')}`;
-  const dataBlocks: Array<{ decl: Extract<(typeof cp.program.decls)[number], { tag: 'data' }>; addr: number }> = [];
+  const dataBlocks: Array<{
+    decl: Extract<(typeof cp.program.decls)[number], { tag: 'data' }>;
+    addr: number;
+  }> = [];
   for (const d of cp.program.decls) {
     if (d.tag !== 'data') continue;
     if (d.annotation.kind !== 'addr') {
@@ -835,10 +1130,18 @@ export function generate(cp: CheckedProgram): CodeBuffer {
       for (const init of field.init) {
         const v = evalConst(init);
         if (v === null) {
-          throw new CodeGenError(`data '${field.name}' values must be compile-time constants`, decl.line, 0);
+          throw new CodeGenError(
+            `data '${field.name}' values must be compile-time constants`,
+            decl.line,
+            0,
+          );
         }
         if (v > 0xff) {
-          throw new CodeGenError(`value ${v} does not fit in a byte (data '${field.name}')`, decl.line, 0);
+          throw new CodeGenError(
+            `value ${v} does not fit in a byte (data '${field.name}')`,
+            decl.line,
+            0,
+          );
         }
         emit(v);
       }

@@ -240,6 +240,71 @@
     </div>
   </section>
 
+  <!-- ── Inline assembly ───────────────────────────────────────── -->
+  <section class="section" style="padding-top:0" id="inline-assembly">
+    <p class="section-label">Escape hatch</p>
+    <h2 class="section-title">Inline assembly</h2>
+    <p class="section-lead">
+      <code>asm { … }</code> drops to raw 6502 for loops, indexed stores and anything the
+      language cannot express yet. The official 6502 instructions are supported, one per line,
+      and program variables and constants come in through <code>${…}</code>.
+    </p>
+
+    <div class="table-wrap reveal">
+      <table>
+        <thead>
+          <tr><th>You write</th><th>Meaning</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>lda #$1B</code> · <code>#0x1B</code> · <code>#27</code> · <code>#'H'</code></td><td style="color:var(--text-muted)">Immediate. <code>$</code> and <code>0x</code> are hex; <code>'H'</code> is a screen code.</td></tr>
+          <tr><td><code>lda ${count}</code></td><td style="color:var(--text-muted)">A variable's address (zero page when it is there). A <code>const</code> gives its value.</td></tr>
+          <tr><td><code>sta ${screen(0, 0)},x</code></td><td style="color:var(--text-muted)">Any constant expression: <code>screen()</code>, <code>color()</code>, constants, <code>+ n</code>.</td></tr>
+          <tr><td><code>lda #lo(${TABLE})</code> · <code>hi(...)</code></td><td style="color:var(--text-muted)">One byte of a constant 16-bit value.</td></tr>
+          <tr><td><code>loop:</code> … <code>bne loop</code></td><td style="color:var(--text-muted)">Labels end with <code>:</code> and belong to their <code>asm</code> block.</td></tr>
+          <tr><td><code>jsr ${redraw}</code></td><td style="color:var(--text-muted)">Calls a C64Script function.</td></tr>
+          <tr><td><code>lda ($FB),y</code> · <code>asl a</code></td><td style="color:var(--text-muted)">Indirect and accumulator forms.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="terminal reveal" style="margin-top:1.5rem">
+      <div class="terminal-bar">
+        <span class="terminal-dot red"></span>
+        <span class="terminal-dot yellow"></span>
+        <span class="terminal-dot green"></span>
+        <span class="terminal-title">fill.c64s</span>
+      </div>
+      <div class="terminal-body">
+        <pre data-try><span class="cm">// Fill screen RAM with a solid block</span>
+<span class="kw">program</span> <span class="an">@</span> <span class="nu">0x0810</span> {
+  <span class="kw">asm</span> {
+    lda #<span class="nu">$A0</span>
+    ldx #<span class="nu">0</span>
+  fill:
+    sta ${<span class="fn">screen</span>(<span class="nu">0</span>, <span class="nu">0</span>)},x
+    sta ${<span class="fn">screen</span>(<span class="nu">0</span>, <span class="nu">0</span>) + <span class="nu">256</span>},x
+    sta ${<span class="fn">screen</span>(<span class="nu">0</span>, <span class="nu">0</span>) + <span class="nu">512</span>},x
+    sta ${<span class="fn">screen</span>(<span class="nu">0</span>, <span class="nu">0</span>) + <span class="nu">744</span>},x
+    inx
+    bne fill
+  }
+  <span class="kw">loop</span> {}
+}</pre>
+      </div>
+    </div>
+
+    <div class="infobox" style="margin-top:1.5rem">
+      <strong>Rules.</strong>
+      Official opcodes only (no undocumented ones). An address below $100 uses the zero-page
+      form when the instruction has one. Branches reach -128..+127 bytes and a farther one is a
+      compile error naming the label. The compiler keeps no value in a register across
+      statements, so an <code>asm</code> block can go anywhere; leave the stack balanced and the
+      decimal flag clear. <code>asm clobbers(A, X, Y, flags)</code> is accepted and checked, but
+      not needed. A <code>u8</code> constant is a value and cannot be stored to; a
+      <code>u16</code> constant is an address and can.
+    </div>
+  </section>
+
   <!-- ── Type system ────────────────────────────────────────────── -->
   <section class="section" style="padding-top:0">
     <p class="section-label">Type system</p>
@@ -692,7 +757,7 @@
         <div class="chip-card-num">NO ARRAYS</div>
         <h3>No arrays or pointers</h3>
         <p class="chip-label">Design in progress</p>
-        <p>Indexed addressing (e.g. <code>LDA $C000,X</code>) is powerful on 6502, but mapping it to a safe language construct is non-trivial. Array indexing and <code>asm {}</code> parse but are a compile error for now, rather than silently producing nothing.</p>
+        <p>Indexed addressing (e.g. <code>LDA $C000,X</code>) is powerful on 6502, but mapping it to a safe language construct is non-trivial. Array indexing parses but is a compile error for now. Use <code>asm {}</code> with <code>,x</code> / <code>,y</code> indexed addressing in the meantime.</p>
       </div>
       <div class="chip-card">
         <div class="chip-card-num">LIMITED STRINGS</div>
