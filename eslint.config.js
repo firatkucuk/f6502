@@ -58,6 +58,8 @@ export default tseslint.config(
         setTimeout: 'readonly',
         File: 'readonly',
         URL: 'readonly',
+        URLSearchParams: 'readonly',
+        fetch: 'readonly',
         TextEncoder: 'readonly',
         TextDecoder: 'readonly',
         btoa: 'readonly',
