@@ -1,4 +1,6 @@
-import type { Decl, VarDecl } from './ast';
+import type { Decl, HardwareDecl, VarDecl } from './ast';
+
+type HardwareField = HardwareDecl['fields'][number];
 
 export const COLOR_NAMES = [
   'BLACK', 'WHITE', 'RED', 'CYAN', 'PURPLE', 'GREEN', 'BLUE', 'YELLOW',
@@ -35,6 +37,10 @@ export function builtinDecls(): Decl[] {
       { name: 'sprite0y',    type: { tag: 'u8' }, offset: 0x01, access: 'rw' },
       { name: 'sprite1x',    type: { tag: 'u8' }, offset: 0x02, access: 'rw' },
       { name: 'sprite1y',    type: { tag: 'u8' }, offset: 0x03, access: 'rw' },
+      ...[2, 3, 4, 5, 6, 7].flatMap((n): HardwareField[] => [
+        { name: `sprite${n}x`, type: { tag: 'u8' }, offset: 2 * n, access: 'rw' },
+        { name: `sprite${n}y`, type: { tag: 'u8' }, offset: 2 * n + 1, access: 'rw' },
+      ]),
       { name: 'spriteXmsb',  type: { tag: 'u8' }, offset: 0x10, access: 'rw' },
       { name: 'ctrl1',       type: { tag: 'u8' }, offset: 0x11, access: 'rw' },
       { name: 'rasterLine',  type: { tag: 'u8' }, offset: 0x12, access: 'readonly' },
@@ -51,6 +57,9 @@ export function builtinDecls(): Decl[] {
       { name: 'bgColor0',    type: { tag: 'u8' }, offset: 0x21, access: 'rw' },
       { name: 'sprite0color',type: { tag: 'u8' }, offset: 0x27, access: 'rw' },
       { name: 'sprite1color',type: { tag: 'u8' }, offset: 0x28, access: 'rw' },
+      ...[2, 3, 4, 5, 6, 7].map((n): HardwareField => ({
+        name: `sprite${n}color`, type: { tag: 'u8' }, offset: 0x27 + n, access: 'rw',
+      })),
     ],
   };
 

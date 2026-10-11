@@ -73,3 +73,38 @@ describe('showcase page', () => {
     }
   });
 });
+
+describe('showcase: sprite-dance', () => {
+  const run = (frames: number) => boot(source('sprite-dance'), frames);
+  const pos = (c: ReturnType<typeof run>) =>
+    Array.from({ length: 8 }, (_, i) => [c.peek(0xd000 + 2 * i), c.peek(0xd001 + 2 * i)]);
+
+  it('shows all eight sprites with the shared shape and distinct colours', () => {
+    const c = run(6);
+    expect(c.peek(0xd015)).toBe(0xff);
+    for (let i = 0; i < 8; i++) expect(c.peek(0x07f8 + i)).toBe(53);
+    const colours = new Set(Array.from({ length: 8 }, (_, i) => c.peek(0xd027 + i) & 15));
+    expect(colours.size).toBe(8);
+    expect(c.peek(0x0d40)).toBe(0x00); // top row of the circle is narrow
+    expect(c.peek(0x0d40 + 30)).toBe(0xff); // the middle row is full
+  });
+
+  it('keeps every sprite inside the visible area and spreads them apart', () => {
+    const c = run(20);
+    const p = pos(c);
+    for (const [x, y] of p) {
+      expect(x).toBeGreaterThanOrEqual(24);
+      expect(x).toBeLessThanOrEqual(255);
+      expect(y).toBeGreaterThanOrEqual(50);
+      expect(y).toBeLessThanOrEqual(229);
+    }
+    expect(new Set(p.map(([x, y]) => `${x},${y}`)).size).toBe(8);
+  });
+
+  it('moves between frames and returns to the start after the 128-frame loop', () => {
+    const a = pos(run(10));
+    const b = pos(run(40));
+    expect(b).not.toEqual(a);
+    expect(pos(run(10 + 128))).toEqual(a);
+  });
+});

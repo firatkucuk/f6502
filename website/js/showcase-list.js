@@ -13,4 +13,10 @@ export const SHOWCASES = [
     blurb:
       'A sunset painted in character mode: one solid-block character, a colour per row, and a few lines of inline assembly to fill the 40 × 25 screen.',
   },
+  {
+    id: 'sprite-dance',
+    title: 'Sprite Dance',
+    blurb:
+      'Eight hardware sprites share one shape and chase each other around a figure of eight. The path is read from a sine table with a few lines of inline assembly.',
+  },
 ];
