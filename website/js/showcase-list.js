@@ -24,13 +24,13 @@ export const SHOWCASES = [
     title: 'Flappy Bird',
     blurb:
       'Fly through the gaps. The bird is a hardware sprite, the pipes are columns of solid characters, and the VIC-II reports the crash.',
-    hint: 'Click the screen to give it keyboard focus, then press SPACE to flap.',
+    hint: 'Press SPACE to flap.',
   },
   {
     id: 'space-invaders',
     title: 'Space Invaders',
     blurb:
       'Shoot the marching block before it reaches your cannon. A and D move, SPACE fires one bullet at a time. The invaders are solid characters, the score is drawn on the top row.',
-    hint: 'Click the screen to give it keyboard focus, then press SPACE to start. A and D move the cannon.',
+    hint: 'Press SPACE to start. A and D move the cannon.',
   },
 ];

@@ -58,6 +58,9 @@ async function run() {
     },
     scale: 'fit',
     audio: false,
+    // Keys come from the document, not the canvas: the page has no focus when it loads, so a
+    // canvas-only listener would ignore SPACE, A and D until the user clicked the screen.
+    keyboardTarget: 'document',
   });
   await player.load(new File([prg], `${showcase.id}.prg`));
   statusEl.textContent = `Compiled in your browser (${prg.length - 2} bytes) and running live.`;
