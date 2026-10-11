@@ -1,0 +1,202 @@
+// Music Box: a four-bar tune on all three SID voices, with a lane per voice that lights up the
+// notes as they play. The tune is three 64-step tables of note numbers (0 is a rest) and one
+// frequency table: the player reads them with t[i] and writes the SID registers.
+// Sound starts after your first click or key press (the browser blocks audio before that).
+const STEP_FRAMES: u8 = 7;    // frames per step: 64 steps make a nine second loop
+const GATE_OFF_AT: u8 = 5;    // the frame of a step where the notes are released
+const BLOCK: u8 = 0xA0;       // the solid block
+const BLANK: u8 = 0x20;
+const LEAD_ROW: u8 = 6;
+const BASS_ROW: u8 = 11;
+const ARP_ROW: u8 = 16;
+const CHORD_ROW: u8 = 21;
+
+// SID frequency registers for note numbers 1..48 (F2 up to E6, PAL clock); note 0 is unused.
+data @addr(0x2000) {
+  freqLo: [u8; 49] = [
+    0, 207, 39, 133, 232, 81, 193, 55,
+    180, 56, 196, 89, 247, 157, 78, 10,
+    208, 162, 129, 109, 103, 112, 137, 178,
+    237, 59, 156, 19, 160, 69, 2, 218,
+    206, 224, 17, 100, 218, 118, 57, 38,
+    64, 137, 4, 180, 156, 192, 35, 200,
+    180,
+  ];
+}
+
+data @addr(0x2040) {
+  freqHi: [u8; 49] = [
+    0, 5, 6, 6, 6, 7, 7, 8,
+    8, 9, 9, 10, 10, 11, 12, 13,
+    13, 14, 15, 16, 17, 18, 19, 20,
+    21, 23, 24, 26, 27, 29, 31, 32,
+    34, 36, 39, 41, 43, 46, 49, 52,
+    55, 58, 62, 65, 69, 73, 78, 82,
+    87,
+  ];
+}
+
+// Four chords (Am, F, C, G) of sixteen steps each.
+data @addr(0x2100) {
+  melody: [u8; 64] = [
+    36, 0, 32, 0, 29, 0, 32, 34, 36, 0, 0, 0, 39, 0, 36, 0,
+    34, 0, 29, 0, 32, 0, 34, 0, 36, 0, 34, 32, 29, 0, 0, 0,
+    39, 0, 36, 0, 32, 0, 36, 0, 39, 0, 39, 0, 39, 36, 32, 0,
+    34, 0, 36, 0, 34, 0, 32, 0, 29, 0, 32, 34, 36, 0, 0, 0,
+  ];
+}
+
+data @addr(0x2140) {
+  bassLine: [u8; 64] = [
+    5, 0, 5, 0, 5, 0, 5, 0, 5, 0, 5, 0, 5, 0, 17, 0,
+    1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 13, 0,
+    8, 0, 8, 0, 8, 0, 8, 0, 8, 0, 8, 0, 8, 0, 20, 0,
+    3, 0, 3, 0, 3, 0, 3, 0, 3, 0, 3, 0, 3, 0, 15, 0,
+  ];
+}
+
+data @addr(0x2180) {
+  arpLine: [u8; 64] = [
+    17, 20, 24, 20, 17, 20, 24, 20, 17, 20, 24, 20, 17, 20, 24, 20,
+    13, 17, 20, 17, 13, 17, 20, 17, 13, 17, 20, 17, 13, 17, 20, 17,
+    20, 24, 27, 24, 20, 24, 27, 24, 20, 24, 27, 24, 20, 24, 27, 24,
+    15, 19, 22, 19, 15, 19, 22, 19, 15, 19, 22, 19, 15, 19, 22, 19,
+  ];
+}
+
+// How brightly each lane cell is lit: set to 6 when a note lands there and one less every step.
+let @addr(0x2200) heat: [u8; 120];
+
+let @zp pos: u8 = 0;     // the next step in the tune (0..63)
+let @zp cur: u8 = 0;     // the step that is playing
+let @zp tick: u8 = 0;    // the frame inside the step (0..6)
+
+// Wait for one video frame.
+fn frame(): void {
+  while (VIC2.rasterLine != 200) {}
+  while (VIC2.rasterLine == 200) {}
+}
+
+fn plot(row: u8, col: u8, ch: u8, hue: u8): void {
+  poke(screen(row, col), ch);
+  poke(color(row, col), hue);
+}
+
+// Redraws one lane (40 cells starting at heat[base]) and fades every lit cell by one.
+fn drawLane(base: u8, row: u8, hue: u8): void {
+  let i: u8 = base;
+  for (let c: u8 = 0; c < 40; c++) {
+    let h: u8 = heat[i];
+    if (h == 0) {
+      plot(row, c, BLANK, COLOR_BLACK);
+    } else {
+      if (h >= 6) {
+        plot(row, c, BLOCK, COLOR_WHITE);
+      } else {
+        if (h >= 3) {
+          plot(row, c, BLOCK, hue);
+        } else {
+          plot(row, c, BLOCK, COLOR_DARK_GREY);
+        }
+      }
+      heat[i] = h - 1;
+    }
+    i = i + 1;
+  }
+}
+
+// Lights note number `note` in a lane: its pitch is its column (note 1 is column 0).
+fn light(base: u8, note: u8): void {
+  if (note != 0) {
+    let at: u8 = base + note;
+    heat[at - 1] = 6;
+  }
+}
+
+// Draws the four chord names, the one that is playing in white.
+fn drawChords(now: u8): void {
+  if (now == 0) { puts(CHORD_ROW, 4, "AM", COLOR_WHITE); } else { puts(CHORD_ROW, 4, "AM", COLOR_DARK_GREY); }
+  if (now == 1) { puts(CHORD_ROW, 14, "F", COLOR_WHITE); } else { puts(CHORD_ROW, 14, "F", COLOR_DARK_GREY); }
+  if (now == 2) { puts(CHORD_ROW, 24, "C", COLOR_WHITE); } else { puts(CHORD_ROW, 24, "C", COLOR_DARK_GREY); }
+  if (now == 3) { puts(CHORD_ROW, 34, "G", COLOR_WHITE); } else { puts(CHORD_ROW, 34, "G", COLOR_DARK_GREY); }
+}
+
+// Starts the three notes of a step (a rest leaves its voice silent) and lights the lanes.
+fn playStep(): void {
+  let lead: u8 = melody[pos];
+  let bass: u8 = bassLine[pos];
+  let arp: u8 = arpLine[pos];
+  if (lead != 0) {
+    SID.v1freq_lo = freqLo[lead];
+    SID.v1freq_hi = freqHi[lead];
+    SID.v1ctrl = 0x41;       // pulse wave, gate on
+  }
+  if (bass != 0) {
+    SID.v2freq_lo = freqLo[bass];
+    SID.v2freq_hi = freqHi[bass];
+    SID.v2ctrl = 0x11;       // triangle wave, gate on
+  }
+  if (arp != 0) {
+    SID.v3freq_lo = freqLo[arp];
+    SID.v3freq_hi = freqHi[arp];
+    SID.v3ctrl = 0x21;       // sawtooth wave, gate on
+  }
+  light(0, lead);
+  light(40, bass);
+  light(80, arp);
+}
+
+program @ 0x0810 {
+  VIC2.borderColor = COLOR_BLACK;
+  VIC2.bgColor0 = COLOR_BLACK;
+  clrscr();
+
+  // RAM is not cleared at power-on: start with every lane cell dark.
+  for (let k: u8 = 0; k < 120; k++) {
+    heat[k] = 0;
+  }
+
+  SID.modeVol = 15;
+  SID.v1pw_lo = 0x00;
+  SID.v1pw_hi = 0x08;        // a square pulse
+  SID.v1atk_dec = 0x08;      // quick attack, medium decay
+  SID.v1sus_rel = 0x45;
+  SID.v2atk_dec = 0x08;
+  SID.v2sus_rel = 0xA6;
+  SID.v3atk_dec = 0x08;
+  SID.v3sus_rel = 0x24;
+
+  puts(1, 13, "SID MUSIC BOX", COLOR_WHITE);
+  puts(LEAD_ROW - 1, 0, "LEAD  PULSE", COLOR_LIGHT_BLUE);
+  puts(BASS_ROW - 1, 0, "BASS  TRIANGLE", COLOR_LIGHT_GREEN);
+  puts(ARP_ROW - 1, 0, "ARP  SAWTOOTH", COLOR_ORANGE);
+  drawChords(0);
+
+  loop {
+    frame();
+    // One job per frame, so no frame runs long and the steps keep their length.
+    if (tick == 0) {
+      playStep();
+      cur = pos;
+      pos = pos + 1;
+      if (pos == 64) { pos = 0; }
+    }
+    if (tick == 1) { drawLane(0, LEAD_ROW, COLOR_LIGHT_BLUE); }
+    if (tick == 2) { drawLane(40, BASS_ROW, COLOR_LIGHT_GREEN); }
+    if (tick == 3) { drawLane(80, ARP_ROW, COLOR_ORANGE); }
+    if (tick == 4) {
+      let part: u8 = cur & 0x30;
+      if (part == 0x00) { drawChords(0); }
+      if (part == 0x10) { drawChords(1); }
+      if (part == 0x20) { drawChords(2); }
+      if (part == 0x30) { drawChords(3); }
+    }
+    if (tick == GATE_OFF_AT) {
+      SID.v1ctrl = 0x40;
+      SID.v2ctrl = 0x10;
+      SID.v3ctrl = 0x20;
+    }
+    tick = tick + 1;
+    if (tick >= STEP_FRAMES) { tick = 0; }
+  }
+}

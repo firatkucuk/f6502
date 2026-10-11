@@ -77,3 +77,40 @@ describe('poke()', () => {
     }
   });
 });
+
+describe('SID registers', () => {
+  // Every SID register named by the language, with the address it must hit (base $D400).
+  const registers: Array<[string, number]> = [];
+  for (const [voice, base] of [
+    [1, 0x00],
+    [2, 0x07],
+    [3, 0x0e],
+  ] as const) {
+    registers.push(
+      [`v${voice}freq_lo`, base],
+      [`v${voice}freq_hi`, base + 1],
+      [`v${voice}pw_lo`, base + 2],
+      [`v${voice}pw_hi`, base + 3],
+      [`v${voice}ctrl`, base + 4],
+      [`v${voice}atk_dec`, base + 5],
+      [`v${voice}sus_rel`, base + 6],
+    );
+  }
+  registers.push(
+    ['filterCutLo', 0x15],
+    ['filterCutHi', 0x16],
+    ['filterRes', 0x17],
+    ['modeVol', 0x18],
+  );
+
+  it('names the registers of all three voices and the filter', () => {
+    const lines = registers.map(([name], i) => `  SID.${name} = ${i + 1};`).join('\n');
+    const prg = compile(`program @ 0x0810 {\n${lines}\n  loop {}\n}`);
+    // Each store is `LDA #n; STA $D4xx`: collect the operands of the STA absolute instructions.
+    const stores: number[] = [];
+    for (let i = 2; i + 2 < prg.length; i++) {
+      if (prg[i] === 0x8d && prg[i + 2] === 0xd4) stores.push(prg[i + 1]!);
+    }
+    expect(stores).toEqual(registers.map(([, offset]) => offset));
+  });
+});

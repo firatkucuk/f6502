@@ -63,7 +63,8 @@ async function run() {
       chargen: 'demos/chargen.bin',
     },
     scale: 'fit',
-    audio: false,
+    // Only the showcases that make sound ask for Web Audio; it starts at the first click or key.
+    audio: showcase.sound === true,
     // Keys come from the document, not the canvas: the page has no focus when it loads, so a
     // canvas-only listener would ignore SPACE, A and D until the user clicked the screen.
     keyboardTarget: 'document',
