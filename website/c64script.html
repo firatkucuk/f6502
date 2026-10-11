@@ -139,7 +139,7 @@
       <span class="lang-feature-icon">🧩</span>
       <div class="lang-feature-body">
         <h4>Functions</h4>
-        <p>Define reusable <code>fn</code> blocks with a return type. Calls compile to <code>JSR</code>/<code>RTS</code>, or inline the body when marked <code>@inline</code>. Parameters are not reliable yet — share data through global variables.</p>
+        <p>Define reusable <code>fn</code> blocks with <code>u8</code> parameters and a return type. Calls compile to <code>JSR</code>/<code>RTS</code>, or inline the body when marked <code>@inline</code>. Parameters live in fixed zero-page slots, so there is no recursion.</p>
       </div>
     </div>
   </section>
@@ -180,7 +180,7 @@
     </div>
 
     <p style="margin:1.5rem 0 1rem;color:var(--text-muted);font-size:0.9rem">
-      Use a function to keep the main loop clean. Functions take no parameters today; share data through global variables:
+      Use a function to keep the main loop clean. Parameters are <code>u8</code> values bound to fixed zero-page slots, so a function cannot call itself:
     </p>
 
     <div class="terminal reveal">
@@ -211,10 +211,10 @@
     </div>
 
     <div class="infobox accent" style="margin-top:2rem">
-      <strong>Pro tip — use @zp for loop counters.</strong>
-      Zero-page variables are accessed with a 2-byte instruction instead of 3,
-      and every branch/compare inside a tight loop hits them dozens of times.
-      The speed difference is measurable on real hardware.
+      <strong>Pro tip — variables live in zero page.</strong>
+      Every <code>let</code> is allocated in zero page automatically (254 bytes in total),
+      so reads and writes are 2-byte instructions instead of 3. <code>const</code> values
+      take no memory at all: they fold into the code.
     </div>
 
     <p style="margin:1.5rem 0 1rem;color:var(--text-muted);font-size:0.9rem">
@@ -274,6 +274,10 @@
           <tr><th>Annotation</th><th>Effect</th></tr>
         </thead>
         <tbody>
+          <tr>
+            <td><em>(none)</em></td>
+            <td style="color:var(--text-muted)"><code>let x: u8</code> is placed in zero page for you; <code>const X: u8 = 5</code> is a compile-time constant with no storage. Both accept constant expressions as initialisers.</td>
+          </tr>
           <tr>
             <td><code>@zp</code></td>
             <td style="color:var(--text-muted)">Place variable in zero page ($00–$FF). Generates shorter, faster opcodes. Max 256 bytes total across all <code>@zp</code> vars.</td>
@@ -607,7 +611,7 @@
         <div class="chip-card-num">NO ARRAYS</div>
         <h3>No arrays or pointers</h3>
         <p class="chip-label">Design in progress</p>
-        <p>Indexed addressing (e.g. <code>LDA $C000,X</code>) is powerful on 6502, but mapping it to a safe language construct is non-trivial. Array and <code>asm {}</code> syntax parses, but the compiler does not emit code for them yet.</p>
+        <p>Indexed addressing (e.g. <code>LDA $C000,X</code>) is powerful on 6502, but mapping it to a safe language construct is non-trivial. Array indexing and <code>asm {}</code> parse but are a compile error for now, rather than silently producing nothing.</p>
       </div>
       <div class="chip-card">
         <div class="chip-card-num">NO STRINGS</div>
@@ -619,7 +623,7 @@
         <div class="chip-card-num">PARTIAL</div>
         <h3>u16 type is partial</h3>
         <p class="chip-label">16-bit operations need more work</p>
-        <p>You can declare <code>u16</code> variables, but arithmetic on them is incomplete. Stick to <code>u8</code> for anything that needs to work reliably today.</p>
+        <p><code>u16</code> variables can be assigned, copied, incremented and read with <code>lo()</code> / <code>hi()</code>. Arithmetic and comparison on them is a compile error until 16-bit support lands; use <code>u8</code> for that.</p>
       </div>
       <div class="chip-card">
         <div class="chip-card-num">CONST ADDR</div>
@@ -628,10 +632,10 @@
         <p><code>poke(0x0400 + 495, value)</code> works and <code>value</code> can be any expression, but the address must be known at compile time. A computed address is a compile error.</p>
       </div>
       <div class="chip-card">
-        <div class="chip-card-num">FN ARGS</div>
-        <h3>Function parameters are unreliable</h3>
-        <p class="chip-label">Share data through globals</p>
-        <p>Functions can return a value, but parameters are not bound properly yet. Pass data through <code>let @zp</code> globals, as in the example above. <code>for</code> works with a global initialised by assignment (<code>for (i = 0; i &lt; 10; i++)</code>); a <code>let</code> declaration inside the <code>for</code> header does not generate correct code yet.</p>
+        <div class="chip-card-num">NO RECURSION</div>
+        <h3>Functions cannot call themselves</h3>
+        <p class="chip-label">No stack frame</p>
+        <p>Parameters and locals live at fixed zero-page addresses, so a function that calls itself, directly or through another function, is a compile error. <code>&amp;&amp;</code>, <code>||</code>, <code>*</code>, <code>/</code> and shifts on variables are compile errors too, and the right-hand side of <code>+ - &amp; | ^</code> and of comparisons must be a literal, a variable or a hardware register.</p>
       </div>
     </div>
 

@@ -80,11 +80,20 @@ describe('type checker', () => {
     expect(() => compile('let @zp x: u8 = 0;')).toThrow(PsTypeError);
   });
 
-  it('folds unannotated intLit var to constValue', () => {
-    const cp = compile('let myConst: u8 = 42; program @ 0xC000 {}');
+  it('folds a const declaration to constValue', () => {
+    const cp = compile('const myConst: u8 = 42; program @ 0xC000 {}');
     const v = cp.vars.get('myConst');
     expect(v?.constValue).toBe(42);
     expect(v?.isConst).toBe(true);
+    expect(v?.zpAddr).toBeNull();
+  });
+
+  it('allocates an un-annotated let in zero page, with its initial value', () => {
+    const cp = compile('let counter: u8 = 42; program @ 0xC000 {}');
+    const v = cp.vars.get('counter');
+    expect(v?.isConst).toBe(false);
+    expect(v?.zpAddr).not.toBeNull();
+    expect(v?.initValue).toBe(42);
   });
 
   it('folds color constant BLACK to constValue 0', () => {

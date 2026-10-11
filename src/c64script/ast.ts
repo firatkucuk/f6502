@@ -14,7 +14,7 @@ export const U16: PsType  = { tag: 'u16' };
 export const BOOL: PsType = { tag: 'bool' };
 export const VOID: PsType = { tag: 'void' };
 
-export function sizeOf(t: PsType, structs: Map<string, StructDecl>): number {
+export function sizeOf(t: PsType, structs: ReadonlyMap<string, StructDecl>): number {
   switch (t.tag) {
     case 'u8':
     case 'bool':    return 1;
@@ -74,7 +74,7 @@ export interface AsmInstr {
 
 // ── Statements ─────────────────────────────────────────────────────────
 export type Stmt =
-  | { readonly tag: 'varDecl';  readonly name: string; readonly type: PsType; readonly annotation: VarAnnotation; readonly init: Expr | null; readonly line: number }
+  | { readonly tag: 'varDecl';  readonly name: string; readonly type: PsType; readonly annotation: VarAnnotation; readonly isConst: boolean; readonly init: Expr | null; readonly line: number }
   | { readonly tag: 'assign';   readonly lhs: Expr;  readonly op: string;  readonly rhs: Expr; readonly line: number }
   | { readonly tag: 'incDec';   readonly lhs: Expr;  readonly op: '++' | '--'; readonly line: number }
   | { readonly tag: 'exprStmt'; readonly expr: Expr; readonly line: number }
@@ -108,6 +108,8 @@ export interface VarDecl {
   readonly name:       string;
   readonly type:       PsType;
   readonly annotation: VarAnnotation;
+  /** Declared with `const`: a compile-time constant, never stored in memory. */
+  readonly isConst:    boolean;
   readonly init:       Expr | null;
   readonly line:       number;
 }

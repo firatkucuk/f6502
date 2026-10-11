@@ -12,8 +12,8 @@
 // ────────────────────────────────────────────────────────────────────────────
 
 // ── Sprite data: Nyan Cat, 24×21 px, single colour, 2 animation frames ───────
-//    Frame A (legs spread) at $0D40 (sprite pointer = 53).
-//    Frame B (legs tucked) at $0D80 (sprite pointer = 54).
+//    Frame A (legs spread) at $0E00 (sprite pointer = 56).
+//    Frame B (legs tucked) at $0E40 (sprite pointer = 57).
 //    Head/ears on the RIGHT (cat faces right). Tail on left. Tart body center.
 //    2× X/Y expansion enabled — 48×42 px on screen.
 //
@@ -27,7 +27,7 @@
 //    row  7: #.#.#.#.#.#.#.#.#.#.##..  sprinkle pattern
 //    …      alternating solid/sprinkle rows 8-13
 //    row 14: paws differ between Frame A (spread) and Frame B (tucked)
-data @addr(0x0D40) {
+data @addr(0x0E00) {
   cat: [u8; 63] = [
     // Frame A — legs spread
     // row  0: ..............#.....#...  ear tips
@@ -101,7 +101,7 @@ let @zp inner: u8 = 0;     // delay inner counter
 // ── Main program — loads at $0810 ─────────────────────────────────────────────
 program @0x0810 {
 
-  poke(0x07F8, 53);   // sprite-pointer 0 = 53 → 53 × 64 = $0D40
+  poke(0x07F8, 56);   // sprite-pointer 0 = 56 → 56 × 64 = $0E00
 
   // ════════════════════════════════════════════════════════════════════════════
   //  SPLASH SCREEN
@@ -231,9 +231,9 @@ program @0x0810 {
       // Update color RAM for rows 7-12 (40 chars each, asm{} in real compiler)
       // In the compiled PRG each row is updated via an X-register loop.
 
-      // Toggle walking frame: walk ^= 1; poke($07F8, 53 + walk)
+      // Toggle walking frame: walk ^= 1; poke($07F8, 56 + walk)
       walk = walk ^ 1;
-      poke(0x07F8, 53 + walk);
+      poke(0x07F8, 56 + walk);
     }
   }
 
