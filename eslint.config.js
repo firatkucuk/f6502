@@ -43,7 +43,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ['website/js/{code-hash,playground,playground-examples,try-now}.js'],
+    files: ['website/js/{code-hash,editor-render,playground,playground-examples,try-now}.js'],
     languageOptions: {
       sourceType: 'module',
       globals: {

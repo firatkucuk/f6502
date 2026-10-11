@@ -630,7 +630,7 @@
         <div class="chip-card-num">FN ARGS</div>
         <h3>Function parameters are unreliable</h3>
         <p class="chip-label">Share data through globals</p>
-        <p>Functions can return a value, but parameters are not bound properly yet. Pass data through <code>let @zp</code> globals, as in the example above. Prefer <code>while</code> and <code>loop</code>; the <code>for</code> statement does not accept an assignment as its initialiser.</p>
+        <p>Functions can return a value, but parameters are not bound properly yet. Pass data through <code>let @zp</code> globals, as in the example above. <code>for</code> works with a global initialised by assignment (<code>for (i = 0; i &lt; 10; i++)</code>); a <code>let</code> declaration inside the <code>for</code> header does not generate correct code yet.</p>
       </div>
     </div>
 

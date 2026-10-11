@@ -1,4 +1,5 @@
 import { codeFromHash } from './code-hash.js';
+import { renderLines } from './editor-render.js';
 import { EXAMPLES } from './playground-examples.js';
 
 const GRAMMAR = {
@@ -34,14 +35,11 @@ function setStatus(text, kind = '') {
 }
 
 function render(errorLine = 0) {
-  const lines = editor.value.split('\n');
-  highlight.innerHTML =
-    lines
-      .map((text, i) => {
-        const html = window.Prism.highlight(text, GRAMMAR, 'c64script') || ' ';
-        return `<span class="ln${i + 1 === errorLine ? ' err' : ''}">${html}</span>`;
-      })
-      .join('') + '<span class="ln"> </span><span class="ln"> </span>';
+  // Without Prism (blocked CDN) the editor still works, just without colours.
+  const highlighter = window.Prism
+    ? (text) => window.Prism.highlight(text, GRAMMAR, 'c64script')
+    : null;
+  highlight.innerHTML = renderLines(editor.value, errorLine, highlighter);
   highlight.scrollTop = editor.scrollTop;
   highlight.scrollLeft = editor.scrollLeft;
 }
@@ -50,7 +48,8 @@ function hex4(n) {
   return n.toString(16).toUpperCase().padStart(4, '0');
 }
 
-async function run() {
+/** `focusScreen`: give the emulator keyboard focus (Run button), not when running from the editor. */
+async function run(focusScreen = false) {
   if (!player) return;
   const source = editor.value.replace(/\r\n?/g, '\n');
   let prg;
@@ -68,7 +67,7 @@ async function run() {
     await player.load(new File([prg], 'play.prg'));
     const load = prg[0] | (prg[1] << 8);
     setStatus(`Compiled · ${prg.length - 2} bytes · loads at $${hex4(load)}`, 'ok');
-    canvas.focus();
+    if (focusScreen) canvas.focus();
   } catch (err) {
     setStatus(`Could not start program: ${err instanceof Error ? err.message : err}`, 'err');
   }
@@ -121,7 +120,7 @@ function setup() {
       run();
     }
   });
-  $('run-btn').addEventListener('click', run);
+  $('run-btn').addEventListener('click', () => run(true));
   $('reboot-btn').addEventListener('click', () => {
     if (player) player.reset();
   });
