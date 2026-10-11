@@ -16,6 +16,10 @@ const titleEl = document.getElementById('showcase-title');
 const blurbEl = document.getElementById('showcase-blurb');
 const fileEl = document.getElementById('showcase-file');
 const hintEl = document.getElementById('showcase-hint');
+const crtEl = document.getElementById('showcase-crt');
+const pauseBtn = document.getElementById('showcase-pause');
+const rebootBtn = document.getElementById('showcase-reboot');
+const fullscreenBtn = document.getElementById('showcase-fullscreen');
 
 function escapeHtml(text) {
   return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -49,6 +53,7 @@ async function run() {
     throw new Error('the emulator bundle is missing or out of date');
   }
   const prg = f6502.compile(source);
+  const file = () => new File([prg], `${showcase.id}.prg`);
   const player = await f6502.start({
     canvas,
     roms: {
@@ -62,8 +67,49 @@ async function run() {
     // canvas-only listener would ignore SPACE, A and D until the user clicked the screen.
     keyboardTarget: 'document',
   });
-  await player.load(new File([prg], `${showcase.id}.prg`));
+  await player.load(file());
   statusEl.textContent = `Compiled in your browser (${prg.length - 2} bytes) and running live.`;
+  wireControls(player, file);
+}
+
+function wireControls(player, file) {
+  const syncPause = () => {
+    pauseBtn.textContent = player.running ? 'Pause' : 'Resume';
+    pauseBtn.setAttribute('aria-pressed', String(!player.running));
+  };
+  pauseBtn.disabled = false;
+  rebootBtn.disabled = false;
+  syncPause();
+  pauseBtn.addEventListener('click', () => {
+    if (player.running) player.pause();
+    else player.resume();
+    syncPause();
+  });
+  rebootBtn.addEventListener('click', async () => {
+    rebootBtn.disabled = true;
+    try {
+      player.reset();
+      await player.load(file());
+      statusEl.textContent = 'Rebooted and running the showcase again.';
+    } catch (err) {
+      console.error('[showcase]', err);
+      statusEl.textContent = `Reboot failed (${err.message}).`;
+    } finally {
+      rebootBtn.disabled = false;
+    }
+  });
+
+  if (!document.fullscreenEnabled || typeof crtEl.requestFullscreen !== 'function') {
+    fullscreenBtn.hidden = true;
+    return;
+  }
+  fullscreenBtn.addEventListener('click', () => {
+    if (document.fullscreenElement) document.exitFullscreen();
+    else crtEl.requestFullscreen();
+  });
+  document.addEventListener('fullscreenchange', () => {
+    fullscreenBtn.textContent = document.fullscreenElement ? 'Exit fullscreen' : 'Fullscreen';
+  });
 }
 
 if (canvas && sourceEl) {
