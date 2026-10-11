@@ -70,9 +70,9 @@ describe('code generator', () => {
     expect(() => compile('program @ 0xC000 { undefinedFunc(); }')).toThrow(/undefined function/);
   });
 
-  it('emits LDA #0 before STA $D020 for BLACK constant assignment', () => {
-    // First set border to 7, then assign BLACK (=0); with bug A still holds 7
-    const prg = compile('program @ 0xC000 { VIC2.borderColor = 7; VIC2.borderColor = BLACK; }');
+  it('emits LDA #0 before STA $D020 for COLOR_BLACK constant assignment', () => {
+    // First set border to 7, then assign COLOR_BLACK (=0); with bug A still holds 7
+    const prg = compile('program @ 0xC000 { VIC2.borderColor = 7; VIC2.borderColor = COLOR_BLACK; }');
     const bytes = Array.from(prg);
     // Sequence: LDA #0 (0xA9 0x00) immediately followed by STA $D020 (0x8D 0x20 0xD0)
     const idx = bytes.findIndex((_, i) =>

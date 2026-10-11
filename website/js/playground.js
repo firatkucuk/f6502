@@ -11,7 +11,7 @@ const GRAMMAR = {
   hardware: { pattern: /\b(?:VIC2|SID|CIA1|CIA2)\b/, alias: 'property' },
   constant: {
     pattern:
-      /\b(?:BLACK|WHITE|RED|CYAN|PURPLE|GREEN|BLUE|YELLOW|ORANGE|BROWN|LIGHT_RED|DARK_GREY|MEDIUM_GREY|LIGHT_GREEN|LIGHT_BLUE|LIGHT_GREY)\b/,
+      /\bCOLOR_(?:BLACK|WHITE|RED|CYAN|PURPLE|GREEN|BLUE|YELLOW|ORANGE|BROWN|LIGHT_RED|DARK_GREY|MEDIUM_GREY|LIGHT_GREEN|LIGHT_BLUE|LIGHT_GREY)\b/,
     alias: 'boolean',
   },
   builtin: { pattern: /\b(?:poke|clrscr|lo|hi|screen|color)(?=\s*\()/, alias: 'function' },

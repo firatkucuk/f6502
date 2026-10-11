@@ -18,7 +18,7 @@ function bootWith(source: string, frames = 5): C64 {
 }
 
 describe('stub KERNAL hands over a clean 40-column screen', () => {
-  const idle = 'program @ 0x0810 { VIC2.borderColor = BLUE; loop {} }';
+  const idle = 'program @ 0x0810 { VIC2.borderColor = COLOR_BLUE; loop {} }';
 
   it('selects 40-column mode, so column 0 is not clipped', () => {
     const c64 = bootWith(idle);
@@ -68,7 +68,7 @@ describe('stub KERNAL boot screen (what Reboot shows)', () => {
     const c64 = newMachine();
     c64.loadPrg(
       compile(`program @ 0x0810 {
-        VIC2.borderColor = RED; VIC2.bgColor0 = GREEN;
+        VIC2.borderColor = COLOR_RED; VIC2.bgColor0 = COLOR_GREEN;
         poke(0x0400, 1); poke(0xD800, 5);
         loop {}
       }`),

@@ -73,12 +73,12 @@ data @addr(0x0E00) {
 // ── ZP variables ──────────────────────────────────────────────────────────────
 let @zp catX:  u8 = 220;   // sprite X position
 let @zp frame: u8 = 0;     // wave phase timer (0-5, wraps every 6 frames)
-let @zp col0:  u8 = 2;     // rainbow row 7  color (RED   = 2)
-let @zp col1:  u8 = 8;     // rainbow row 8  color (ORANGE= 8)
-let @zp col2:  u8 = 7;     // rainbow row 9  color (YELLOW= 7)
-let @zp col3:  u8 = 5;     // rainbow row 10 color (GREEN = 5)
-let @zp col4:  u8 = 14;    // rainbow row 11 color (LIGHT_BLUE=14)
-let @zp col5:  u8 = 4;     // rainbow row 12 color (PURPLE= 4)
+let @zp col0:  u8 = 2;     // rainbow row 7  color (COLOR_RED   = 2)
+let @zp col1:  u8 = 8;     // rainbow row 8  color (COLOR_ORANGE= 8)
+let @zp col2:  u8 = 7;     // rainbow row 9  color (COLOR_YELLOW= 7)
+let @zp col3:  u8 = 5;     // rainbow row 10 color (COLOR_GREEN = 5)
+let @zp col4:  u8 = 14;    // rainbow row 11 color (COLOR_LIGHT_BLUE=14)
+let @zp col5:  u8 = 4;     // rainbow row 12 color (COLOR_PURPLE= 4)
 let @zp tmp:   u8 = 0;     // scratch for color rotation
 let @zp walk:  u8 = 0;     // walk phase toggle (0=frame A ptr53, 1=frame B ptr54)
 let @zp outer: u8 = 0;     // delay outer counter
@@ -108,8 +108,8 @@ program @0x0810 {
   // ════════════════════════════════════════════════════════════════════════════
 
   clrscr();
-  VIC2.bgColor0    = BLACK;
-  VIC2.borderColor = BLACK;
+  VIC2.bgColor0    = COLOR_BLACK;
+  VIC2.borderColor = COLOR_BLACK;
   VIC2.spriteEnable = 0;
 
   // "F6502" at row 10 col 17 ($05A1)
@@ -172,13 +172,13 @@ program @0x0810 {
   //  NYAN CAT ANIMATION
   // ════════════════════════════════════════════════════════════════════════════
 
-  VIC2.bgColor0    = BLUE;         // sky-blue background
-  VIC2.borderColor = RED;          // initial border = top rainbow stripe
+  VIC2.bgColor0    = COLOR_BLUE;         // sky-blue background
+  VIC2.borderColor = COLOR_RED;          // initial border = top rainbow stripe
   VIC2.spriteEnable = 1;           // sprite 0 on
   poke(0xD017, 1);                 // Y-expand sprite 0 ×2
   poke(0xD01D, 1);                 // X-expand sprite 0 ×2
   VIC2.ctrl2       = 0x08;         // 38-col, no multicolour
-  VIC2.sprite0color = LIGHT_GREY;  // cat body = light grey
+  VIC2.sprite0color = COLOR_LIGHT_GREY;  // cat body = light grey
   VIC2.sprite0y     = 94;          // centered in rainbow band with 2× expansion
 
   catX  = 220;

@@ -1,5 +1,5 @@
 import { TypeError } from './errors';
-import { builtinDecls } from './builtin';
+import { COLOR_NAMES, builtinDecls } from './builtin';
 import { ZpAllocator } from './symbols';
 import type { Program, Stmt, Expr, PsType, StructDecl, HardwareDecl, FnDecl, VarDecl } from './ast';
 import { sizeOf } from './ast';
@@ -413,7 +413,10 @@ export function check(userProg: Program): CheckedProgram {
       case 'ident': {
         const v = resolveVar(scope, e.name);
         if (v === undefined) {
-          throw new TypeError(`undefined variable '${e.name}'`, e.line, 0);
+          const hint = (COLOR_NAMES as readonly string[]).includes(e.name)
+            ? ` (colour names start with COLOR_: did you mean COLOR_${e.name}?)`
+            : '';
+          throw new TypeError(`undefined variable '${e.name}'${hint}`, e.line, 0);
         }
         if (access === 'write' && v.isConst) {
           throw new TypeError(`cannot assign to constant '${e.name}'`, e.line, 0);

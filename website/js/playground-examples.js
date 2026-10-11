@@ -31,8 +31,8 @@ program @ 0x0810 {
     title: 'Colour constants',
     source: `// Colour constants compile to immediates
 program @ 0x0810 {
-  VIC2.borderColor = BLUE;       // LDA #6 ; STA $D020
-  VIC2.bgColor0    = LIGHT_BLUE; // LDA #14; STA $D021
+  VIC2.borderColor = COLOR_BLUE;       // LDA #6 ; STA $D020
+  VIC2.bgColor0    = COLOR_LIGHT_BLUE; // LDA #14; STA $D021
   loop {}
 }
 `,
@@ -65,8 +65,8 @@ program @ 0x0810 {
 // screen(row, col) / color(row, col) turn a position into an address at compile time.
 program @ 0x0810 {
   clrscr();
-  VIC2.borderColor = BLACK;
-  VIC2.bgColor0 = BLACK;
+  VIC2.borderColor = COLOR_BLACK;
+  VIC2.bgColor0 = COLOR_BLACK;
 
   poke(screen(12, 15), 8);    // H
   poke(screen(12, 16), 5);    // E
@@ -77,14 +77,14 @@ program @ 0x0810 {
   poke(screen(12, 22), 0x36); // 6
   poke(screen(12, 23), 0x34); // 4
 
-  poke(color(12, 15), WHITE);
-  poke(color(12, 16), WHITE);
-  poke(color(12, 17), WHITE);
-  poke(color(12, 18), WHITE);
-  poke(color(12, 19), WHITE);
-  poke(color(12, 21), WHITE);
-  poke(color(12, 22), WHITE);
-  poke(color(12, 23), WHITE);
+  poke(color(12, 15), COLOR_WHITE);
+  poke(color(12, 16), COLOR_WHITE);
+  poke(color(12, 17), COLOR_WHITE);
+  poke(color(12, 18), COLOR_WHITE);
+  poke(color(12, 19), COLOR_WHITE);
+  poke(color(12, 21), COLOR_WHITE);
+  poke(color(12, 22), COLOR_WHITE);
+  poke(color(12, 23), COLOR_WHITE);
   loop {}
 }
 `,
@@ -124,7 +124,7 @@ let @zp x: u8 = 24;
 program @ 0x0810 {
   poke(0x07F8, 53);          // sprite 0 data at $0D40 (53 * 64)
   VIC2.spriteEnable = 1;
-  VIC2.sprite0color = YELLOW;
+  VIC2.sprite0color = COLOR_YELLOW;
   VIC2.sprite0y = 120;
 
   loop {

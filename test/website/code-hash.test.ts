@@ -3,7 +3,7 @@ import { codeFromHash, decodeCode, encodeCode, tryNowUrl } from '../../website/j
 
 describe('code-hash', () => {
   it('round-trips ASCII source', () => {
-    const src = 'program @ 0x0810 {\n  VIC2.borderColor = RED;\n  loop {}\n}\n';
+    const src = 'program @ 0x0810 {\n  VIC2.borderColor = COLOR_RED;\n  loop {}\n}\n';
     expect(decodeCode(encodeCode(src))).toBe(src);
   });
 

@@ -96,10 +96,10 @@ describe('type checker', () => {
     expect(v?.initValue).toBe(42);
   });
 
-  it('folds color constant BLACK to constValue 0', () => {
+  it('folds color constant COLOR_BLACK to constValue 0', () => {
     const cp = compile('program @ 0xC000 {}');
-    expect(cp.vars.get('BLACK')?.constValue).toBe(0);
-    expect(cp.vars.get('WHITE')?.constValue).toBe(1);
+    expect(cp.vars.get('COLOR_BLACK')?.constValue).toBe(0);
+    expect(cp.vars.get('COLOR_WHITE')?.constValue).toBe(1);
   });
 
   it('throws when reading writeonly field inside binary expression', () => {

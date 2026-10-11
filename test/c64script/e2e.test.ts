@@ -79,11 +79,11 @@ describe('c64script e2e', () => {
     expect(c64.peek(0xD020) & 0x0F).toBe(6);
   });
 
-  it('BLACK color constant folds to zero at runtime', () => {
-    // First paint the border 7 so any missing LDA leaves A=7 — proving BLACK=0 was actually emitted
+  it('COLOR_BLACK color constant folds to zero at runtime', () => {
+    // First paint the border 7 so any missing LDA leaves A=7 — proving COLOR_BLACK=0 was actually emitted
     const src = `program @ 0xC000 {
       VIC2.borderColor = 7;
-      VIC2.borderColor = BLACK;
+      VIC2.borderColor = COLOR_BLACK;
       loop {}
     }`;
     const c64 = loadAndRun(src, 20);
