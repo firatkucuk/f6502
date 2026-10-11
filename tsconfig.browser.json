@@ -1,5 +1,9 @@
 {
   "extends": "./tsconfig.json",
-  "compilerOptions": { "lib": ["ES2022", "DOM"] },
-  "include": ["src", "test/browser"]
+  "compilerOptions": {
+    "lib": ["ES2022", "DOM"],
+    // The website tests import the page scripts (website/js/*.js); their types are inferred.
+    "allowJs": true
+  },
+  "include": ["src", "test/browser", "test/website"]
 }

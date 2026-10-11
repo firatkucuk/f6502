@@ -1,4 +1,4 @@
-import { C64ScriptTypeError as TypeError } from './errors';
+import { C64ScriptTypeError } from './errors';
 import { COLOR_NAMES, builtinDecls } from './builtin';
 import { ZpAllocator } from './symbols';
 import type {
@@ -115,14 +115,14 @@ export function foldConst(
         const a = e.args[0] !== undefined ? foldConst(e.args[0], lookup) : null;
         if (a === null) return null;
         if (a % 64 !== 0) {
-          throw new TypeError(
+          throw new C64ScriptTypeError(
             `spritePtr(): address ${a} is not a multiple of 64 (sprite data sits on 64-byte boundaries)`,
             e.line,
             0,
           );
         }
         if (a >= 0x4000) {
-          throw new TypeError(
+          throw new C64ScriptTypeError(
             `spritePtr(): address ${a} is outside the VIC-II's 16 KB bank 0 (0..16383)`,
             e.line,
             0,
@@ -135,14 +135,14 @@ export function foldConst(
       const col = e.args[1] !== undefined ? foldConst(e.args[1], lookup) : null;
       if (row === null || col === null) return null;
       if (row >= SCREEN_ROWS) {
-        throw new TypeError(
+        throw new C64ScriptTypeError(
           `${e.name}(): row ${row} is out of range 0..${SCREEN_ROWS - 1}`,
           e.line,
           0,
         );
       }
       if (col >= SCREEN_COLS) {
-        throw new TypeError(
+        throw new C64ScriptTypeError(
           `${e.name}(): column ${col} is out of range 0..${SCREEN_COLS - 1}`,
           e.line,
           0,
@@ -210,29 +210,29 @@ export function check(userProg: Program): CheckedProgram {
   function declare(d: VarDecl, scope: string | null): void {
     const key = scope === null ? d.name : scopedName(scope, d.name);
     if (scope !== null && fns.has(d.name)) {
-      throw new TypeError(`'${d.name}' is already defined as a function`, d.line, 0);
+      throw new C64ScriptTypeError(`'${d.name}' is already defined as a function`, d.line, 0);
     }
     const lookup = (n: string) => resolveVar(scope, n);
     if (d.type.tag === 'array' && d.type.elem.tag === 'u16') {
-      throw new TypeError('arrays of u16 are not supported yet', d.line, 0);
+      throw new C64ScriptTypeError('arrays of u16 are not supported yet', d.line, 0);
     }
     const ann = d.annotation;
     const isInt = d.type.tag === 'u8' || d.type.tag === 'bool';
     const fits = (v: number): void => {
       if (isInt && v > 0xff) {
-        throw new TypeError(`value ${v} does not fit in ${d.type.tag}`, d.line, 0);
+        throw new C64ScriptTypeError(`value ${v} does not fit in ${d.type.tag}`, d.line, 0);
       }
     };
 
     if (scope !== null) {
       if (vars.has(d.name) || blockNames.some((names) => names.has(d.name))) {
-        throw new TypeError(`'${d.name}' already defined`, d.line, 0);
+        throw new C64ScriptTypeError(`'${d.name}' already defined`, d.line, 0);
       }
       const sibling = vars.get(key);
       if (sibling !== undefined) {
         // Declared before in another block of this function: share the slot.
         if (sibling.type.tag !== d.type.tag) {
-          throw new TypeError(
+          throw new C64ScriptTypeError(
             `'${d.name}' was declared with a different type (${sibling.type.tag}) elsewhere in this function`,
             d.line,
             0,
@@ -246,11 +246,11 @@ export function check(userProg: Program): CheckedProgram {
         return;
       }
     } else if (vars.has(key)) {
-      throw new TypeError(`'${d.name}' already defined`, d.line, 0);
+      throw new C64ScriptTypeError(`'${d.name}' already defined`, d.line, 0);
     }
 
     if (d.isConst && ann.tag !== 'none') {
-      throw new TypeError(
+      throw new C64ScriptTypeError(
         `a const cannot have a ${ann.tag === 'zp' ? '@zp' : '@addr'} annotation (use let)`,
         d.line,
         0,
@@ -265,11 +265,11 @@ export function check(userProg: Program): CheckedProgram {
 
     if (d.isConst) {
       if (d.init === null) {
-        throw new TypeError(`constant '${d.name}' needs an initialiser`, d.line, 0);
+        throw new C64ScriptTypeError(`constant '${d.name}' needs an initialiser`, d.line, 0);
       }
       const v = foldConst(d.init, lookup);
       if (v === null) {
-        throw new TypeError(
+        throw new C64ScriptTypeError(
           `constant '${d.name}' needs a compile-time constant initialiser`,
           d.line,
           0,
@@ -282,19 +282,19 @@ export function check(userProg: Program): CheckedProgram {
       if (ann.tag === 'addr') {
         const a = foldConst(ann.address, lookup);
         if (a === null) {
-          throw new TypeError(
+          throw new C64ScriptTypeError(
             '@addr(...) must be a compile-time constant (a const declared above this line)',
             d.line,
             0,
           );
         }
         if (a > 0xffff) {
-          throw new TypeError(`address ${a} is out of range 0..65535`, d.line, 0);
+          throw new C64ScriptTypeError(`address ${a} is out of range 0..65535`, d.line, 0);
         }
         // $F8-$FF hold the compiler's 16-bit accumulator and temporaries.
         const size = Math.max(1, sizeOf(d.type, structs));
         if (a < 0x100 && a + size > 0xf8) {
-          throw new TypeError(
+          throw new C64ScriptTypeError(
             `address $${a.toString(16).toUpperCase()} overlaps $F8-$FF, which are reserved by the compiler`,
             d.line,
             0,
@@ -308,7 +308,7 @@ export function check(userProg: Program): CheckedProgram {
           fits(v);
           initValue = v;
         } else if (scope === null) {
-          throw new TypeError(
+          throw new C64ScriptTypeError(
             `initialiser of '${d.name}' must be a compile-time constant`,
             d.line,
             0,
@@ -333,20 +333,20 @@ export function check(userProg: Program): CheckedProgram {
   for (const d of allDecls) {
     if (d.tag === 'varDecl') {
       if (fns.has(d.name)) {
-        throw new TypeError(`'${d.name}' is already defined as a function`, d.line, 0);
+        throw new C64ScriptTypeError(`'${d.name}' is already defined as a function`, d.line, 0);
       }
       declare(d, null);
     }
 
     if (d.tag === 'fn') {
       if (vars.has(d.name)) {
-        throw new TypeError(`'${d.name}' is already defined as a variable`, d.line, 0);
+        throw new C64ScriptTypeError(`'${d.name}' is already defined as a variable`, d.line, 0);
       }
       if (fns.has(d.name) || BUILTIN_FNS.has(d.name)) {
-        throw new TypeError(`function '${d.name}' already defined`, d.line, 0);
+        throw new C64ScriptTypeError(`function '${d.name}' already defined`, d.line, 0);
       }
       if (d.ret.tag === 'u16') {
-        throw new TypeError(
+        throw new C64ScriptTypeError(
           `u16 return values are not supported yet (function '${d.name}')`,
           d.line,
           0,
@@ -357,7 +357,7 @@ export function check(userProg: Program): CheckedProgram {
 
     if (d.tag === 'program') {
       if (hasProgramDecl) {
-        throw new TypeError('only one program block is allowed', d.line, 0);
+        throw new C64ScriptTypeError('only one program block is allowed', d.line, 0);
       }
       programDecl = d;
       hasProgramDecl = true;
@@ -365,17 +365,21 @@ export function check(userProg: Program): CheckedProgram {
   }
 
   if (!hasProgramDecl || programDecl === null) {
-    throw new TypeError('program block is required', 0, 0);
+    throw new C64ScriptTypeError('program block is required', 0, 0);
   }
 
   // Addresses are folded once every global is known, so a `const` may sit below `program @ …`.
   const globalLookup = (n: string) => vars.get(n);
   const programAddr = foldConst(programDecl.address, globalLookup);
   if (programAddr === null) {
-    throw new TypeError('program address must be a compile-time constant', programDecl.line, 0);
+    throw new C64ScriptTypeError(
+      'program address must be a compile-time constant',
+      programDecl.line,
+      0,
+    );
   }
   if (programAddr > 0xffff) {
-    throw new TypeError(
+    throw new C64ScriptTypeError(
       `program address ${programAddr} is out of range 0..65535`,
       programDecl.line,
       0,
@@ -388,10 +392,10 @@ export function check(userProg: Program): CheckedProgram {
     if (d.tag !== 'data' || d.annotation.tag !== 'addr') continue;
     const a = foldConst(d.annotation.address, globalLookup);
     if (a === null) {
-      throw new TypeError('@addr(...) must be a compile-time constant', d.line, 0);
+      throw new C64ScriptTypeError('@addr(...) must be a compile-time constant', d.line, 0);
     }
     if (a > 0xffff) {
-      throw new TypeError(`address ${a} is out of range 0..65535`, d.line, 0);
+      throw new C64ScriptTypeError(`address ${a} is out of range 0..65535`, d.line, 0);
     }
     dataAddrs.set(d, a);
   }
@@ -402,10 +406,10 @@ export function check(userProg: Program): CheckedProgram {
     let offset = 0;
     for (const f of d.fields) {
       if (f.type.tag === 'array' && f.type.elem.tag === 'u16') {
-        throw new TypeError('arrays of u16 are not supported yet', d.line, 0);
+        throw new C64ScriptTypeError('arrays of u16 are not supported yet', d.line, 0);
       }
       if (vars.has(f.name) || fns.has(f.name) || BUILTIN_FNS.has(f.name)) {
-        throw new TypeError(`'${f.name}' already defined`, d.line, 0);
+        throw new C64ScriptTypeError(`'${f.name}' already defined`, d.line, 0);
       }
       vars.set(f.name, {
         type: f.type,
@@ -431,7 +435,7 @@ export function check(userProg: Program): CheckedProgram {
       blockNames.push(new Set());
       for (const p of d.params) {
         if (p.type.tag !== 'u8' && p.type.tag !== 'bool') {
-          throw new TypeError(
+          throw new C64ScriptTypeError(
             `${p.type.tag} parameter '${p.name}' is not supported yet (only u8 and bool)`,
             d.line,
             0,
@@ -466,7 +470,7 @@ export function check(userProg: Program): CheckedProgram {
     state.set(name, 'open');
     for (const edge of calls.get(name) ?? []) {
       if (state.get(edge.to) === 'open') {
-        throw new TypeError(
+        throw new C64ScriptTypeError(
           `function '${edge.to}' is called from within itself; recursion is not supported (there is no stack frame)`,
           edge.line,
           0,
@@ -488,7 +492,7 @@ export function check(userProg: Program): CheckedProgram {
   };
   for (const c of argCalls) {
     if (reaches(c.inner, c.callee)) {
-      throw new TypeError(
+      throw new C64ScriptTypeError(
         `argument of '${c.callee}' calls '${c.inner}', which calls '${c.callee}' again; ` +
           'the parameter slots are shared, so assign the result to a variable first',
         c.line,
@@ -571,7 +575,7 @@ export function check(userProg: Program): CheckedProgram {
       case 'break':
       case 'continue':
         if (loops === 0) {
-          throw new TypeError(`'${s.tag}' outside of a loop`, s.line, 0);
+          throw new C64ScriptTypeError(`'${s.tag}' outside of a loop`, s.line, 0);
         }
         break;
       case 'asm':
@@ -586,7 +590,7 @@ export function check(userProg: Program): CheckedProgram {
   function checkAsm(s: Extract<Stmt, { tag: 'asm' }>, scope: string): void {
     for (const name of s.clobbers) {
       if (!CLOBBERABLE.has(name.toLowerCase())) {
-        throw new TypeError(
+        throw new C64ScriptTypeError(
           `unknown register '${name}' in clobbers() (use A, X, Y or flags)`,
           s.line,
           0,
@@ -627,7 +631,11 @@ export function check(userProg: Program): CheckedProgram {
   function checkPuts(e: Extract<Expr, { tag: 'call' }>, scope: string): void {
     const [rowE, colE, textE, colourE] = e.args;
     if (textE === undefined || textE.tag !== 'strLit') {
-      throw new TypeError('puts(): the third argument must be a string literal', e.line, 0);
+      throw new C64ScriptTypeError(
+        'puts(): the third argument must be a string literal',
+        e.line,
+        0,
+      );
     }
     for (const a of [rowE, colE, colourE]) {
       if (a !== undefined) checkExpr(a, 'read', scope, null);
@@ -636,10 +644,14 @@ export function check(userProg: Program): CheckedProgram {
     const row = rowE !== undefined ? foldConst(rowE, lookup) : null;
     const col = colE !== undefined ? foldConst(colE, lookup) : null;
     if (row !== null && row >= SCREEN_ROWS) {
-      throw new TypeError(`puts(): row ${row} is out of range 0..${SCREEN_ROWS - 1}`, e.line, 0);
+      throw new C64ScriptTypeError(
+        `puts(): row ${row} is out of range 0..${SCREEN_ROWS - 1}`,
+        e.line,
+        0,
+      );
     }
     if (col !== null && col + textE.codes.length > SCREEN_COLS) {
-      throw new TypeError(
+      throw new C64ScriptTypeError(
         col >= SCREEN_COLS
           ? `puts(): column ${col} is out of range 0..${SCREEN_COLS - 1}`
           : `puts(): ${textE.codes.length} characters starting at column ${col} run past column ${SCREEN_COLS - 1}`,
@@ -649,7 +661,7 @@ export function check(userProg: Program): CheckedProgram {
     }
     const colour = colourE !== undefined ? foldConst(colourE, lookup) : null;
     if (colour !== null && colour > 15) {
-      throw new TypeError(
+      throw new C64ScriptTypeError(
         `puts(): colour ${colour} is out of range 0..15 (use COLOR_*)`,
         e.line,
         0,
@@ -671,10 +683,10 @@ export function check(userProg: Program): CheckedProgram {
           const hint = (COLOR_NAMES as readonly string[]).includes(e.name)
             ? ` (colour names start with COLOR_: did you mean COLOR_${e.name}?)`
             : '';
-          throw new TypeError(`undefined variable '${e.name}'${hint}`, e.line, 0);
+          throw new C64ScriptTypeError(`undefined variable '${e.name}'${hint}`, e.line, 0);
         }
         if (access === 'write' && v.isConst) {
-          throw new TypeError(`cannot assign to constant '${e.name}'`, e.line, 0);
+          throw new C64ScriptTypeError(`cannot assign to constant '${e.name}'`, e.line, 0);
         }
         break;
       }
@@ -686,25 +698,25 @@ export function check(userProg: Program): CheckedProgram {
         const hw = hardware.get(e.obj.name);
         if (!hw) {
           if (resolveVar(scope, e.obj.name) !== undefined) {
-            throw new TypeError(
+            throw new C64ScriptTypeError(
               `'${e.obj.name}' is not a hardware block (struct field access is not supported yet)`,
               e.line,
               0,
             );
           }
-          throw new TypeError(`undefined variable '${e.obj.name}'`, e.line, 0);
+          throw new C64ScriptTypeError(`undefined variable '${e.obj.name}'`, e.line, 0);
         }
         const f = hw.fields.find((field) => field.name === e.field);
         if (f) {
           if (access === 'write' && (f.access === 'readonly' || f.access === 'read_to_clear')) {
-            throw new TypeError(
+            throw new C64ScriptTypeError(
               `cannot write to readonly field '${e.obj.name}.${e.field}'`,
               e.line,
               0,
             );
           }
           if (access === 'read' && f.access === 'writeonly') {
-            throw new TypeError(
+            throw new C64ScriptTypeError(
               `cannot read from writeonly field '${e.obj.name}.${e.field}'`,
               e.line,
               0,
@@ -720,13 +732,13 @@ export function check(userProg: Program): CheckedProgram {
             ? ([fn.decl.params.length, fn.decl.params.length] as const)
             : BUILTIN_FNS.get(e.name);
         if (range === undefined) {
-          throw new TypeError(`undefined function '${e.name}'`, e.line, 0);
+          throw new C64ScriptTypeError(`undefined function '${e.name}'`, e.line, 0);
         }
         const [min, max] = range;
         if (e.args.length < min || e.args.length > max) {
           const expected =
             min === max ? `${min} argument${min === 1 ? '' : 's'}` : `${min} or ${max} arguments`;
-          throw new TypeError(
+          throw new C64ScriptTypeError(
             `function '${e.name}' expects ${expected}, got ${e.args.length}`,
             e.line,
             0,
@@ -744,7 +756,7 @@ export function check(userProg: Program): CheckedProgram {
         break;
       }
       case 'strLit':
-        throw new TypeError(
+        throw new C64ScriptTypeError(
           'string literals are only allowed as the third argument of puts()',
           e.line,
           0,
@@ -763,17 +775,17 @@ export function check(userProg: Program): CheckedProgram {
         break;
       case 'index': {
         if (e.obj.tag !== 'ident') {
-          throw new TypeError('only named arrays can be indexed', e.line, 0);
+          throw new C64ScriptTypeError('only named arrays can be indexed', e.line, 0);
         }
         checkExpr(e.obj, 'read', scope, parent);
         const arr = resolveVar(scope, e.obj.name);
         if (arr === undefined || arr.type.tag !== 'array') {
-          throw new TypeError(`'${e.obj.name}' is not an array`, e.line, 0);
+          throw new C64ScriptTypeError(`'${e.obj.name}' is not an array`, e.line, 0);
         }
         checkExpr(e.idx, 'read', scope, parent);
         const k = foldConst(e.idx, (n) => resolveVar(scope, n));
         if (k !== null && k >= arr.type.size) {
-          throw new TypeError(
+          throw new C64ScriptTypeError(
             `index ${k} is out of range for '${e.obj.name}' (length ${arr.type.size})`,
             e.line,
             0,

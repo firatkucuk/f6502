@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import { OPS } from '../../src/core';
-import type { Mode } from '../../src/core';
 import { chooseMode, isMnemonic, opcodeFor, takesOperand } from '../../src/c64script/asm';
 import type { AsmShape } from '../../src/c64script/asm';
 
@@ -40,7 +39,7 @@ describe('asm opcode table', () => {
 });
 
 describe('chooseMode', () => {
-  const pick = (m: string, shape: AsmShape, value: number | null): Mode | string => {
+  const pick = (m: string, shape: AsmShape, value: number | null): string => {
     const r = chooseMode(m, shape, value);
     return 'mode' in r ? r.mode : r.error;
   };

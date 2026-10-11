@@ -8,7 +8,7 @@
     try {
       const b64 = btoa(String.fromCharCode(...new Uint8Array(ab)));
       localStorage.setItem(LS_PREFIX + name, b64);
-    } catch (_) {
+    } catch {
       /* storage full or unavailable */
     }
   }
@@ -21,7 +21,7 @@
       const ab = new Uint8Array(bin.length);
       for (let i = 0; i < bin.length; i++) ab[i] = bin.charCodeAt(i);
       return ab.buffer;
-    } catch (_) {
+    } catch {
       return null;
     }
   }
@@ -100,7 +100,6 @@
       if (!files.length) return;
 
       const roms = {};
-      const names = files.map((f) => f.name.toLowerCase());
 
       setStatus('Reading files…');
 

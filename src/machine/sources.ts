@@ -174,11 +174,9 @@ export class PrgSource extends ListSource {
   }
 }
 
-export function openSource(
-  bytes: Uint8Array,
-  kind?: 'd64' | 't64' | 'prg' | 'p00',
-  name?: string,
-): FileSource {
+export type DiskKind = 'd64' | 't64' | 'prg' | 'p00';
+
+export function openSource(bytes: Uint8Array, kind?: DiskKind, name?: string): FileSource {
   const sniff = kind ?? detect(bytes);
   switch (sniff) {
     case 'd64':
@@ -193,7 +191,7 @@ export function openSource(
   }
 }
 
-function detect(bytes: Uint8Array): 'd64' | 't64' | 'p00' | 'prg' {
+function detect(bytes: Uint8Array): DiskKind {
   if ([174848, 175531, 196608, 197376].includes(bytes.length)) return 'd64';
   const head = new TextDecoder().decode(bytes.subarray(0, 8));
   if (head.startsWith('C64File')) return 'p00';

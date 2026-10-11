@@ -49,7 +49,7 @@ describe('MCBASE', () => {
     const seen: number[] = [];
     for (let raster = 40; raster <= 80; raster++) {
       line(r, raster);
-      seen.push(r.sprites.mcBase[0]!);
+      seen.push(r.sprites.mcBase[0]);
     }
     expect(seen[seen.indexOf(Math.max(...seen)) - 1]).toBe(60);
     expect(Math.max(...seen)).toBe(63);

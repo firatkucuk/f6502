@@ -4,8 +4,8 @@ import type { CheckedProgram, ResolvedVar } from './checker';
 import { OPS } from '../core';
 import { chooseMode, opcodeFor } from './asm';
 import type { AsmShape } from './asm';
-import { sizeOf } from './ast';
-import type { AsmExpr, AsmItem, Expr, Stmt } from './ast';
+import { isCompareOp, sizeOf } from './ast';
+import type { AsmExpr, AsmItem, AssignOp, BinaryOp, CompareOp, Expr, Stmt } from './ast';
 
 export type FixupKind =
   | { tag: 'branch8'; label: string }
@@ -48,7 +48,8 @@ export function generate(cp: CheckedProgram): CodeBuffer {
     return cp.vars.get(scopedName(scope, name)) ?? cp.vars.get(name);
   }
 
-  const COMPARE_OPS = new Set(['==', '!=', '<', '>', '<=', '>=']);
+  /** The operators the 8-bit expression generator implements. */
+  const BYTE_OPS: ReadonlySet<BinaryOp> = new Set<BinaryOp>(['+', '-', '&', '|', '^']);
 
   /** True when the expression has a 16-bit value (the code generator only does 8-bit math). */
   function isU16(e: Expr): boolean {
@@ -70,7 +71,7 @@ export function generate(cp: CheckedProgram): CodeBuffer {
       case 'unary':
         return isU16(e.rhs);
       case 'binary':
-        return COMPARE_OPS.has(e.op) ? false : isU16(e.lhs) || isU16(e.rhs);
+        return isCompareOp(e.op) ? false : isU16(e.lhs) || isU16(e.rhs);
       default:
         return false;
     }
@@ -662,9 +663,9 @@ export function generate(cp: CheckedProgram): CodeBuffer {
       const add = e.op === '+';
       const [imm, zp, abs] = add ? [0x69, 0x65, 0x6d] : [0xe9, 0xe5, 0xed];
       emit(0xa5, ACC, add ? 0x18 : 0x38); // LDA lo; CLC | SEC
-      r.load(0, imm!, zp!, abs!);
+      r.load(0, imm, zp, abs);
       emit(0x85, ACC, 0xa5, ACC + 1); // STA lo; LDA hi
-      r.load(1, imm!, zp!, abs!);
+      r.load(1, imm, zp, abs);
       emit(0x85, ACC + 1);
       return;
     }
@@ -683,14 +684,14 @@ export function generate(cp: CheckedProgram): CodeBuffer {
     if (e.op === '&&' || e.op === '||') {
       throw new CodeGenError(`'${e.op}' is not supported yet`, e.line, 0);
     }
-    if (COMPARE_OPS.has(e.op)) {
+    if (isCompareOp(e.op)) {
       throw new CodeGenError(
         `comparison '${e.op}' can only be used as a condition (if / while / for)`,
         e.line,
         0,
       );
     }
-    if (!['+', '-', '&', '|', '^'].includes(e.op)) {
+    if (!BYTE_OPS.has(e.op)) {
       throw new CodeGenError(`operator '${e.op}' is not supported yet`, e.line, 0);
     }
     if (isU16(e.lhs) || isU16(e.rhs)) {
@@ -730,7 +731,7 @@ export function generate(cp: CheckedProgram): CodeBuffer {
   // Emit branch instruction(s) for a comparison operator.
   // invertForFalse=true: branch to label when condition is FALSE (skip body).
   // invertForFalse=false: branch to label when condition is TRUE.
-  function emitCondJump(op: string, label: string, invertForFalse: boolean): void {
+  function emitCondJump(op: CompareOp, label: string, invertForFalse: boolean): void {
     if (invertForFalse) {
       switch (op) {
         case '==':
@@ -767,10 +768,6 @@ export function generate(cp: CheckedProgram): CodeBuffer {
           emitLabel(okLabel);
           break;
         }
-        default:
-          emit(0xf0);
-          addFixup({ tag: 'branch8', label }, 1);
-          break;
       }
     } else {
       switch (op) {
@@ -808,10 +805,6 @@ export function generate(cp: CheckedProgram): CodeBuffer {
           addFixup({ tag: 'branch8', label }, 1); // BEQ → =
           break;
         }
-        default:
-          emit(0xd0);
-          addFixup({ tag: 'branch8', label }, 1);
-          break;
       }
     }
   }
@@ -851,7 +844,7 @@ export function generate(cp: CheckedProgram): CodeBuffer {
   }
 
   /** The 8-bit condition whose branch test matches the flags left by `genCompare16`. */
-  function jumpOp16(op: string): string {
+  function jumpOp16(op: CompareOp): CompareOp {
     if (op === '>') return '<'; // C clear after the swapped subtraction
     if (op === '<=') return '>=';
     return op;
@@ -867,7 +860,7 @@ export function generate(cp: CheckedProgram): CodeBuffer {
       throw new CodeGenError(`'${cond.op}' is not supported yet`, cond.line, 0);
     }
     const stay = freshLabel('cond_stay');
-    if (cond.tag === 'binary' && COMPARE_OPS.has(cond.op)) {
+    if (cond.tag === 'binary' && isCompareOp(cond.op)) {
       if (isU16(cond.lhs) || isU16(cond.rhs)) {
         genCompare16(cond);
         emitCondJump(jumpOp16(cond.op), stay, !invertForFalse);
@@ -1113,7 +1106,7 @@ export function generate(cp: CheckedProgram): CodeBuffer {
     }
   }
 
-  const COMPOUND_OPS: Record<string, string> = {
+  const COMPOUND_OPS: Partial<Record<AssignOp, BinaryOp>> = {
     '+=': '+',
     '-=': '-',
     '&=': '&',
