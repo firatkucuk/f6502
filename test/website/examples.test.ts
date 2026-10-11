@@ -97,3 +97,19 @@ describe('slideshow example (also the home page demo)', () => {
     expect(screen(boot(src(), slides * 150 + 40))).toEqual(title);
   });
 });
+
+describe('asm example', () => {
+  const src = () => EXAMPLES.find((e) => e.id === 'asm')!.source;
+
+  it('fills the screen with solid blocks and cycles four colour bands', () => {
+    const early = boot(src(), 20);
+    for (const addr of [0x0400, 0x05ff, 0x07e7]) expect(early.peek(addr)).toBe(0xa0);
+    const bands = (c: C64) => [0xd800, 0xd900, 0xda00, 0xdb00].map((a) => c.peek(a) & 0x0f);
+    const a = bands(early);
+    const b = bands(boot(src(), 60));
+    expect(b).not.toEqual(a);
+    // four neighbouring colours: each band is the previous one + 1 (mod 16)
+    expect(a[1]).toBe((a[0]! + 1) & 15);
+    expect(a[2]).toBe((a[0]! + 2) & 15);
+  });
+});

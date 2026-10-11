@@ -14,7 +14,7 @@ describe('errors', () => {
 describe('lexer', () => {
   it('tokenizes a minimal program', () => {
     const toks = tokenize('let x: u8 = 0;');
-    const kinds = toks.map(t => t.kind);
+    const kinds = toks.map((t) => t.kind);
     expect(kinds).toEqual(['let', 'ident', 'colon', 'u8', 'eq', 'int_lit', 'semicolon', 'eof']);
   });
 
@@ -32,21 +32,59 @@ describe('lexer', () => {
 
   it('skips line comments', () => {
     const toks = tokenize('let x: u8 // comment\n= 0;');
-    expect(toks.map(t => t.kind)).toEqual(['let', 'ident', 'colon', 'u8', 'eq', 'int_lit', 'semicolon', 'eof']);
+    expect(toks.map((t) => t.kind)).toEqual([
+      'let',
+      'ident',
+      'colon',
+      'u8',
+      'eq',
+      'int_lit',
+      'semicolon',
+      'eof',
+    ]);
   });
 
   it('tracks line numbers', () => {
     const toks = tokenize('let\nx: u8;');
-    const x = toks.find(t => t.text === 'x');
+    const x = toks.find((t) => t.text === 'x');
     expect(x?.line).toBe(2);
   });
 
   it('throws LexError on unknown character', () => {
-    expect(() => tokenize('let x = #;')).toThrow(LexError);
+    expect(() => tokenize('let x = `;')).toThrow(LexError);
   });
 
   it('tokenizes dollar_lbrace inside asm block', () => {
     const toks = tokenize('asm { lda ${count} }');
-    expect(toks.some(t => t.kind === 'dollar_lbrace')).toBe(true);
+    expect(toks.some((t) => t.kind === 'dollar_lbrace')).toBe(true);
+  });
+});
+
+describe('lexer: assembler tokens', () => {
+  it('lexes $HEX as an integer literal', () => {
+    const toks = tokenize('$D020 $1b $0');
+    expect(toks.map((t) => `${t.kind}:${t.text}`)).toEqual([
+      'int_lit:0xD020',
+      'int_lit:0x1b',
+      'int_lit:0x0',
+      'eof:',
+    ]);
+  });
+
+  it('lexes # as a token', () => {
+    expect(tokenize('#5').map((t) => t.kind)).toEqual(['hash', 'int_lit', 'eof']);
+  });
+
+  it('keeps ${ as the interpolation opener', () => {
+    expect(tokenize('${x}').map((t) => t.kind)).toEqual([
+      'dollar_lbrace',
+      'ident',
+      'rbrace',
+      'eof',
+    ]);
+  });
+
+  it('rejects a lone $', () => {
+    expect(() => tokenize('lda $ 5')).toThrow(/unexpected character '\$'/);
   });
 });
