@@ -61,29 +61,30 @@ program @ 0x0810 {
   {
     id: 'hello',
     title: 'Text on screen',
-    source: `// Write HELLO C64 into screen RAM (screen codes) and colour it white
+    source: `// Write HELLO C64 into screen RAM (screen codes) and colour it white.
+// screen(row, col) / color(row, col) turn a position into an address at compile time.
 program @ 0x0810 {
   clrscr();
   VIC2.borderColor = BLACK;
   VIC2.bgColor0 = BLACK;
 
-  poke(0x0400 + 495, 8);    // H   row 12, column 15
-  poke(0x0400 + 496, 5);    // E
-  poke(0x0400 + 497, 12);   // L
-  poke(0x0400 + 498, 12);   // L
-  poke(0x0400 + 499, 15);   // O
-  poke(0x0400 + 501, 3);    // C
-  poke(0x0400 + 502, 0x36); // 6
-  poke(0x0400 + 503, 0x34); // 4
+  poke(screen(12, 15), 8);    // H
+  poke(screen(12, 16), 5);    // E
+  poke(screen(12, 17), 12);   // L
+  poke(screen(12, 18), 12);   // L
+  poke(screen(12, 19), 15);   // O
+  poke(screen(12, 21), 3);    // C
+  poke(screen(12, 22), 0x36); // 6
+  poke(screen(12, 23), 0x34); // 4
 
-  poke(0xD800 + 495, WHITE);
-  poke(0xD800 + 496, WHITE);
-  poke(0xD800 + 497, WHITE);
-  poke(0xD800 + 498, WHITE);
-  poke(0xD800 + 499, WHITE);
-  poke(0xD800 + 501, WHITE);
-  poke(0xD800 + 502, WHITE);
-  poke(0xD800 + 503, WHITE);
+  poke(color(12, 15), WHITE);
+  poke(color(12, 16), WHITE);
+  poke(color(12, 17), WHITE);
+  poke(color(12, 18), WHITE);
+  poke(color(12, 19), WHITE);
+  poke(color(12, 21), WHITE);
+  poke(color(12, 22), WHITE);
+  poke(color(12, 23), WHITE);
   loop {}
 }
 `,

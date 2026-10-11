@@ -52,6 +52,8 @@ export function generate(cp: CheckedProgram): CodeBuffer {
       case 'cast':
         return e.toType.tag === 'u16';
       case 'call':
+        // screen() / color() are addresses: 16-bit values.
+        if (e.name === 'screen' || e.name === 'color') return true;
         return cp.fns.get(e.name)?.decl.ret.tag === 'u16';
       case 'unary':
         return isU16(e.rhs);
@@ -194,6 +196,10 @@ export function generate(cp: CheckedProgram): CodeBuffer {
       }
       const addrVal = evalConst(addrExpr);
       if (addrVal === null) {
+        // screen()/color() with a runtime row or column explain themselves better.
+        if (addrExpr.tag === 'call' && (addrExpr.name === 'screen' || addrExpr.name === 'color')) {
+          genCall(addrExpr);
+        }
         throw new CodeGenError('poke() address must be a compile-time constant', e.line, 0);
       }
       assertFits8(valueExpr, e.line, 'a byte');
@@ -205,6 +211,21 @@ export function generate(cp: CheckedProgram): CodeBuffer {
     }
     // ── built-in: clrscr() ────────────────────────────────────────────────
     if (e.name === 'clrscr') { genClrscr(); return; }
+
+    // ── built-ins: screen(row, col) / color(row, col) — compile-time addresses ──
+    if (e.name === 'screen' || e.name === 'color') {
+      const address = evalConst(e);
+      if (address === null) {
+        throw new CodeGenError(
+          `${e.name}(): row and column must be compile-time constants ` +
+            '(runtime positions need 16-bit arithmetic, which is not available yet)',
+          e.line,
+          0,
+        );
+      }
+      emit(0xA9, address & 0xFF);
+      return;
+    }
 
     // ── user function: bind the arguments to its parameter slots, then call ──
     const fn = cp.fns.get(e.name);

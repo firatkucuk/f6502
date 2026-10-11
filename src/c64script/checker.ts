@@ -44,7 +44,15 @@ export function scopedName(scope: string, name: string): string {
 const BUILTIN_FNS: ReadonlyMap<string, number> = new Map([
   ['poke', 2],
   ['clrscr', 0],
+  ['screen', 2],
+  ['color', 2],
 ]);
+
+/** Text screen geometry, for screen(row, col) and color(row, col). */
+const SCREEN_RAM = 0x0400;
+const COLOR_RAM = 0xd800;
+const SCREEN_ROWS = 25;
+const SCREEN_COLS = 40;
 
 /**
  * Folds an expression to a number when it is made only of literals and constants. Returns null
@@ -80,6 +88,19 @@ export function foldConst(
       if (e.op !== '!') return null;
       const v = foldConst(e.rhs, lookup);
       return v === null ? null : v === 0 ? 1 : 0;
+    }
+    case 'call': {
+      if (e.name !== 'screen' && e.name !== 'color') return null;
+      const row = e.args[0] !== undefined ? foldConst(e.args[0], lookup) : null;
+      const col = e.args[1] !== undefined ? foldConst(e.args[1], lookup) : null;
+      if (row === null || col === null) return null;
+      if (row >= SCREEN_ROWS) {
+        throw new TypeError(`${e.name}(): row ${row} is out of range 0..${SCREEN_ROWS - 1}`, e.line, 0);
+      }
+      if (col >= SCREEN_COLS) {
+        throw new TypeError(`${e.name}(): column ${col} is out of range 0..${SCREEN_COLS - 1}`, e.line, 0);
+      }
+      return (e.name === 'screen' ? SCREEN_RAM : COLOR_RAM) + row * SCREEN_COLS + col;
     }
     case 'binary': {
       const l = foldConst(e.lhs, lookup);

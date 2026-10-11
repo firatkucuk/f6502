@@ -14,7 +14,7 @@ const GRAMMAR = {
       /\b(?:BLACK|WHITE|RED|CYAN|PURPLE|GREEN|BLUE|YELLOW|ORANGE|BROWN|LIGHT_RED|DARK_GREY|MEDIUM_GREY|LIGHT_GREEN|LIGHT_BLUE|LIGHT_GREY)\b/,
     alias: 'boolean',
   },
-  builtin: { pattern: /\b(?:poke|clrscr|lo|hi)\b/, alias: 'function' },
+  builtin: { pattern: /\b(?:poke|clrscr|lo|hi|screen|color)(?=\s*\()/, alias: 'function' },
   number: /\b0x[0-9a-fA-F]+\b|\b\d+\b/,
   operator: /[-+*/=<>!&|^%]+/,
   punctuation: /[{}[\];(),.:]/,
