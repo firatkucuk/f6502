@@ -100,16 +100,34 @@ describe('slideshow example (also the home page demo)', () => {
 
 describe('asm example', () => {
   const src = () => EXAMPLES.find((e) => e.id === 'asm')!.source;
+  const colourOf = (c: C64, cell: number) => c.peek(0xd800 + cell) & 0x0f;
 
-  it('fills the screen with solid blocks and cycles four colour bands', () => {
+  it('paints solid blocks coloured by position, once', () => {
+    const c = boot(src(), 20);
+    for (const cell of [0, 1, 255, 256, 700, 999]) {
+      expect(c.peek(0x0400 + cell), `screen cell ${cell}`).toBe(0xa0);
+    }
+    // colour = low nibble of the cell index within each 256-cell page
+    for (const cell of [0, 1, 5, 15, 16, 17, 100, 255]) {
+      expect(colourOf(c, cell), `colour cell ${cell}`).toBe(cell & 0x0f);
+      expect(colourOf(c, 256 + cell)).toBe(cell & 0x0f);
+    }
+  });
+
+  it('does not repaint the screen or colour RAM after the first pass (no flicker)', () => {
     const early = boot(src(), 20);
-    for (const addr of [0x0400, 0x05ff, 0x07e7]) expect(early.peek(addr)).toBe(0xa0);
-    const bands = (c: C64) => [0xd800, 0xd900, 0xda00, 0xdb00].map((a) => c.peek(a) & 0x0f);
-    const a = bands(early);
-    const b = bands(boot(src(), 60));
-    expect(b).not.toEqual(a);
-    // four neighbouring colours: each band is the previous one + 1 (mod 16)
-    expect(a[1]).toBe((a[0]! + 1) & 15);
-    expect(a[2]).toBe((a[0]! + 2) & 15);
+    const later = boot(src(), 90);
+    for (const cell of [0, 7, 300, 640, 999]) {
+      expect(later.peek(0x0400 + cell)).toBe(early.peek(0x0400 + cell));
+      expect(colourOf(later, cell)).toBe(colourOf(early, cell));
+    }
+  });
+
+  it('steps only the border colour, once per frame, and slowly', () => {
+    const a = boot(src(), 20).peek(0xd020) & 0x0f;
+    const b = boot(src(), 60).peek(0xd020) & 0x0f;
+    expect(b).not.toBe(a);
+    // ticks advances once per frame and the colour is ticks / 4: 40 frames = 10 steps
+    expect((b - a + 16) % 16).toBe(10);
   });
 });
