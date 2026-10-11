@@ -1,0 +1,283 @@
+// Turbo Sprint: A/D or the arrow keys steer. SPACE starts a race or retries after a crash.
+// Three hardware sprites, a character-mode road, and no assembly or runtime multiplication.
+const SHAPE: u16 = 0x3000;    // aligned sprite RAM, outside the VIC-II character ROM window
+
+data @addr(SHAPE) {
+  carShape: [u8; 64] = [
+    0x00, 0x7E, 0x00,
+    0x00, 0xFF, 0x00,
+    0x01, 0xFF, 0x80,
+    0x01, 0xFF, 0x80,
+    0x0D, 0xFF, 0xB0,
+    0x0D, 0xFF, 0xB0,
+    0x0D, 0x81, 0xB0,
+    0x01, 0x81, 0x80,
+    0x01, 0x81, 0x80,
+    0x01, 0xFF, 0x80,
+    0x01, 0xFF, 0x80,
+    0x01, 0xFF, 0x80,
+    0x01, 0xFF, 0x80,
+    0x01, 0x81, 0x80,
+    0x0D, 0x81, 0xB0,
+    0x0D, 0xFF, 0xB0,
+    0x0D, 0xFF, 0xB0,
+    0x01, 0xFF, 0x80,
+    0x01, 0xFF, 0x80,
+    0x00, 0xFF, 0x00,
+    0x00, 0xFF, 0x00,
+    0,
+  ];
+  // Offset some cars within their lane so parking on a divider is never permanently safe.
+  lanes: [u8; 8] = [168, 224, 112, 176, 128, 208, 160, 120];
+}
+let @addr(0x3100) trafficX: [u8; 2];
+let @addr(0x3102) trafficY: [u8; 2];
+
+let @zp x: u8 = 168;
+let @zp alive: u8 = 1;
+let @zp speed: u8 = 2;
+let @zp gear: u8 = 1;
+let @zp passes: u8 = 0;
+let @zp hundreds: u8 = 0;
+let @zp tens: u8 = 0;
+let @zp ones: u8 = 0;
+let @zp laneIndex: u8 = 0;
+let @zp scroll: u8 = 0;
+let @zp roadTick: u8 = 0;
+
+fn frame(): void {
+  while (VIC2.rasterLine != 250) {}
+  while (VIC2.rasterLine == 250) {}
+}
+
+fn space(): u8 {
+  CIA1.portA = 0x7F;
+  if ((CIA1.portB & 0x10) == 0) { return 1; }
+  return 0;
+}
+
+fn leftKey(): u8 {
+  CIA1.portA = 0xFD;
+  if ((CIA1.portB & 0x04) == 0) { return 1; }
+  CIA1.portA = 0xFE;
+  if ((CIA1.portB & 0x04) == 0) {
+    CIA1.portA = 0xFD;
+    if ((CIA1.portB & 0x80) == 0) { return 1; }
+  }
+  return 0;
+}
+
+fn rightKey(): u8 {
+  CIA1.portA = 0xFB;
+  if ((CIA1.portB & 0x04) == 0) { return 1; }
+  CIA1.portA = 0xFE;
+  if ((CIA1.portB & 0x04) == 0) {
+    CIA1.portA = 0xFD;
+    if ((CIA1.portB & 0x80) != 0) { return 1; }
+  }
+  return 0;
+}
+
+// A held start key must be released before it can dismiss the next crash screen.
+fn waitForSpace(): void {
+  while (space() == 1) { frame(); }
+  while (space() == 0) { frame(); }
+}
+
+fn plot(row: u8, col: u8, hue: u8): void {
+  poke(screen(row, col), 0xA0);
+  poke(color(row, col), hue);
+}
+
+// The blocks stay in place; changing just their colours scrolls the dashes and kerbs.
+fn roadMarks(): void {
+  let stripe: u16 = color(2, 16);
+  let kerb: u16 = color(2, 10);
+  for (let row: u8 = 2; row < 23; row++) {
+    let phase: u8 = row - scroll;
+    let hue: u8 = COLOR_DARK_GREY;
+    if ((phase & 3) < 2) { hue = COLOR_WHITE; }
+    poke(stripe, hue);
+    poke(stripe + 6, hue);
+    hue = COLOR_RED;
+    if ((phase & 2) == 0) { hue = COLOR_WHITE; }
+    poke(kerb, hue);
+    poke(kerb + 19, hue);
+    stripe += 40;
+    kerb += 40;
+  }
+}
+
+fn drawField(): void {
+  VIC2.spriteEnable = 0;
+  clrscr();
+  for (let row: u8 = 2; row < 23; row++) {
+    for (let col: u8 = 0; col < 40; col++) {
+      let hue: u8 = COLOR_GREEN;
+      if (col >= 11) {
+        if (col < 29) { hue = COLOR_DARK_GREY; }
+      }
+      plot(row, col, hue);
+    }
+  }
+  // Roadside trees: small clusters of lighter blocks against the grass.
+  let treeRow: u8 = 4;
+  while (treeRow < 22) {
+    let row: u8 = treeRow;
+    plot(row, 4, COLOR_LIGHT_GREEN);
+    plot(row + 1, 3, COLOR_LIGHT_GREEN);
+    plot(row + 1, 4, COLOR_LIGHT_GREEN);
+    plot(row + 1, 5, COLOR_LIGHT_GREEN);
+    plot(row + 2, 4, COLOR_BROWN);
+    plot(row, 35, COLOR_LIGHT_GREEN);
+    plot(row + 1, 34, COLOR_LIGHT_GREEN);
+    plot(row + 1, 35, COLOR_LIGHT_GREEN);
+    plot(row + 1, 36, COLOR_LIGHT_GREEN);
+    plot(row + 2, 35, COLOR_BROWN);
+    treeRow = treeRow + 6;
+  }
+  roadMarks();
+  puts(0, 1, "TURBO SPRINT", COLOR_CYAN);
+  puts(0, 24, "PASS 000", COLOR_WHITE);
+  puts(0, 33, "GEAR 1", COLOR_YELLOW);
+  puts(24, 3, "A D OR ARROWS STEER   SPACE START", COLOR_LIGHT_GREY);
+}
+
+fn showCars(): void {
+  VIC2.sprite0x = x;
+  VIC2.sprite0y = 210;
+  VIC2.sprite1x = trafficX[0];
+  VIC2.sprite1y = trafficY[0];
+  VIC2.sprite2x = trafficX[1];
+  VIC2.sprite2y = trafficY[1];
+  VIC2.spriteEnable = 7;
+}
+
+fn resetGame(): void {
+  x = 168;
+  speed = 2;
+  gear = 1;
+  passes = 0;
+  hundreds = 0;
+  tens = 0;
+  ones = 0;
+  laneIndex = 0;
+  scroll = 0;
+  roadTick = 0;
+  alive = 1;
+  trafficX[0] = 216;
+  trafficY[0] = 62;
+  trafficX[1] = 120;
+  trafficY[1] = 150;
+  VIC2.borderColor = COLOR_BLACK;
+  VIC2.sprite0color = COLOR_CYAN;
+  drawField();
+  showCars();
+}
+
+fn steer(): void {
+  if (leftKey() == 1) {
+    if (x > 114) { x = x - 3; } else { x = 112; }
+  } else if (rightKey() == 1) {
+    if (x < 230) { x = x + 3; } else { x = 232; }
+  }
+}
+
+fn addScore(): void {
+  // Decimal digits avoid division. The score wraps after 999 overtakes.
+  ones = ones + 1;
+  if (ones == 10) {
+    ones = 0;
+    tens = tens + 1;
+    if (tens == 10) {
+      tens = 0;
+      hundreds = hundreds + 1;
+      if (hundreds == 10) { hundreds = 0; }
+    }
+  }
+  poke(screen(0, 29), hundreds + 0x30);
+  poke(screen(0, 30), tens + 0x30);
+  poke(screen(0, 31), ones + 0x30);
+  passes = passes + 1;
+  if (passes == 5) {
+    passes = 0;
+    if (gear < 3) {
+      gear = gear + 1;
+      speed = speed + 1;
+      poke(screen(0, 38), gear + 0x30);
+    }
+  }
+}
+
+fn moveTraffic(): void {
+  for (let car: u8 = 0; car < 2; car++) {
+    let y: u8 = trafficY[car] + speed;
+    if (y >= 234) {
+      y = 58;
+      trafficX[car] = lanes[laneIndex];
+      laneIndex = (laneIndex + 1) & 7;
+      addScore();
+    }
+    trafficY[car] = y;
+    let otherX: u8 = trafficX[car];
+    let otherRight: u8 = otherX + 18;
+    // The body and wheels fill the middle 18 pixels. Ignore transparent sprite margins.
+    if (y > 192) {
+      if (y < 230) {
+        if (x + 18 > otherX) {
+          if (x < otherRight) { alive = 0; }
+        }
+      }
+    }
+  }
+}
+
+fn play(): void {
+  while (alive == 1) {
+    frame();
+    steer();
+    moveTraffic();
+    showCars();
+    roadTick = roadTick + speed;
+    if (roadTick >= 8) {
+      roadTick = roadTick - 8;
+      scroll = (scroll + 1) & 3;
+      roadMarks();
+    }
+  }
+}
+
+program @ 0x0810 {
+  VIC2.ctrl1 = 0x1B;
+  VIC2.ctrl2 = 0x08;
+  VIC2.memPointers = 0x15;
+  VIC2.bgColor0 = COLOR_BLACK;
+  VIC2.spriteXmsb = 0;
+  VIC2.spriteYexp = 0;
+  poke(0xD01D, 0);            // normal sprite width
+  poke(0xD01C, 0);            // monochrome sprites
+  poke(0xD01B, 0);            // cars in front of the road's solid characters
+  CIA1.ddrA = 0xFF;
+  CIA1.ddrB = 0;
+  poke(SPRITE_PTRS, spritePtr(SHAPE));
+  poke(SPRITE_PTRS + 1, spritePtr(SHAPE));
+  poke(SPRITE_PTRS + 2, spritePtr(SHAPE));
+  VIC2.sprite1color = COLOR_YELLOW;
+  VIC2.sprite2color = COLOR_LIGHT_RED;
+  resetGame();
+  VIC2.spriteEnable = 1;      // keep traffic from covering the title instructions
+  puts(7, 14, "TURBO SPRINT", COLOR_WHITE);
+  puts(10, 12, "DODGE THE TRAFFIC", COLOR_YELLOW);
+  puts(12, 14, "PRESS SPACE", COLOR_WHITE);
+  puts(14, 12, "PASS CARS TO SCORE", COLOR_CYAN);
+  waitForSpace();
+  loop {
+    resetGame();
+    play();
+    VIC2.borderColor = COLOR_RED;
+    VIC2.sprite0color = COLOR_WHITE;
+    puts(10, 15, "CRASH", COLOR_YELLOW);
+    puts(12, 13, "SPACE TO RETRY", COLOR_WHITE);
+    waitForSpace();
+  }
+}

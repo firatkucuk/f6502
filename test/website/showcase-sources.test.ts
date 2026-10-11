@@ -363,11 +363,231 @@ describe('showcases are written in plain C64Script', () => {
     'space-invaders',
     'music-box',
     'crystal-climb',
+    'turbo-sprint',
   ]) {
     it(`${id} has no inline assembly`, () => {
       expect(source(id)).not.toMatch(/\basm\b\s*(clobbers\s*\([^)]*\)\s*)?\{/);
     });
   }
+});
+
+describe('showcase: turbo-sprint', () => {
+  const run = (c: C64, frames: number) => {
+    for (let i = 0; i < frames; i++) c.runFrame();
+  };
+  const cell = (c: C64, row: number, col: number) => c.peek(0x0400 + row * 40 + col);
+  const text = (c: C64, row: number, col: number, length: number) =>
+    Array.from({ length }, (_, i) => cell(c, row, col + i))
+      .map((v) => String.fromCharCode(v >= 1 && v <= 26 ? v + 64 : v))
+      .join('');
+  const cars = (c: C64) => Array.from({ length: 6 }, (_, i) => c.peek(0xd000 + i));
+  const x = (c: C64) => c.peek(0xd000);
+  const traffic = (c: C64) => [
+    { x: c.peek(0xd002), y: c.peek(0xd003) },
+    { x: c.peek(0xd004), y: c.peek(0xd005) },
+  ];
+  const score = (c: C64) =>
+    (cell(c, 0, 29) - 0x30) * 100 + (cell(c, 0, 30) - 0x30) * 10 + cell(c, 0, 31) - 0x30;
+  const gear = (c: C64) => cell(c, 0, 38) - 0x30;
+  const crashed = (c: C64) => text(c, 10, 15, 5) === 'CRASH';
+  const hold = (c: C64, key: 'A' | 'D' | 'SPACE', frames: number) => {
+    c.keyDown(key);
+    run(c, frames);
+    c.keyUp(key);
+  };
+  const started = (): C64 => {
+    const c = boot(source('turbo-sprint'), 90);
+    hold(c, 'SPACE', 3);
+    // Drawing the field takes multiple emulated frames. Stop as soon as traffic starts.
+    for (let f = 0; f < 90 && c.peek(0xd003) === 62; f++) c.runFrame();
+    expect(c.peek(0xd003)).toBeGreaterThan(62);
+    return c;
+  };
+  /** Avoid cars nearing the player; distant cars must not force a cut across closer traffic. */
+  const driveFrame = (c: C64) => {
+    const occupied = traffic(c).filter((car) => car.y > 120 && car.y < 230);
+    const safe = [120, 168, 216].filter((lane) =>
+      occupied.every((car) => Math.abs(car.x - lane) >= 18),
+    );
+    safe.sort((a, b) => Math.abs(a - x(c)) - Math.abs(b - x(c)));
+    const target = safe[0]!;
+    const key = x(c) < target ? 'D' : x(c) > target ? 'A' : undefined;
+    if (key) c.keyDown(key);
+    c.runFrame();
+    if (key) c.keyUp(key);
+  };
+
+  it('draws the road, cars and title, then waits for SPACE', () => {
+    const c = boot(source('turbo-sprint'), 90);
+    expect(c.peek(0xd015)).toBe(1);
+    expect(c.peek(0xd000)).toBe(168);
+    expect(c.peek(0xd001)).toBe(210);
+    expect(c.peek(0x0400 + 12 * 40 + 14)).toBe(16); // PRESS SPACE
+    expect(c.peek(0x0400 + 3 * 40 + 12)).toBe(0xa0);
+    expect(c.peek(0xd800 + 3 * 40 + 12) & 15).toBe(11);
+    expect(c.peek(0xd800 + 3 * 40 + 2) & 15).toBe(5);
+    expect(traffic(c)).toEqual([
+      { x: 216, y: 62 },
+      { x: 120, y: 150 },
+    ]);
+    expect(score(c)).toBe(0);
+    expect(gear(c)).toBe(1);
+    const before = cars(c);
+    hold(c, 'D', 20);
+    expect(cars(c)).toEqual(before);
+  });
+
+  it('starts on SPACE, moves traffic, and animates the road markings', () => {
+    const c = started();
+    expect(c.peek(0xd015)).toBe(7);
+    expect(text(c, 12, 14, 11)).not.toBe('PRESS SPACE');
+    const before = traffic(c);
+    const stripes = () =>
+      Array.from({ length: 21 }, (_, i) => c.peek(0xd800 + (i + 2) * 40 + 16) & 15);
+    const initialStripes = stripes();
+    let changed = false;
+    for (let f = 0; f < 8; f++) {
+      c.runFrame();
+      if (stripes().some((hue, i) => hue !== initialStripes[i])) changed = true;
+    }
+    expect(traffic(c)[0]!.y).toBeGreaterThan(before[0]!.y);
+    expect(traffic(c)[1]!.y).toBeGreaterThan(before[1]!.y);
+    expect(changed).toBe(true);
+    expect(score(c)).toBe(0);
+  });
+
+  it('steers with A/D and both cursor directions', () => {
+    const c = started();
+    const middle = x(c);
+    hold(c, 'A', 4);
+    const left = x(c);
+    expect(left).toBeLessThan(middle);
+    hold(c, 'D', 4);
+    expect(x(c)).toBe(middle);
+    c.keyDown('CRSR_RIGHT');
+    run(c, 4);
+    c.keyUp('CRSR_RIGHT');
+    expect(x(c)).toBeGreaterThan(middle);
+    c.keyDown('LSHIFT');
+    c.keyDown('CRSR_RIGHT');
+    run(c, 4);
+    c.keyUp('CRSR_RIGHT');
+    c.keyUp('LSHIFT');
+    expect(x(c)).toBe(middle);
+    expect(crashed(c)).toBe(false);
+  });
+
+  it('clamps steering to both edges of the road', () => {
+    const right = started();
+    hold(right, 'D', 30);
+    expect(x(right)).toBe(232);
+    expect(crashed(right)).toBe(false);
+    const left = started();
+    run(left, 50); // let the car initially in the left lane pass first
+    hold(left, 'A', 25);
+    expect(x(left)).toBe(112);
+    expect(crashed(left)).toBe(false);
+  });
+
+  it('eventually catches a car parked between either pair of traffic lanes', () => {
+    for (const [key, parkedX] of [
+      ['A', 144],
+      ['D', 192],
+    ] as const) {
+      const c = started();
+      hold(c, key, 8);
+      expect(x(c)).toBe(parkedX);
+      for (let f = 0; f < 900 && !crashed(c); f++) c.runFrame();
+      expect(crashed(c), `a parked car at X=${parkedX} must face traffic`).toBe(true);
+    }
+  }, 15000);
+
+  it('scores passed cars, recycles them into lanes and increases speed up to third gear', () => {
+    const c = started();
+    const initialY = c.peek(0xd003);
+    run(c, 5);
+    const initialDistance = c.peek(0xd003) - initialY;
+    expect(initialDistance).toBeGreaterThanOrEqual(8);
+    expect(initialDistance).toBeLessThanOrEqual(12);
+    let recycled = false;
+    let reachedSecond = false;
+    let reachedThird = false;
+    for (let f = 0; f < 1600 && score(c) < 16 && !crashed(c); f++) {
+      const before = traffic(c);
+      driveFrame(c);
+      for (const [i, car] of traffic(c).entries()) {
+        expect(car.x).toBeGreaterThanOrEqual(112);
+        expect(car.x).toBeLessThanOrEqual(232);
+        if (car.y < before[i]!.y) {
+          recycled = true;
+          expect(car.y).toBeGreaterThanOrEqual(58);
+          expect(car.y).toBeLessThanOrEqual(62);
+        }
+      }
+      if (score(c) >= 5 && score(c) < 10) {
+        reachedSecond = true;
+        expect(gear(c)).toBe(2);
+      }
+      if (score(c) >= 10) {
+        reachedThird = true;
+        expect(gear(c)).toBe(3);
+      }
+    }
+    expect(crashed(c)).toBe(false);
+    expect(recycled).toBe(true);
+    expect(reachedSecond).toBe(true);
+    expect(reachedThird).toBe(true);
+    expect(score(c)).toBeGreaterThanOrEqual(16);
+    expect(gear(c)).toBe(3);
+    for (const col of [29, 30, 31]) {
+      expect(cell(c, 0, col)).toBeGreaterThanOrEqual(0x30);
+      expect(cell(c, 0, col)).toBeLessThanOrEqual(0x39);
+    }
+    // Read one car safely away from its wrap point to measure the final traffic speed.
+    const sprite = traffic(c)[0]!.y < 205 ? 0 : 1;
+    const before = traffic(c)[sprite]!.y;
+    for (let f = 0; f < 5; f++) driveFrame(c);
+    expect(traffic(c)[sprite]!.y - before).toBeGreaterThan(initialDistance);
+  }, 15000);
+
+  it('freezes on a crash and requires a fresh SPACE press to reset the race', () => {
+    const c = started();
+    for (let f = 0; f < 800 && score(c) < 5 && !crashed(c); f++) driveFrame(c);
+    expect(score(c)).toBeGreaterThanOrEqual(5);
+    expect(gear(c)).toBe(2);
+    c.keyDown('SPACE'); // a held key must not skip the crash message
+    const approaching = traffic(c).sort((a, b) => a.y - b.y)[0]!;
+    for (let f = 0; f < 150 && !crashed(c); f++) {
+      const key = x(c) < approaching.x ? 'D' : x(c) > approaching.x ? 'A' : undefined;
+      if (key) c.keyDown(key);
+      c.runFrame();
+      if (key) c.keyUp(key);
+    }
+    run(c, 2); // let both message lines finish drawing
+    expect(crashed(c)).toBe(true);
+    expect(text(c, 12, 13, 14)).toBe('SPACE TO RETRY');
+    expect(c.peek(0xd020) & 15).toBe(2);
+    const stopped = cars(c);
+    const finalScore = score(c);
+    hold(c, 'D', 20);
+    expect(cars(c)).toEqual(stopped);
+    expect(score(c)).toBe(finalScore);
+    expect(crashed(c)).toBe(true);
+    c.keyUp('SPACE');
+    run(c, 3);
+    expect(crashed(c)).toBe(true);
+    hold(c, 'SPACE', 3);
+    for (let f = 0; f < 90 && (c.peek(0xd015) !== 7 || score(c) !== 0); f++) c.runFrame();
+    expect(crashed(c)).toBe(false);
+    expect(x(c)).toBe(168);
+    expect(c.peek(0xd001)).toBe(210);
+    expect(score(c)).toBe(0);
+    expect(gear(c)).toBe(1);
+    expect(c.peek(0xd020) & 15).not.toBe(2);
+    const before = c.peek(0xd003);
+    run(c, 5);
+    expect(c.peek(0xd003)).toBeGreaterThan(before);
+  });
 });
 
 describe('showcase: crystal-climb', () => {
