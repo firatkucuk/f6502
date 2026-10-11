@@ -21,7 +21,7 @@ data @addr(0x2100) {
 
 let @zp fx: u8 = 0;          // the block's leftmost column (0..8)
 let @zp fdir: u8 = 1;        // 1 while the block moves right
-let @zp top: u8 = 3;         // the top invader row (3..13); the rows are two apart
+let @zp top: u8 = 3;         // the top invader row (3..14); the rows are two apart
 let @zp remaining: u8 = 40;  // invaders still alive
 let @zp period: u8 = 12;     // frames between block moves; shorter as the block thins
 let @zp moveTick: u8 = 0;    // frames since the block last moved
@@ -199,7 +199,7 @@ fn stepBullet(): void {
 }
 
 // Moves the block one step: sideways, or down one row and back the other way at an edge.
-// A block that reaches the cannon's row loses the game.
+// A block whose lowest row reaches the cannon's row loses the game.
 fn stepFormation(): void {
   let prev: u8 = top;
   if (fdir == 1) {
@@ -218,7 +218,7 @@ fn stepFormation(): void {
     }
   }
   if (top != prev) { clearBand(prev); }
-  if (top == 13) { outcome = 2; }
+  if (top == 14) { outcome = 2; }
   drawFormation();
 }
 
