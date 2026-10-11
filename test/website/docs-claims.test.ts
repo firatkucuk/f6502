@@ -139,10 +139,10 @@ describe('every row of the "not in the language yet" table is true', () => {
     ['for step +=', P('for (let i: u8 = 0; i < 8; i += 2) { }'), parseErr, 'parse'],
     ['for empty init', P('let i: u8 = 0; for (; i < 3; i++) { }'), parseErr, 'parse'],
     [
-      'array indexing',
-      P('buf[1] = 5;', 'let @zp buf: [u8; 4];'),
-      /array indexing is not supported yet/,
-      'codegen',
+      'arrays of u16',
+      P('', 'let @zp buf: [u16; 4];'),
+      /arrays of u16 are not supported yet/,
+      'type',
     ],
     ['block comment', P('/* hi */ VIC2.borderColor = 1;'), parseErr, 'parse'],
     [
@@ -156,12 +156,6 @@ describe('every row of the "not in the language yet" table is true', () => {
       P('VIC2.borderColor = twice(twice(1));', 'fn twice(x: u8): u8 { return x + x; }'),
       /argument of 'twice' calls 'twice'/,
       'type',
-    ],
-    [
-      '16-bit arithmetic',
-      P('w = w + 1;', 'let @zp w: u16 = 0;'),
-      /16-bit arithmetic is not supported yet/,
-      'codegen',
     ],
   ];
 
@@ -195,9 +189,23 @@ describe('the types table', () => {
     for (const t of ['u8', 'u16', 'bool']) expect(table).toContain(`<code>${t}</code>`);
   });
 
-  it('describes u16 as it behaves today (arithmetic and comparison are compile errors)', () => {
+  it('describes u16 as it behaves today (16-bit arithmetic and comparison work)', () => {
     expect(table).not.toMatch(/arithmetic on it is incomplete/);
-    expect(table).toMatch(/compile error/);
+    expect(table).not.toMatch(/Arithmetic and comparison on it are compile errors/);
+    expect(table).toMatch(/added to and subtracted from, compared/);
+  });
+
+  it('no longer describes limitations that were removed', () => {
+    for (const stale of [
+      'The address must be known at compile time',
+      'Array indexing parses but is a compile error',
+      'poke() needs a constant address',
+      'If you want to add arrays',
+      'arithmetic and comparison are compile errors',
+      'accepted but cannot be used yet\n      (indexing',
+    ]) {
+      expect(html, stale).not.toContain(stale);
+    }
   });
 });
 
@@ -233,5 +241,76 @@ describe('named addresses', () => {
       /@addr\(\.\.\.\) must be a compile-time constant/,
       1,
     );
+  });
+});
+
+describe('16-bit values in the guide', () => {
+  it('the sixteen-bit sample sums to 3000 and finishes', () => {
+    const at = html.indexOf('sixteen-bit.c64s');
+    expect(at).toBeGreaterThan(0);
+    const pre = html.slice(html.indexOf('<pre', at), html.indexOf('</pre>', at));
+    const src = pre
+      .replace(/<[^>]+>/g, '')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&amp;/g, '&');
+    const c = boot(src, 60);
+    expect(c.peek(0x0900) | (c.peek(0x0901) << 8)).toBe(3000);
+    expect(c.peek(0xd020) & 15).toBe(5);
+  });
+});
+
+describe('computed addresses in the guide', () => {
+  it('the diagonal sample fills the diagonal', () => {
+    const at = html.indexOf('computed-address.c64s');
+    expect(at).toBeGreaterThan(0);
+    const pre = html.slice(html.indexOf('<pre', at), html.indexOf('</pre>', at));
+    const src = pre
+      .replace(/<[^>]+>/g, '')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&amp;/g, '&');
+    const c = boot(src, 6);
+    for (const r of [0, 7, 24]) {
+      expect(c.peek(0x0400 + r * 40 + r)).toBe(0xa0);
+      expect(c.peek(0xd800 + r * 40 + r) & 15).toBe(7);
+    }
+    expect(c.peek(0x0400 + 1)).not.toBe(0xa0);
+  });
+});
+
+describe('arrays in the guide', () => {
+  it('the arrays sample copies and increments a table', () => {
+    const at = html.indexOf('arrays.c64s');
+    expect(at).toBeGreaterThan(0);
+    const pre = html.slice(html.indexOf('<pre', at), html.indexOf('</pre>', at));
+    const src = pre
+      .replace(/<[^>]+>/g, '')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&amp;/g, '&');
+    const c = boot(src, 6);
+    expect(Array.from({ length: 8 }, (_, i) => c.peek(0x0c10 + i))).toEqual([
+      1, 2, 5, 10, 17, 26, 37, 50,
+    ]);
+    expect(c.peek(0xd020) & 15).toBe(10);
+  });
+});
+
+describe('array caveats in the guide', () => {
+  it('says that a compound assignment evaluates the index twice, and that is what happens', () => {
+    expect(text).toMatch(/work the index out twice/);
+    const c = boot(
+      `let @addr(0x0C00) a: [u8; 4];
+let @zp calls: u8 = 0;
+fn f(): u8 { calls++; return 1; }
+program @ 0x0810 {
+  a[f()] += 1;
+  poke(0x0900, calls);
+  loop {}
+}`,
+      3,
+    );
+    expect(c.peek(0x0900)).toBe(2);
   });
 });

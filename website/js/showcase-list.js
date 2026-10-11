@@ -11,13 +11,13 @@ export const SHOWCASES = [
     id: 'character-art',
     title: 'Character Mode Art',
     blurb:
-      'A sunset painted in character mode: one solid-block character, a colour per row, and a few lines of inline assembly to fill the 40 × 25 screen.',
+      'A sunset painted in character mode: one solid-block character and a colour per row, filled across the 40 × 25 screen with two nested loops.',
   },
   {
     id: 'sprite-dance',
     title: 'Sprite Dance',
     blurb:
-      'Eight hardware sprites share one shape and chase each other around a figure of eight. The path is read from a sine table with a few lines of inline assembly.',
+      'Eight hardware sprites share one shape and chase each other around a figure of eight. The path is read from a sine table with wave[i].',
   },
   {
     id: 'flappy-bird',

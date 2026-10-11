@@ -176,19 +176,17 @@ describe('u16', () => {
     expect(background(c)).toBe(0);
   });
 
-  it('rejects 16-bit arithmetic and comparison instead of using the low byte', () => {
-    expectError(
-      'let @zp w: u16 = 0;\nprogram @ 0x0810 {\n  w = w + 1;\n  loop {}\n}',
-      'codegen',
-      /16-bit/,
-      3,
-    );
-    expectError(
-      'let @zp w: u16 = 0;\nprogram @ 0x0810 {\n  if (w < 300) { VIC2.borderColor = 1; }\n  loop {}\n}',
-      'codegen',
-      /16-bit/,
-      3,
-    );
+  it('compares the whole 16-bit value, not its low byte', () => {
+    // 300 = 0x012C: the low byte alone (44) is below 100 and below 300.
+    const c = boot(`
+      let @zp w: u16 = 300;
+      program @ 0x0810 {
+        if (w < 100) { VIC2.borderColor = 1; }
+        if (w == 300) { VIC2.bgColor0 = 2; }
+        loop {}
+      }`);
+    expect(border(c)).toBe(0);
+    expect(background(c)).toBe(2);
   });
 });
 
@@ -233,11 +231,11 @@ describe('unsupported constructs are errors, not no-ops', () => {
     );
   });
 
-  it('array indexing', () => {
+  it('indexing something that is not an array', () => {
     expectError(
       'let @zp a: u8 = 0;\nprogram @ 0x0810 {\n  a = a[1];\n  loop {}\n}',
-      'codegen',
-      /indexing/,
+      'type',
+      /'a' is not an array/,
       3,
     );
   });

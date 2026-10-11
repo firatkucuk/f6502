@@ -32,7 +32,7 @@ describe('showcase: rainbow-border', () => {
 });
 
 describe('showcase: character-art', () => {
-  const c = boot(source('character-art'), 4);
+  const c = boot(source('character-art'), 30); // 1000 cells painted by loops take ~20 frames
   const cell = (r: number, col: number) => c.peek(0x0400 + r * 40 + col);
   const colour = (r: number, col: number) => c.peek(0xd800 + r * 40 + col) & 15;
 
@@ -177,6 +177,11 @@ describe('showcase: flappy-bird', () => {
   const run = (c: Game, frames: number) => {
     for (let i = 0; i < frames; i++) c.runFrame();
   };
+  /** Runs until the title is on screen (the loops paint the sky and ground first). */
+  const toTitle = (c: Game) => {
+    for (let i = 0; i < 120 && text(c, 11, 14, 11) !== 'PRESS SPACE'; i++) c.runFrame();
+    run(c, 2); // the game is now waiting for a fresh press
+  };
   const tap = (c: Game) => {
     c.keyDown('SPACE');
     run(c, 3);
@@ -213,7 +218,7 @@ describe('showcase: flappy-bird', () => {
 
   it('opens on a title: sky, ground, a waiting bird', () => {
     const c = newGame();
-    run(c, 4);
+    toTitle(c);
     expect(text(c, 11, 14, 11)).toBe('PRESS SPACE');
     expect(text(c, 7, 14, 11)).toBe('FLAPPY BIRD');
     expect(c.peek(0xd021) & 15).toBe(14);
@@ -236,7 +241,7 @@ describe('showcase: flappy-bird', () => {
 
   it('flaps up, then falls faster and faster', () => {
     const c = newGame();
-    run(c, 3);
+    toTitle(c);
     c.keyDown('SPACE');
     run(c, 2);
     c.keyUp('SPACE');
@@ -256,7 +261,7 @@ describe('showcase: flappy-bird', () => {
   it('the ceiling is safe: the VIC-II border idle byte at $3FFF is clear', () => {
     const c = newGame();
     c.pokeRam(0x3fff, 0xff); // a machine that powers up with it set
-    run(c, 3);
+    toTitle(c);
     tap(c);
     // keep climbing: tap every 12 frames, the bird reaches the ceiling and stays alive
     for (let f = 0; f < 120; f++) {
@@ -271,7 +276,7 @@ describe('showcase: flappy-bird', () => {
 
   it('each tap of SPACE is one flap, holding it is not a flap per frame', () => {
     const c = newGame();
-    run(c, 3);
+    toTitle(c);
     c.keyDown('SPACE');
     run(c, 60);
     expect(y(c)).toBeGreaterThan(100); // held: one flap only, then it fell
@@ -279,7 +284,7 @@ describe('showcase: flappy-bird', () => {
 
   it('draws pipes with an 8-row hole, scrolling in from the right', () => {
     const c = newGame();
-    run(c, 3);
+    toTitle(c);
     tap(c);
     autopilot(c, 70);
     const hole = nextHole(c);
@@ -298,7 +303,7 @@ describe('showcase: flappy-bird', () => {
 
   it('a pipe that is flown through scores a point', () => {
     const c = newGame();
-    run(c, 3);
+    toTitle(c);
     tap(c);
     autopilot(c, 900);
     expect(text(c, 9, 15, 9)).not.toBe('GAME OVER');
@@ -311,7 +316,7 @@ describe('showcase: flappy-bird', () => {
 
   it('falling to the ground ends the game', () => {
     const c = newGame();
-    run(c, 3);
+    toTitle(c);
     tap(c);
     run(c, 120);
     expect(text(c, 9, 15, 9)).toBe('GAME OVER');
@@ -320,7 +325,7 @@ describe('showcase: flappy-bird', () => {
 
   it('flying into a pipe ends the game, in mid-air', () => {
     const c = newGame();
-    run(c, 3);
+    toTitle(c);
     tap(c);
     // hug the ceiling: every hole starts below row 3, so the first pipe is solid there
     autopilot(c, 400, () => 56);
@@ -330,22 +335,29 @@ describe('showcase: flappy-bird', () => {
 
   it('the game over screen waits for SPACE, then a fresh game starts at once', () => {
     const c = newGame();
-    run(c, 3);
+    toTitle(c);
     tap(c);
     autopilot(c, 400, () => 56);
     expect(text(c, 9, 15, 9)).toBe('GAME OVER');
     run(c, 200); // it stays
     expect(text(c, 9, 15, 9)).toBe('GAME OVER');
     tap(c);
-    run(c, 2);
+    run(c, 4);
     expect(text(c, 9, 15, 9)).toBe('         '); // cleared
     expect(text(c, 11, 14, 11)).toBe('           '); // and no title the second time
+    run(c, 30); // the loops repaint the sky and ground, then the new game is under way
     expect(score(c)).toBe(0);
-    expect(nextHole(c)).toBeNull();
-    expect(y(c)).toBeGreaterThan(80);
-    expect(y(c)).toBeLessThan(110);
-    run(c, 30);
-    expect(y(c)).toBeGreaterThan(70); // flying again
+    expect(y(c)).toBeGreaterThan(60);
+    expect(y(c)).toBeLessThan(150);
+    expect(text(c, 9, 15, 9)).not.toBe('GAME OVER'); // flying again
     expect(c.peek(0xd015)).toBe(1);
   });
+});
+
+describe('showcases are written in plain C64Script', () => {
+  for (const id of ['character-art', 'sprite-dance', 'flappy-bird', 'rainbow-border']) {
+    it(`${id} has no inline assembly`, () => {
+      expect(source(id)).not.toMatch(/\basm\b\s*(clobbers\s*\([^)]*\)\s*)?\{/);
+    });
+  }
 });

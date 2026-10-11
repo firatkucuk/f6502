@@ -29,6 +29,10 @@ export interface CodeBuffer {
 
 type LoopContext = { breakLabel: string; continueLabel: string };
 
+/** Zero page the compiler keeps for itself ($F8–$FF are outside the allocator's range). */
+const ACC = 0xf8; // 16-bit accumulator: low at $F8, high at $F9; also the pointer for (zp),Y
+const TMP2 = 0xfa; // second 16-bit temporary ($FA/$FB)
+
 export function generate(cp: CheckedProgram): CodeBuffer {
   const bytes: number[] = [];
   const labels = new Map<string, number>();
@@ -54,6 +58,7 @@ export function generate(cp: CheckedProgram): CodeBuffer {
       case 'ident': {
         const v = lookup(e.name);
         if (v === undefined) return false;
+        if (v.type.tag === 'array') return true; // its address
         return v.isConst ? (v.constValue ?? 0) > 0xff : v.type.tag === 'u16';
       }
       case 'cast':
@@ -150,6 +155,13 @@ export function generate(cp: CheckedProgram): CodeBuffer {
         emit(0xe9, 0x01); // SBC #1
       }
       emit(0x8d, addr & 0xff, (addr >> 8) & 0xff); // STA abs
+    } else if (lhs.tag === 'index') {
+      const one: Expr = { tag: 'intLit', value: 1, line: lhs.line };
+      genAssign(
+        lhs,
+        { tag: 'binary', op: op === '++' ? '+' : '-', lhs, rhs: one, line: lhs.line },
+        lhs.line,
+      );
     } else {
       throw new CodeGenError(`cannot apply '${op}' here`, lhs.line, 0);
     }
@@ -205,11 +217,16 @@ export function generate(cp: CheckedProgram): CodeBuffer {
       }
       const addrVal = evalConst(addrExpr);
       if (addrVal === null) {
-        // screen()/color() with a runtime row or column explain themselves better.
-        if (addrExpr.tag === 'call' && (addrExpr.name === 'screen' || addrExpr.name === 'color')) {
-          genCall(addrExpr);
-        }
-        throw new CodeGenError('poke() address must be a compile-time constant', e.line, 0);
+        // A computed address: the value waits on the stack while the address is built in ACC,
+        // which is then the pointer for STA (ACC),Y.
+        assertFits8(valueExpr, e.line, 'a byte');
+        const byteConst = evalConst(valueExpr);
+        if (byteConst !== null) emit(0xa9, byteConst & 0xff);
+        else genExpr(valueExpr);
+        emit(0x48); // PHA: the value waits on the stack while the address is built
+        gen16(addrExpr);
+        emit(0x68, 0xa0, 0x00, 0x91, ACC); // PLA; LDY #0; STA (ACC),Y
+        return;
       }
       assertFits8(valueExpr, e.line, 'a byte');
       const byteVal = evalConst(valueExpr);
@@ -232,7 +249,7 @@ export function generate(cp: CheckedProgram): CodeBuffer {
       if (row === null || col === null) {
         throw new CodeGenError(
           'puts(): row and column must be compile-time constants ' +
-            '(runtime positions need 16-bit arithmetic, which is not available yet)',
+            '(use poke(screen(row, col), code) for a position known only at run time)',
           e.line,
           0,
         );
@@ -262,6 +279,20 @@ export function generate(cp: CheckedProgram): CodeBuffer {
       return;
     }
 
+    // ── built-in: peek(addr) — the byte at any address ──
+    if (e.name === 'peek') {
+      const a = e.args[0];
+      if (a === undefined) throw new CodeGenError('peek() takes an address', e.line, 0);
+      const c = evalConst(a);
+      if (c !== null) {
+        emit(0xad, c & 0xff, (c >> 8) & 0xff); // LDA abs
+        return;
+      }
+      gen16(a);
+      emit(0xa0, 0x00, 0xb1, ACC); // LDY #0; LDA (ACC),Y
+      return;
+    }
+
     // ── built-ins: spritePtr(addr) — the pointer value for sprite data at addr ──
     if (e.name === 'spritePtr') {
       const value = evalConst(e);
@@ -280,12 +311,9 @@ export function generate(cp: CheckedProgram): CodeBuffer {
     if (e.name === 'screen' || e.name === 'color') {
       const address = evalConst(e);
       if (address === null) {
-        throw new CodeGenError(
-          `${e.name}(): row and column must be compile-time constants ` +
-            '(runtime positions need 16-bit arithmetic, which is not available yet)',
-          e.line,
-          0,
-        );
+        genScreenAddr(e);
+        emit(0xa5, ACC); // the low byte, as for any address in an 8-bit context
+        return;
       }
       emit(0xa9, address & 0xff);
       return;
@@ -363,6 +391,11 @@ export function generate(cp: CheckedProgram): CodeBuffer {
         return;
       }
     }
+    if (isU16(arg)) {
+      gen16(arg);
+      emit(0xa5, ACC + (high ? 1 : 0));
+      return;
+    }
     throw new CodeGenError(`${high ? 'hi' : 'lo'}() needs a variable or a constant`, line, 0);
   }
 
@@ -417,7 +450,10 @@ export function generate(cp: CheckedProgram): CodeBuffer {
         break;
       }
       case 'cast':
-        genExpr(e.expr);
+        if (e.toType.tag === 'u8' && isU16(e.expr) && evalConst(e.expr) === null) {
+          gen16(e.expr); // narrowing a 16-bit expression keeps its low byte
+          emit(0xa5, ACC);
+        } else genExpr(e.expr);
         break;
       case 'call':
         genCall(e);
@@ -429,7 +465,8 @@ export function generate(cp: CheckedProgram): CodeBuffer {
         genByteOf(e.expr, true, e.line);
         break;
       case 'index':
-        throw new CodeGenError('array indexing is not supported yet', e.line, 0);
+        genIndexRead(e);
+        break;
       case 'strLit':
         throw new CodeGenError('string literals are only allowed in puts()', e.line, 0);
     }
@@ -463,6 +500,183 @@ export function generate(cp: CheckedProgram): CodeBuffer {
       return;
     }
     throw new CodeGenError(RHS_HINT, rhs.line, 0);
+  }
+
+  /** A right-hand operand of 16-bit math: loads byte 0 (low) or 1 (high) with the given opcodes. */
+  interface Operand16 {
+    load(byte: 0 | 1, imm: number, zp: number, abs: number): void;
+  }
+
+  function operand16(rhs: Expr): Operand16 {
+    const c = evalConst(rhs);
+    if (c !== null) {
+      return { load: (b, imm) => emit(imm, b === 0 ? c & 0xff : (c >> 8) & 0xff) };
+    }
+    if (rhs.tag === 'ident') {
+      const v = lookup(rhs.name);
+      if (v && (v.zpAddr !== null || v.absAddr !== null)) {
+        const wide = v.type.tag === 'u16';
+        return {
+          load: (b, imm, zp, abs) => {
+            if (b === 1 && !wide) emit(imm, 0);
+            else if (v.zpAddr !== null) emit(zp, v.zpAddr + b);
+            else {
+              const a = (v.absAddr as number) + b;
+              emit(abs, a & 0xff, (a >> 8) & 0xff);
+            }
+          },
+        };
+      }
+    }
+    if (rhs.tag === 'field' && rhs.obj.tag === 'ident') {
+      const addr = hwAddr(rhs.obj.name, rhs.field, rhs.line);
+      return {
+        load: (b, imm, _zp, abs) => {
+          if (b === 1) emit(imm, 0);
+          else emit(abs, addr & 0xff, (addr >> 8) & 0xff);
+        },
+      };
+    }
+    throw new CodeGenError(RHS_HINT, rhs.line, 0);
+  }
+
+  /** The array an index expression refers to, with its address and whether it is zero page. */
+  function arrayOf(e: Extract<Expr, { tag: 'index' }>): { base: number; zp: boolean } {
+    if (e.obj.tag !== 'ident') {
+      throw new CodeGenError('only named arrays can be indexed', e.line, 0);
+    }
+    const v = lookup(e.obj.name);
+    if (!v || v.type.tag !== 'array') {
+      throw new CodeGenError(`'${e.obj.name}' is not an array`, e.line, 0);
+    }
+    if (v.zpAddr !== null) return { base: v.zpAddr, zp: true };
+    if (v.absAddr !== null) return { base: v.absAddr, zp: false };
+    throw new CodeGenError(`cannot index '${e.obj.name}'`, e.line, 0);
+  }
+
+  /** Leaves the address of the indexed element in ACC (the 16-bit index path). */
+  function genElementAddr(e: Extract<Expr, { tag: 'index' }>, base: number): void {
+    gen16(e.idx);
+    emit(0x18, 0xa5, ACC, 0x69, base & 0xff, 0x85, ACC); // CLC; ACC.lo += lo(base)
+    emit(0xa5, ACC + 1, 0x69, (base >> 8) & 0xff, 0x85, ACC + 1); // ACC.hi += hi(base) + carry
+  }
+
+  function genIndexRead(e: Extract<Expr, { tag: 'index' }>): void {
+    const { base, zp } = arrayOf(e);
+    const k = evalConst(e.idx);
+    if (k !== null) {
+      const a = base + k;
+      if (zp) emit(0xa5, a & 0xff);
+      else emit(0xad, a & 0xff, (a >> 8) & 0xff);
+      return;
+    }
+    if (!isU16(e.idx)) {
+      genExpr(e.idx);
+      emit(0xaa); // TAX
+      if (zp)
+        emit(0xb5, base & 0xff); // LDA zp,X
+      else emit(0xbd, base & 0xff, (base >> 8) & 0xff); // LDA abs,X
+      return;
+    }
+    genElementAddr(e, base);
+    emit(0xa0, 0x00, 0xb1, ACC); // LDY #0; LDA (ACC),Y
+  }
+
+  /** Stores the byte waiting on the stack (pushed by the caller) to the indexed element. */
+  function genIndexWrite(e: Extract<Expr, { tag: 'index' }>): void {
+    const { base, zp } = arrayOf(e);
+    const k = evalConst(e.idx);
+    if (k !== null) {
+      const a = base + k;
+      emit(0x68); // PLA
+      if (zp) emit(0x85, a & 0xff);
+      else emit(0x8d, a & 0xff, (a >> 8) & 0xff);
+      return;
+    }
+    if (!isU16(e.idx)) {
+      genExpr(e.idx);
+      emit(0xaa, 0x68); // TAX; PLA
+      if (zp)
+        emit(0x95, base & 0xff); // STA zp,X
+      else emit(0x9d, base & 0xff, (base >> 8) & 0xff); // STA abs,X
+      return;
+    }
+    genElementAddr(e, base);
+    emit(0x68, 0xa0, 0x00, 0x91, ACC); // PLA; LDY #0; STA (ACC),Y
+  }
+
+  /** `screen(row, col)` / `color(row, col)` with run-time arguments → ACC. */
+  function genScreenAddr(e: Extract<Expr, { tag: 'call' }>): void {
+    const [rowE, colE] = e.args;
+    if (rowE === undefined || colE === undefined) {
+      throw new CodeGenError(`${e.name}() takes a row and a column`, e.line, 0);
+    }
+    if (isU16(rowE) || isU16(colE)) {
+      throw new CodeGenError(`${e.name}(): the row and the column must be 8-bit values`, e.line, 0);
+    }
+    const base = e.name === 'screen' ? 0x0400 : 0xd800;
+    genExpr(colE);
+    emit(0x48); // PHA: the column waits on the stack while the row is scaled
+    genExpr(rowE);
+    emit(0x85, ACC, 0xa9, 0x00, 0x85, ACC + 1); // ACC = row
+    for (let i = 0; i < 3; i++) emit(0x06, ACC, 0x26, ACC + 1); // ASL lo; ROL hi: row * 8
+    emit(0xa5, ACC, 0x85, TMP2, 0xa5, ACC + 1, 0x85, TMP2 + 1); // TMP2 = row * 8
+    for (let i = 0; i < 2; i++) emit(0x06, ACC, 0x26, ACC + 1); // row * 32
+    emit(0x18, 0xa5, ACC, 0x65, TMP2, 0x85, ACC); // CLC; ACC.lo += TMP2.lo
+    emit(0xa5, ACC + 1, 0x65, TMP2 + 1, 0x85, ACC + 1); // ACC.hi += TMP2.hi (+ carry)
+    emit(0x68, 0x85, TMP2); // PLA; STA TMP2: the column
+    emit(0x18, 0xa5, ACC, 0x65, TMP2, 0x85, ACC); // ACC.lo += column
+    emit(0xa5, ACC + 1, 0x69, 0x00, 0x85, ACC + 1); // ACC.hi += carry
+    emit(0x18, 0xa5, ACC, 0x69, base & 0xff, 0x85, ACC); // ACC.lo += lo(base)
+    emit(0xa5, ACC + 1, 0x69, (base >> 8) & 0xff, 0x85, ACC + 1); // ACC.hi += hi(base) + carry
+  }
+
+  /** Evaluates `e` as a 16-bit value into ACC (low) / ACC+1 (high). */
+  function gen16(e: Expr): void {
+    const c = evalConst(e);
+    if (c !== null) {
+      emit(0xa9, c & 0xff, 0x85, ACC, 0xa9, (c >> 8) & 0xff, 0x85, ACC + 1);
+      return;
+    }
+    if (e.tag === 'ident') {
+      const v = lookup(e.name);
+      if (v && v.type.tag === 'u16' && !v.isConst) {
+        for (const b of [0, 1] as const) {
+          if (v.zpAddr !== null) emit(0xa5, v.zpAddr + b);
+          else if (v.absAddr !== null) {
+            const a = v.absAddr + b;
+            emit(0xad, a & 0xff, (a >> 8) & 0xff);
+          } else throw new CodeGenError(`cannot read '${e.name}'`, e.line, 0);
+          emit(0x85, ACC + b);
+        }
+        return;
+      }
+    }
+    if (e.tag === 'cast' && e.toType.tag === 'u16') {
+      gen16(e.expr);
+      return;
+    }
+    if (e.tag === 'binary' && (e.op === '+' || e.op === '-') && isU16(e)) {
+      gen16(e.lhs);
+      const r = operand16(e.rhs);
+      const add = e.op === '+';
+      const [imm, zp, abs] = add ? [0x69, 0x65, 0x6d] : [0xe9, 0xe5, 0xed];
+      emit(0xa5, ACC, add ? 0x18 : 0x38); // LDA lo; CLC | SEC
+      r.load(0, imm!, zp!, abs!);
+      emit(0x85, ACC, 0xa5, ACC + 1); // STA lo; LDA hi
+      r.load(1, imm!, zp!, abs!);
+      emit(0x85, ACC + 1);
+      return;
+    }
+    if (e.tag === 'call' && (e.name === 'screen' || e.name === 'color')) {
+      genScreenAddr(e);
+      return;
+    }
+    if (isU16(e)) {
+      throw new CodeGenError('this 16-bit expression is not supported yet', e.line, 0);
+    }
+    genExpr(e); // an 8-bit value: zero-extend
+    emit(0x85, ACC, 0xa9, 0x00, 0x85, ACC + 1);
   }
 
   function genBinary(e: Extract<Expr, { tag: 'binary' }>): void {
@@ -603,6 +817,47 @@ export function generate(cp: CheckedProgram): CodeBuffer {
   }
 
   /**
+   * Compares two 16-bit values and leaves the flags for `jumpOp16(op)`:
+   *   == / !=  → Z (equal)        < / >=  → C (a >= b)
+   *   > / <=   → the operands are swapped, so C is clear when a > b.
+   */
+  function genCompare16(cond: Extract<Expr, { tag: 'binary' }>): void {
+    const op = cond.op;
+    gen16(cond.lhs);
+    const r = operand16(cond.rhs);
+    if (op === '>' || op === '<=') {
+      // b - a: C is clear when b < a, i.e. a > b.
+      r.load(0, 0xa9, 0xa5, 0xad); // LDA b.lo
+      emit(0xc5, ACC); // CMP a.lo
+      r.load(1, 0xa9, 0xa5, 0xad); // LDA b.hi
+      emit(0xe5, ACC + 1); // SBC a.hi
+      return;
+    }
+    if (op === '==' || op === '!=') {
+      const ne = freshLabel('cmp16_ne');
+      emit(0xa5, ACC); // LDA a.lo
+      r.load(0, 0xc9, 0xc5, 0xcd); // CMP b.lo
+      emit(0xd0);
+      addFixup({ kind: 'branch8', label: ne }, 1); // BNE: Z is already clear
+      emit(0xa5, ACC + 1); // LDA a.hi
+      r.load(1, 0xc9, 0xc5, 0xcd); // CMP b.hi: Z set when equal
+      emitLabel(ne);
+      return;
+    }
+    emit(0xa5, ACC); // LDA a.lo
+    r.load(0, 0xc9, 0xc5, 0xcd); // CMP b.lo
+    emit(0xa5, ACC + 1); // LDA a.hi
+    r.load(1, 0xe9, 0xe5, 0xed); // SBC b.hi: C set when a >= b
+  }
+
+  /** The 8-bit condition whose branch test matches the flags left by `genCompare16`. */
+  function jumpOp16(op: string): string {
+    if (op === '>') return '<'; // C clear after the swapped subtraction
+    if (op === '<=') return '>=';
+    return op;
+  }
+
+  /**
    * Emits code that continues at `label` when the condition is false (`invertForFalse`) or
    * true (otherwise). A 6502 branch reaches only ±127 bytes, so this never branches to `label`
    * directly: it branches the opposite way over a JMP, which can go anywhere.
@@ -614,16 +869,21 @@ export function generate(cp: CheckedProgram): CodeBuffer {
     const stay = freshLabel('cond_stay');
     if (cond.tag === 'binary' && COMPARE_OPS.has(cond.op)) {
       if (isU16(cond.lhs) || isU16(cond.rhs)) {
-        throw new CodeGenError('16-bit comparison is not supported yet', cond.line, 0);
+        genCompare16(cond);
+        emitCondJump(jumpOp16(cond.op), stay, !invertForFalse);
+      } else {
+        genExpr(cond.lhs);
+        genCmpRhs(cond.rhs);
+        // Stay (fall into the body / loop) when the jump to `label` is NOT wanted.
+        emitCondJump(cond.op, stay, !invertForFalse);
       }
-      genExpr(cond.lhs);
-      genCmpRhs(cond.rhs);
-      // Stay (fall into the body / loop) when the jump to `label` is NOT wanted.
-      emitCondJump(cond.op, stay, !invertForFalse);
+    } else if (isU16(cond)) {
+      // A 16-bit value is true when either byte is non-zero.
+      gen16(cond);
+      emit(0xa5, ACC, 0x05, ACC + 1); // LDA lo; ORA hi
+      emit(invertForFalse ? 0xd0 : 0xf0); // BNE / BEQ over the jump
+      addFixup({ kind: 'branch8', label: stay }, 1);
     } else {
-      if (isU16(cond)) {
-        throw new CodeGenError('16-bit comparison is not supported yet', cond.line, 0);
-      }
       // Any other value is true when it is non-zero. CMP #0 makes the flags reflect A even
       // after a function call returned it.
       genExpr(cond);
@@ -895,7 +1155,12 @@ export function generate(cp: CheckedProgram): CodeBuffer {
       }
     }
     if (isU16(value)) {
-      throw new CodeGenError('16-bit arithmetic is not supported yet', line, 0);
+      gen16(value);
+      emit(0xa5, ACC);
+      store(0);
+      emit(0xa5, ACC + 1);
+      store(1);
+      return;
     }
     genExpr(value); // an 8-bit value: zero-extend
     store(0);
@@ -911,6 +1176,13 @@ export function generate(cp: CheckedProgram): CodeBuffer {
         genStore16(v, lhs.name, rhs, line);
         return;
       }
+    }
+    if (lhs.tag === 'index') {
+      assertFits8(rhs, line, 'an array element');
+      genExpr(rhs);
+      emit(0x48); // PHA: the value waits on the stack while the index is computed
+      genIndexWrite(lhs);
+      return;
     }
     assertFits8(rhs, line, lhs.tag === 'ident' ? `'${lhs.name}'` : 'a byte register');
     genExpr(rhs);
@@ -1141,6 +1413,7 @@ export function generate(cp: CheckedProgram): CodeBuffer {
           0,
         );
       }
+      const wide = field.type.tag === 'u16'; // a scalar u16 field is two bytes, low first
       for (const init of field.init) {
         const v = evalConst(init);
         if (v === null) {
@@ -1150,14 +1423,15 @@ export function generate(cp: CheckedProgram): CodeBuffer {
             0,
           );
         }
-        if (v > 0xff) {
+        if (!wide && v > 0xff) {
           throw new CodeGenError(
             `value ${v} does not fit in a byte (data '${field.name}')`,
             decl.line,
             0,
           );
         }
-        emit(v);
+        emit(v & 0xff);
+        if (wide) emit((v >> 8) & 0xff);
       }
     }
   }

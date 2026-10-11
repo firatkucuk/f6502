@@ -29,7 +29,6 @@ data @addr(SHAPE) {
   ];
 }
 
-let @zp cell: u16;            // moves down screen RAM inside column()
 let @zp y: u8 = 100;          // the bird's height (sprite Y)
 let @zp rise: u8 = 0;         // frames of climbing left after a flap
 let @zp speed: u8 = 1;        // fall speed, grows while falling
@@ -61,40 +60,17 @@ fn space(): u8 {
 }
 
 // Writes `ch` down screen column `col`, rows 1..21 (row 0 is the score), leaving an 8-row hole
-// that starts at `gap`.
+// that starts at `gap`. `cell` walks down the column: one row below is 40 cells further on.
 fn column(col: u8, gap: u8, ch: u8): void {
-  asm {
-    lda #lo(${SCREEN_RAM + 40})
-    clc
-    adc ${col}
-    sta ${cell}
-    lda #hi(${SCREEN_RAM + 40})
-    adc #0
-    sta ${cell} + 1
-    ldx #1                  // row
-  next:
-    cpx ${gap}
-    bcc draw                // above the hole
-    txa
-    sec
-    sbc ${gap}
-    cmp #8
-    bcc skip                // inside the hole
-  draw:
-    ldy #0
-    lda ${ch}
-    sta (${cell}),y
-  skip:
-    clc
-    lda ${cell}
-    adc #40
-    sta ${cell}
-    bcc same
-    inc ${cell} + 1
-  same:
-    inx
-    cpx #22
-    bne next
+  let cell: u16 = screen(1, col);
+  let hole: u8 = gap + 8;
+  for (let row: u8 = 1; row < 22; row++) {
+    if (row < gap) {
+      poke(cell, ch);
+    } else if (row >= hole) {
+      poke(cell, ch);
+    }
+    cell += 40;
   }
 }
 
@@ -144,29 +120,14 @@ program @ 0x0810 {
   loop {
     // ── a new game ──
     clrscr();
-    asm {
-      lda #${COLOR_GREEN}      // all colour RAM green: pipes only need the character
-      ldx #0
-    sky:
-      sta ${COLOR_RAM},x
-      sta ${COLOR_RAM + 0x100},x
-      sta ${COLOR_RAM + 0x200},x
-      sta ${COLOR_RAM + 0x2E8},x
-      inx
-      bne sky
-
-      lda #$A0                // the ground: rows 22..24
-      ldx #119
-    ground:
-      sta ${SCREEN_RAM + 880},x
-      dex
-      bpl ground
-      lda #${COLOR_BROWN}
-      ldx #119
-    soil:
-      sta ${COLOR_RAM + 880},x
-      dex
-      bpl soil
+    for (let r: u8 = 0; r < 25; r++) {       // all colour RAM green: pipes only need the character
+      for (let c: u8 = 0; c < 40; c++) { poke(color(r, c), COLOR_GREEN); }
+    }
+    for (let r: u8 = 22; r < 25; r++) {      // the ground: rows 22..24
+      for (let c: u8 = 0; c < 40; c++) {
+        poke(screen(r, c), 0xA0);
+        poke(color(r, c), COLOR_BROWN);
+      }
     }
     y = 100;
     rise = 0;
