@@ -25,6 +25,7 @@ mkdirSync(outDir, { recursive: true });
 //                           into the keyboard buffer ($00C6 / $0277)
 //
 //   So the KERNAL must:
+//     0. Zero $00C6 so a reset never replays the previous program
 //     a. Write "READY." to screen (screen codes: R=18 E=5 A=1 D=4 Y=25 .=46)
 //        at row 5 col 0 = $04C8, matching screenCodeToChar() in c64.ts
 //     b. Poll $00C6 (keyboard buffer count) until non-zero
@@ -49,6 +50,11 @@ mkdirSync(outDir, { recursive: true });
   kernal[p++] = 0x8D; kernal[p++] = 0x11; kernal[p++] = 0xD0; // STA $D011 (screen on)
   kernal[p++] = 0xA9; kernal[p++] = 0x15; // LDA #$15
   kernal[p++] = 0x8D; kernal[p++] = 0x18; kernal[p++] = 0xD0; // STA $D018 (screen at $0400)
+
+  // Empty the keyboard buffer. RAM survives a reset, so a stale non-zero $C6 would make the wait
+  // loop below fall straight through into whatever program the previous run left at $0810.
+  kernal[p++] = 0xA9; kernal[p++] = 0x00; // LDA #0
+  kernal[p++] = 0x85; kernal[p++] = 0xC6; // STA $C6
 
   // Write "READY." to screen RAM at $04C8 (row 5, col 0)
   // Screen codes: R=18, E=5, A=1, D=4, Y=25, .=46

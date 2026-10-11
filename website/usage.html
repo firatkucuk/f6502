@@ -61,6 +61,7 @@
     <li><a href="architecture.html">Architecture</a></li>
     <li><a href="usage.html" aria-current="page">Usage</a></li>
     <li><a href="c64script.html">C64Script</a></li>
+    <li><a href="playground.html">Playground</a></li>
     <li><a href="showcases.html">Showcases</a></li>
   </ul>
   <a class="nav-gh" href="https://github.com/firatkucuk/f6502" target="_blank" rel="noopener">
@@ -140,7 +141,7 @@
 <span class="token-kw">import</span> { <span class="token-type">C64</span> } <span class="token-kw">from</span> <span class="token-str">'f6502'</span>;
 
 <span class="token-cmt">// C64Script compiler</span>
-<span class="token-kw">import</span> { <span class="token-fn">compile</span> } <span class="token-kw">from</span> <span class="token-str">'f6502/c64script'</span>;</pre>
+<span class="token-kw">import</span> { <span class="token-fn">compile</span> } <span class="token-kw">from</span> <span class="token-str">'f6502'</span>;</pre>
       </div>
     </div>
 
@@ -542,13 +543,13 @@ ctx.<span class="token-fn">putImageData</span>(
         <span class="terminal-title">TypeScript</span>
       </div>
       <div class="terminal-body">
-        <pre><span class="token-kw">import</span> { <span class="token-fn">compile</span> } <span class="token-kw">from</span> <span class="token-str">'f6502/c64script'</span>;
+        <pre><span class="token-kw">import</span> { <span class="token-fn">compile</span> } <span class="token-kw">from</span> <span class="token-str">'f6502'</span>;
 
 <span class="token-kw">const</span> prg: <span class="token-type">Uint8Array</span> = <span class="token-fn">compile</span>(<span class="token-str">`
-  program(0x0810) {
-    var color: byte @zp = 0;
+  let @zp color: u8 = 0;
+  program @ 0x0810 {
     loop {
-      c64.border = color;
+      VIC2.borderColor = color;
       color = color + 1;
       if (color == 16) { color = 0; }
     }
@@ -566,9 +567,12 @@ ctx.<span class="token-fn">putImageData</span>(
 
     <div class="infobox accent">
       <strong>compile() is synchronous</strong> — it throws a typed error
-      (<code>LexError</code>, <code>ParseError</code>, <code>TypeError</code>, or
-      <code>CodeGenError</code>) on failure, all importable from
-      <code>f6502/c64script</code>.
+      (<code>LexError</code>, <code>ParseError</code>, <code>C64ScriptTypeError</code>, or
+      <code>CodeGenError</code>, all extending <code>C64ScriptError</code>, which carries
+      <code>line</code> and <code>col</code>) on failure, all importable from
+      <code>f6502</code>. In a plain <code>&lt;script&gt;</code> tag the compiler is
+      <code>F6502.compile</code>. Try programs without installing anything in the
+      <a href="playground.html">Playground</a>.
     </div>
 
     <p>
