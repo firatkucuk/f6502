@@ -5,12 +5,13 @@
 
 /**
  * @param {object} opts
- * @param {{ running: boolean, pause(): void, resume(): void }} opts.player
+ * @param {{ running: boolean, hasAudio?: boolean, muted?: boolean, pause(): void, resume(): void }} opts.player
  * @param {HTMLElement} opts.crt        the element that goes fullscreen (screen and bar)
  * @param {HTMLCanvasElement} opts.canvas
  * @param {HTMLButtonElement} opts.pauseBtn
  * @param {HTMLButtonElement} opts.rebootBtn
  * @param {HTMLButtonElement} opts.fullscreenBtn
+ * @param {HTMLButtonElement} [opts.soundBtn]  mute / unmute; shown only when the player has sound
  * @param {() => Promise<void>} opts.reboot
  * @returns {{ sync(): void }} `sync` re-reads the pause button state after the page resumes the player
  */
@@ -21,6 +22,7 @@ export function wireEmuControls({
   pauseBtn,
   rebootBtn,
   fullscreenBtn,
+  soundBtn,
   reboot,
 }) {
   const setLabel = (btn, label, pressed) => {
@@ -51,6 +53,16 @@ export function wireEmuControls({
       rebootBtn.disabled = false;
     }
   });
+
+  if (soundBtn && player.hasAudio) {
+    soundBtn.hidden = false;
+    const syncSound = () => setLabel(soundBtn, player.muted ? 'Unmute' : 'Mute', player.muted);
+    syncSound();
+    soundBtn.addEventListener('click', () => {
+      player.muted = !player.muted;
+      syncSound();
+    });
+  }
 
   if (!document.fullscreenEnabled || typeof crt.requestFullscreen !== 'function') {
     fullscreenBtn.hidden = true;

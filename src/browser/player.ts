@@ -54,6 +54,7 @@ export class Player {
   private readonly readyFrames: number;
   private readonly audio: PlayerAudio | undefined;
   private warping = false;
+  private userMuted = false;
 
   constructor(
     readonly c64: C64,
@@ -85,9 +86,24 @@ export class Player {
   resume(): void {
     if (this.running) return;
     this.running = true;
-    this.audio?.setMuted(this.warping);
+    this.audio?.setMuted(this.userMuted || this.warping);
     this.clock.reset();
     this.schedule();
+  }
+
+  /** True when sound is playing through Web Audio, so there is something to mute. */
+  get hasAudio(): boolean {
+    return this.audio !== undefined;
+  }
+
+  /** The user's mute. Pausing and warping silence the sound on their own, whatever this is. */
+  get muted(): boolean {
+    return this.userMuted;
+  }
+
+  set muted(muted: boolean) {
+    this.userMuted = muted;
+    if (this.running) this.audio?.setMuted(muted || this.warping);
   }
 
   pause(): void {
@@ -166,7 +182,7 @@ export class Player {
       const frames = warp ? WARP_FRAMES : elapsed;
       if (warp !== this.warping) {
         this.warping = warp;
-        this.audio?.setMuted(warp);
+        this.audio?.setMuted(warp || this.userMuted);
       }
       for (let i = 0; i < frames; i++) {
         this.keys.pump();
