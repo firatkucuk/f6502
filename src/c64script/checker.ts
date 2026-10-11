@@ -167,7 +167,6 @@ export function check(userProg: Program): CheckedProgram {
   const structs = new Map<string, StructDecl>();
   const hardware = new Map<string, HardwareDecl>();
   const zp = new ZpAllocator();
-  let loadAddr = 0;
   let hasProgramDecl = false;
   let programDecl: ProgramDecl | null = null;
 
@@ -348,7 +347,7 @@ export function check(userProg: Program): CheckedProgram {
       0,
     );
   }
-  loadAddr = programAddr;
+  const loadAddr = programAddr;
 
   const dataAddrs = new Map<DataDecl, number>();
   for (const d of allDecls) {
