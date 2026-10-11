@@ -15,6 +15,7 @@ const tryLink = document.getElementById('showcase-try');
 const titleEl = document.getElementById('showcase-title');
 const blurbEl = document.getElementById('showcase-blurb');
 const fileEl = document.getElementById('showcase-file');
+const hintEl = document.getElementById('showcase-hint');
 
 function escapeHtml(text) {
   return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -29,6 +30,7 @@ function showUnknown() {
 async function run() {
   titleEl.textContent = showcase.title;
   blurbEl.textContent = showcase.blurb;
+  hintEl.textContent = showcase.hint ?? '';
   fileEl.textContent = `${showcase.id}.c64s`;
   document.title = `${showcase.title} — f6502`;
 
