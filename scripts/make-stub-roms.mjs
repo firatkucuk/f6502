@@ -1,4 +1,4 @@
-// Generates legally-clean stub ROM files for the f6502 Nyan Cat showcase.
+// Generates legally-clean stub ROM files for the f6502 showcases and playground.
 // These are original files — NOT derived from Commodore ROMs — and contain
 // only the minimal code needed to boot into our PRG at $0810.
 //
