@@ -980,3 +980,36 @@ kbd {
   transition: all 0.2s;
 }
 .try-now:hover { filter: brightness(1.15); }
+
+/* ── Home page: "See it run" slideshow ───────────────────────────────────── */
+.slideshow-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 1.5rem;
+  align-items: start;
+  margin-top: 1.5rem;
+}
+@media (max-width: 900px) { .slideshow-grid { grid-template-columns: minmax(0, 1fr); } }
+.slideshow-status {
+  margin: 0.9rem 0 0;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+.slideshow-source { position: relative; max-height: 520px; overflow: auto; }
+.slideshow-source pre { margin: 0; background: none; border: 0; padding: 0; }
+.slideshow-source code { font-family: var(--font-mono); font-size: 0.8rem; line-height: 1.6; color: #c0c4e0; }
+.slideshow-source .token.comment { color: #454770; font-style: italic; }
+.slideshow-source .token.keyword { color: #887ecb; }
+.slideshow-source .token.attr-name { color: #c9934a; }
+.slideshow-source .token.class-name { color: #6abfc6; }
+.slideshow-source .token.property { color: #50b8c8; }
+.slideshow-source .token.function { color: #a090e8; }
+.slideshow-source .token.boolean, .slideshow-source .token.number { color: #c9d487; }
+.slideshow-source .token.string { color: #9ae29b; }
+.slideshow-source .token.operator { color: #6070a0; }
+.slideshow-source .token.punctuation { color: #4a4d70; }
+.slideshow-actions { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.9rem;
+  font-size: 0.78rem; color: var(--text-dim); }
+.slideshow-actions .try-now { float: none; margin: 0; }
