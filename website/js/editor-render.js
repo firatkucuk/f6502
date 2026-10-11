@@ -20,6 +20,7 @@ export function renderLines(source, errorLine, highlighter) {
     }
     return `<span class="ln${i + 1 === errorLine ? ' err' : ''}">${html || ' '}</span>`;
   });
-  // Two spare lines so the overlay can always scroll as far as the textarea does.
-  return lines.join('') + '<span class="ln"> </span><span class="ln"> </span>';
+  // Two spare rows so the overlay can always scroll as far as the textarea does. They are not
+  // source lines, so the stylesheet gives `.pad` no line number.
+  return lines.join('') + '<span class="ln pad"> </span><span class="ln pad"> </span>';
 }

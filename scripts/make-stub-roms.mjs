@@ -29,10 +29,10 @@ mkdirSync(outDir, { recursive: true });
 //     a. Write "READY." to screen (screen codes: R=18 E=5 A=1 D=4 Y=25 .=46)
 //        at row 5 col 0 = $04C8, matching screenCodeToChar() in c64.ts
 //     b. Poll $00C6 (keyboard buffer count) until non-zero
-//     c. JMP $0810 — by this point the PRG has been written to RAM
+//     c. Clear the text screen, then JMP $0810 — by this point the PRG has been written to RAM
 //
 // $E000: RTI         — NMI/IRQ handler
-// $E001-$E025: init + READY + wait loop
+// $E001-: init + READY + wait loop + screen clear + JMP
 // $FFFA-$FFFF: hardware vectors
 {
   const kernal = new Uint8Array(8192).fill(0xEA); // NOP fill
@@ -50,6 +50,10 @@ mkdirSync(outDir, { recursive: true });
   kernal[p++] = 0x8D; kernal[p++] = 0x11; kernal[p++] = 0xD0; // STA $D011 (screen on)
   kernal[p++] = 0xA9; kernal[p++] = 0x15; // LDA #$15
   kernal[p++] = 0x8D; kernal[p++] = 0x18; kernal[p++] = 0xD0; // STA $D018 (screen at $0400)
+  // 40-column mode, as the real KERNAL sets it. The VIC resets to 38 columns, which hides most
+  // of the first character of every row.
+  kernal[p++] = 0xA9; kernal[p++] = 0xC8; // LDA #$C8
+  kernal[p++] = 0x8D; kernal[p++] = 0x16; kernal[p++] = 0xD0; // STA $D016
 
   // Empty the keyboard buffer. RAM survives a reset, so a stale non-zero $C6 would make the wait
   // loop below fall straight through into whatever program the previous run left at $0810.
@@ -76,6 +80,20 @@ mkdirSync(outDir, { recursive: true });
   const waitAddr = p; // remember loop top (relative to $E000)
   kernal[p++] = 0xA5; kernal[p++] = 0xC6; // LDA $C6 (zero-page keyboard buffer count)
   kernal[p++] = 0xF0; kernal[p++] = 0xFC; // BEQ waitAddr (back 4 bytes = loop)
+
+  // The boot text has done its job (player.load() saw it). Hand the program a clean screen, as
+  // the real KERNAL's screen init does, so "READY." does not sit under whatever it draws.
+  kernal[p++] = 0xA9; kernal[p++] = 0x20; // LDA #$20 (space)
+  kernal[p++] = 0xA2; kernal[p++] = 0x00; // LDX #0
+  kernal[p++] = 0x9D; kernal[p++] = 0x00; kernal[p++] = 0x04; // STA $0400,X
+  kernal[p++] = 0x9D; kernal[p++] = 0x00; kernal[p++] = 0x05; // STA $0500,X
+  kernal[p++] = 0x9D; kernal[p++] = 0x00; kernal[p++] = 0x06; // STA $0600,X
+  kernal[p++] = 0xE8;                                         // INX
+  kernal[p++] = 0xD0; kernal[p++] = 0xF4;                     // BNE -12 (back to STA $0400,X)
+  kernal[p++] = 0xA2; kernal[p++] = 232;                      // LDX #232
+  kernal[p++] = 0x9D; kernal[p++] = 0xFF; kernal[p++] = 0x06; // STA $06FF,X  ($0700-$07E7)
+  kernal[p++] = 0xCA;                                         // DEX
+  kernal[p++] = 0xD0; kernal[p++] = 0xFA;                     // BNE -6 (back to STA $06FF,X)
 
   // PRG is loaded — jump into it
   kernal[p++] = 0x4C; kernal[p++] = 0x10; kernal[p++] = 0x08; // JMP $0810
