@@ -137,7 +137,7 @@ program @ 0x0810 {
 let @zp ticks: u8 = 0;
 
 program @ 0x0810 {
-  // Once: solid blocks everywhere, each cell coloured by its position.
+  // Once: solid blocks everywhere, in eight colour stripes that repeat every 8 columns.
   asm {
     ldx #0
   paint:
@@ -147,7 +147,8 @@ program @ 0x0810 {
     sta \${screen(0, 0) + 512},x
     sta \${screen(0, 0) + 744},x
     txa
-    and #$0F
+    and #$07          // 0..7 ...
+    ora #$08          // ... becomes colours 8..15
     sta \${color(0, 0)},x
     sta \${color(0, 0) + 256},x
     sta \${color(0, 0) + 512},x

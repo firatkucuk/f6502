@@ -102,15 +102,16 @@ describe('asm example', () => {
   const src = () => EXAMPLES.find((e) => e.id === 'asm')!.source;
   const colourOf = (c: C64, cell: number) => c.peek(0xd800 + cell) & 0x0f;
 
-  it('paints solid blocks coloured by position, once', () => {
+  it('paints every cell a solid block, coloured by column in a seamless 8-colour stripe', () => {
     const c = boot(src(), 20);
-    for (const cell of [0, 1, 255, 256, 700, 999]) {
+    for (let cell = 0; cell < 1000; cell++) {
       expect(c.peek(0x0400 + cell), `screen cell ${cell}`).toBe(0xa0);
-    }
-    // colour = low nibble of the cell index within each 256-cell page
-    for (const cell of [0, 1, 5, 15, 16, 17, 100, 255]) {
-      expect(colourOf(c, cell), `colour cell ${cell}`).toBe(cell & 0x0f);
-      expect(colourOf(c, 256 + cell)).toBe(cell & 0x0f);
+      // The pattern repeats every 8 columns, and 40 / 256 / 744 are multiples of 8, so the
+      // fill's four chunks join without a seam: the colour depends on the column only.
+      const column = cell % 40;
+      expect(colourOf(c, cell), `colour of row ${Math.floor(cell / 40)}, column ${column}`).toBe(
+        (column & 7) | 8,
+      );
     }
   });
 
