@@ -16,43 +16,6 @@
       object-fit: cover; image-rendering: pixelated;
     }
 
-    /* thumb-specific backgrounds for the programs that are still to come */
-    .thumb-sid {
-      background:
-        repeating-linear-gradient(90deg,
-          transparent 0px, transparent 2px,
-          rgba(136,126,203,0.25) 2px, rgba(136,126,203,0.25) 3px),
-        linear-gradient(180deg, #080918 0%, #0f1030 40%, #080918 100%);
-      position: relative;
-    }
-    .thumb-sid::after {
-      content: '';
-      position: absolute;
-      bottom: 20%; left: 5%; right: 5%; height: 40%;
-      background:
-        repeating-linear-gradient(90deg,
-          transparent 0px, transparent 4px,
-          rgba(106,191,198,0.5) 4px, rgba(106,191,198,0.5) 6px,
-          transparent 6px, transparent 10px,
-          rgba(136,126,203,0.4) 10px, rgba(136,126,203,0.4) 12px);
-      border-radius: 4px;
-    }
-    .thumb-mandel {
-      background:
-        radial-gradient(ellipse at 40% 50%, #50459b 0%, #1a0a2e 35%, #080918 70%),
-        radial-gradient(ellipse at 65% 55%, #a057a3 0%, transparent 25%);
-    }
-    .thumb-breakout {
-      background:
-        repeating-linear-gradient(0deg,
-          transparent 0px, transparent 9px,
-          rgba(106,191,198,0.18) 9px, rgba(106,191,198,0.18) 11px),
-        repeating-linear-gradient(90deg,
-          transparent 0px, transparent 18px,
-          rgba(136,126,203,0.18) 18px, rgba(136,126,203,0.18) 20px),
-        linear-gradient(180deg, #0a1a0f 0%, #080918 100%);
-    }
-
     /* showcase thumb label */
     .thumb-label {
       position: absolute;
@@ -199,57 +162,6 @@
           </div>
         </div>
       </a>
-
-      <!-- 4. SID Jukebox -->
-      <div class="showcase-card reveal">
-        <div class="showcase-thumb thumb-sid" style="position:relative;">
-          <div class="showcase-thumb-crt"></div>
-          <span class="thumb-label">COMING SOON</span>
-        </div>
-        <div class="showcase-body">
-          <h3>SID Jukebox</h3>
-          <p>A multi-voice SID composition using all three voices, the resonant filter, and ADSR envelopes. Press F1/F2 to change tracks.</p>
-          <div class="tag-row">
-            <span class="tag tag-accent">Audio</span>
-            <span class="tag tag-primary">SID</span>
-          </div>
-          <span class="coming-soon-badge">COMING SOON</span>
-        </div>
-      </div>
-
-      <!-- 5. Mandelbrot Set -->
-      <div class="showcase-card reveal">
-        <div class="showcase-thumb thumb-mandel" style="position:relative;">
-          <div class="showcase-thumb-crt"></div>
-          <span class="thumb-label">COMING SOON</span>
-        </div>
-        <div class="showcase-body">
-          <h3>Mandelbrot Set</h3>
-          <p>A Mandelbrot set renderer written in C64Script. It's slow — that's the point. 320×200 pixels, 16 colours, pure 6502.</p>
-          <div class="tag-row">
-            <span class="tag tag-accent">C64Script</span>
-            <span class="tag tag-yellow">Math</span>
-          </div>
-          <span class="coming-soon-badge">COMING SOON</span>
-        </div>
-      </div>
-
-      <!-- 6. Breakout Clone -->
-      <div class="showcase-card reveal">
-        <div class="showcase-thumb thumb-breakout" style="position:relative;">
-          <div class="showcase-thumb-crt"></div>
-          <span class="thumb-label">COMING SOON</span>
-        </div>
-        <div class="showcase-body">
-          <h3>Breakout Clone</h3>
-          <p>A classic brick-breaker game with sprite-based paddle, ball physics, and collision detection. Written entirely in C64Script.</p>
-          <div class="tag-row">
-            <span class="tag tag-accent">Game</span>
-            <span class="tag tag-primary">Sprites</span>
-          </div>
-          <span class="coming-soon-badge">COMING SOON</span>
-        </div>
-      </div>
 
     </div><!-- /.showcase-grid -->
   </section>
