@@ -224,8 +224,13 @@ describe('compound assignment', () => {
 });
 
 describe('unsupported constructs are errors, not no-ops', () => {
-  it('asm {}', () => {
-    expectError('program @ 0x0810 {\n  asm { nop }\n  loop {}\n}', 'codegen', /asm/, 2);
+  it('an unknown instruction inside asm {}', () => {
+    expectError(
+      'program @ 0x0810 {\n  asm { frob }\n  loop {}\n}',
+      'codegen',
+      /unknown instruction 'FROB'/,
+      2,
+    );
   });
 
   it('array indexing', () => {
