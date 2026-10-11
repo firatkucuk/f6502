@@ -23,6 +23,17 @@
     .sc-crt { background: #000; border: 1px solid var(--border-2); border-radius: 10px; padding: 12px; }
     .sc-crt canvas { display: block; width: 100%; aspect-ratio: 384 / 272; image-rendering: pixelated;
                      background: #000; }
+    .sc-bar { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 10px; }
+    .sc-bar button { font-family: var(--font-mono); font-size: 0.78rem; padding: 0.35rem 0.8rem;
+                     background: none; color: var(--text-muted); border: 1px solid var(--border-2);
+                     border-radius: 6px; cursor: pointer; }
+    .sc-bar button:hover:not(:disabled) { color: var(--text); border-color: var(--primary); }
+    .sc-bar button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    .sc-bar button:disabled { opacity: 0.5; cursor: default; }
+    .sc-crt:fullscreen { display: flex; flex-direction: column; justify-content: center; align-items: center;
+                         border: 0; border-radius: 0; padding: 0; background: #000; }
+    .sc-crt:fullscreen canvas { width: min(100vw, calc((100vh - 52px) * 384 / 272)); height: auto; }
+    .sc-crt:fullscreen .sc-bar { margin-top: 0; padding: 8px 0; }
     .sc-status { margin-top: 0.6rem; min-height: 1.4em; font-family: var(--font-mono);
                  font-size: 0.8rem; color: var(--text-muted); }
     .sc-hint { margin: 0.4rem 0 0; font-size: 0.82rem; color: var(--text-dim); }
@@ -71,9 +82,14 @@
 
   <main class="sc">
     <section aria-label="Emulator">
-      <div class="sc-crt">
+      <div class="sc-crt" id="showcase-crt">
         <canvas id="showcase-canvas" width="384" height="272" tabindex="0"
                 aria-label="A Commodore 64 screen running the showcase"></canvas>
+        <div class="sc-bar" role="toolbar" aria-label="Emulator controls">
+          <button type="button" id="showcase-pause" disabled>Pause</button>
+          <button type="button" id="showcase-reboot" disabled>Reboot</button>
+          <button type="button" id="showcase-fullscreen">Fullscreen</button>
+        </div>
       </div>
       <div id="showcase-status" class="sc-status" role="status" aria-live="polite">Starting the emulator…</div>
       <p id="showcase-hint" class="sc-hint"></p>
