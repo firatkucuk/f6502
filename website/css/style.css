@@ -1003,7 +1003,14 @@ kbd {
 .slideshow-source .token.punctuation { color: #4a4d70; }
 
 /* ── Emulator control bar (showcase and playground): pause, reboot, fullscreen ── */
-.emu-bar { display: flex; gap: 0.4rem; margin-top: 10px; }
+/* The logo sits on the left; its auto right margin pushes the buttons to the right. */
+.emu-bar { display: flex; align-items: center; gap: 0.4rem; margin-top: 10px; }
+.emu-bar-logo {
+  margin-right: auto; font-family: var(--font-pixel); font-size: 11px; line-height: 1;
+  letter-spacing: -0.02em; color: var(--primary); text-shadow: 0 0 14px var(--primary-glow);
+  user-select: none;
+}
+.emu-bar-logo span { color: var(--accent); }
 .emu-bar button {
   width: 2rem; height: 2rem; padding: 0; display: inline-flex; align-items: center;
   justify-content: center; background: none; color: var(--text-muted);
@@ -1023,4 +1030,7 @@ kbd {
   border: 0; border-radius: 0; padding: 0; background: #000;
 }
 .emu-crt:fullscreen canvas { width: min(100vw, calc((100vh - 52px) * 384 / 272)); height: auto; }
-.emu-crt:fullscreen .emu-bar { margin-top: 0; padding: 8px 0; }
+.emu-crt:fullscreen .emu-bar {
+  margin-top: 0; padding: 8px 12px; box-sizing: border-box;
+  width: min(100vw, calc((100vh - 52px) * 384 / 272));
+}
