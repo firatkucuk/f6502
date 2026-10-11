@@ -1,0 +1,13 @@
+{
+  "example:slideshow": "0b873f51b4b321907b538b94ced950c8307db9834421589df0aa075af09d5583",
+  "example:rainbow": "50886330de608c74bbd7de5c220adfd9bf8b2bf594db39418d6a4cc90ae68331",
+  "example:colors": "826d51e48dd86be933c89e4c865713df22e756cd92688360afac1a9421c828b7",
+  "example:function": "88fb3e12b98ee8038b74f6b31e5147740dd048d63f1a6f59d39abb3925217dbe",
+  "example:hello": "da3bebc5f30a3d39ec41398337bb16dbdb04fbfeaece9e70f9c911255f3b0599",
+  "example:asm": "09a429346b4891d7304f18b8b0ad79f9a2e8a8c70dbdea12a8b6af162a57d301",
+  "example:sprite": "c2be88ab60bcf696533165e48cf7c555e7647b97460c3b6a346c201fef32c764",
+  "showcase:character-art.c64s": "8dc77cfadf5611fa672784890c89436d7b6a560cf5720b2f58c4a1409f339386",
+  "showcase:flappy-bird.c64s": "f6572ffa78b6dd331992260b8631e20ac6f51ddb8fd93767669e6d3ccd4892ce",
+  "showcase:rainbow-border.c64s": "3c412528b648d049771c0cee31053d641c857d7e61a46a059e6a21a1e5187139",
+  "showcase:sprite-dance.c64s": "8a7a544b772914af208facfe2b4e4cde552964dfc2d446e04f28194ad1ab7ecd"
+}
