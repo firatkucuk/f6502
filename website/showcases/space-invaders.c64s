@@ -21,7 +21,8 @@ data @addr(0x2100) {
 
 let @zp fx: u8 = 0;          // the block's leftmost column (0..8)
 let @zp fdir: u8 = 1;        // 1 while the block moves right
-let @zp top: u8 = 3;         // the top invader row (3..14); the rows are two apart
+let @zp top: u8 = 3;         // the top invader row (3..22); the rows are two apart
+let @zp low: u8 = 4;         // the lowest row of the block (0..4) with an invader still alive
 let @zp remaining: u8 = 40;  // invaders still alive
 let @zp period: u8 = 12;     // frames between block moves; shorter as the block thins
 let @zp moveTick: u8 = 0;    // frames since the block last moved
@@ -90,10 +91,24 @@ fn clearRow(row: u8): void {
   }
 }
 
-// Blanks the five invader rows that start at `first`, two rows apart.
+// The lowest row of the block (0..4) that still has a live invader. The rows below it are empty,
+// so the block is only drawn, cleared and checked against the cannon down to this row.
+fn lowestRow(): u8 {
+  let found: u8 = 0;
+  let n: u8 = 0;
+  for (let k: u8 = 0; k < 5; k++) {
+    for (let i: u8 = 0; i < 8; i++) {
+      if (alive[n] == 1) { found = k; }
+      n = n + 1;
+    }
+  }
+  return found;
+}
+
+// Blanks the invader rows that start at `first`, two rows apart, down to the lowest live row.
 fn clearBand(first: u8): void {
   let rk: u8 = first;
-  for (let k: u8 = 0; k < 5; k++) {
+  for (let k: u8 = 0; k <= low; k++) {
     clearRow(rk);
     rk = rk + 2;
   }
@@ -103,7 +118,7 @@ fn clearBand(first: u8): void {
 fn drawFormation(): void {
   let rk: u8 = top;
   let n: u8 = 0;
-  for (let k: u8 = 0; k < 5; k++) {
+  for (let k: u8 = 0; k <= low; k++) {
     clearRow(rk);
     let left: u8 = fx;
     for (let i: u8 = 0; i < 8; i++) {
@@ -165,6 +180,7 @@ fn hitInvader(): u8 {
               if (remaining == 0) { outcome = 1; }
               if (remaining == 20) { period = 8; }
               if (remaining == 8) { period = 4; }
+              low = lowestRow();
               return 1;
             }
           }
@@ -199,7 +215,7 @@ fn stepBullet(): void {
 }
 
 // Moves the block one step: sideways, or down one row and back the other way at an edge.
-// A block whose lowest row reaches the cannon's row loses the game.
+// The game is lost when the lowest row that still has an invader reaches the cannon's row.
 fn stepFormation(): void {
   let prev: u8 = top;
   if (fdir == 1) {
@@ -218,7 +234,9 @@ fn stepFormation(): void {
     }
   }
   if (top != prev) { clearBand(prev); }
-  if (top == 14) { outcome = 2; }
+  let bottom: u8 = top;                                 // the row of the lowest live invaders
+  for (let k: u8 = 0; k < low; k++) { bottom = bottom + 2; }
+  if (bottom == CANNON_ROW) { outcome = 2; }
   drawFormation();
 }
 
@@ -236,6 +254,7 @@ program @ 0x0810 {
     fx = 0;
     fdir = 1;
     top = 3;
+    low = 4;
     remaining = 40;
     period = 12;
     moveTick = 0;
