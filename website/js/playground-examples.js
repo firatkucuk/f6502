@@ -134,44 +134,41 @@ program @ 0x0810 {
     id: 'asm',
     title: 'Inline assembly',
     source: `// asm {} drops to raw 6502. \${name} brings in program variables and constants.
-let @zp shade: u8 = 0;
+let @zp ticks: u8 = 0;
 
 program @ 0x0810 {
-  // Fill the screen with solid blocks once.
+  // Once: solid blocks everywhere, each cell coloured by its position.
   asm {
-    lda #$A0
     ldx #0
-  fill:
+  paint:
+    lda #$A0
     sta \${screen(0, 0)},x
     sta \${screen(0, 0) + 256},x
     sta \${screen(0, 0) + 512},x
     sta \${screen(0, 0) + 744},x
+    txa
+    and #$0F
+    sta \${color(0, 0)},x
+    sta \${color(0, 0) + 256},x
+    sta \${color(0, 0) + 512},x
+    sta \${color(0, 0) + 744},x
     inx
-    bne fill
+    bne paint
   }
 
   loop {
-    while (VIC2.rasterLine != 200) {}
-    while (VIC2.rasterLine == 200) {}
-
-    shade++;
-
-    // Four colour bands, each one step further along the palette.
+    // Change the border only while the beam is below the picture (line 251),
+    // so nothing tears.
+    while (VIC2.rasterLine != 251) {}
     asm {
-      ldx #0
-    paint:
-      lda \${shade}
-      sta \${color(0, 0)},x
-      clc
-      adc #1
-      sta \${color(0, 0) + 256},x
-      adc #1
-      sta \${color(0, 0) + 512},x
-      adc #1
-      sta \${color(0, 0) + 744},x
-      inx
-      bne paint
+      inc \${ticks}
+      lda \${ticks}
+      lsr a
+      lsr a
+      and #$0F
+      sta $D020
     }
+    while (VIC2.rasterLine == 251) {}
   }
 }
 `,
