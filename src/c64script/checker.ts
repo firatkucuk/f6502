@@ -60,6 +60,7 @@ const BUILTIN_FNS: ReadonlyMap<string, readonly [min: number, max: number]> = ne
   ['clrscr', [0, 0]],
   ['screen', [2, 2]],
   ['color', [2, 2]],
+  ['spritePtr', [1, 1]],
   ['puts', [3, 4]],
 ]);
 
@@ -108,6 +109,25 @@ export function foldConst(
       return v === null ? null : v === 0 ? 1 : 0;
     }
     case 'call': {
+      if (e.name === 'spritePtr') {
+        const a = e.args[0] !== undefined ? foldConst(e.args[0], lookup) : null;
+        if (a === null) return null;
+        if (a % 64 !== 0) {
+          throw new TypeError(
+            `spritePtr(): address ${a} is not a multiple of 64 (sprite data sits on 64-byte boundaries)`,
+            e.line,
+            0,
+          );
+        }
+        if (a >= 0x4000) {
+          throw new TypeError(
+            `spritePtr(): address ${a} is outside the VIC-II's 16 KB bank 0 (0..16383)`,
+            e.line,
+            0,
+          );
+        }
+        return a / 64;
+      }
       if (e.name !== 'screen' && e.name !== 'color') return null;
       const row = e.args[0] !== undefined ? foldConst(e.args[0], lookup) : null;
       const col = e.args[1] !== undefined ? foldConst(e.args[1], lookup) : null;

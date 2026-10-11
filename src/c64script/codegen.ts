@@ -262,6 +262,20 @@ export function generate(cp: CheckedProgram): CodeBuffer {
       return;
     }
 
+    // ── built-ins: spritePtr(addr) — the pointer value for sprite data at addr ──
+    if (e.name === 'spritePtr') {
+      const value = evalConst(e);
+      if (value === null) {
+        throw new CodeGenError(
+          'spritePtr(): the address must be a compile-time constant',
+          e.line,
+          0,
+        );
+      }
+      emit(0xa9, value & 0xff);
+      return;
+    }
+
     // ── built-ins: screen(row, col) / color(row, col) — compile-time addresses ──
     if (e.name === 'screen' || e.name === 'color') {
       const address = evalConst(e);

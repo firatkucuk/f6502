@@ -178,7 +178,9 @@ program @ 0x0810 {
     id: 'sprite',
     title: 'Moving sprite',
     source: `// A hollow-box sprite crossing the screen
-data @addr(0x0D40) {
+const SHAPE: u16 = 0x0D40;   // sprite data: 64-byte aligned
+
+data @addr(SHAPE) {
   box: [u8; 63] = [
     0xFF, 0xFF, 0xFF,
     0x80, 0x00, 0x01,
@@ -207,7 +209,7 @@ data @addr(0x0D40) {
 let @zp x: u8 = 24;
 
 program @ 0x0810 {
-  poke(0x07F8, 53);          // sprite 0 data at $0D40 (53 * 64)
+  poke(SPRITE_PTRS, spritePtr(SHAPE));   // sprite 0 reads its shape from SHAPE
   VIC2.spriteEnable = 1;
   VIC2.sprite0color = COLOR_YELLOW;
   VIC2.sprite0y = 120;

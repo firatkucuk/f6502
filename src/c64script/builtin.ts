@@ -5,9 +5,16 @@ export const COLOR_NAMES = [
   'ORANGE', 'BROWN', 'LIGHT_RED', 'DARK_GREY', 'MEDIUM_GREY', 'LIGHT_GREEN', 'LIGHT_BLUE', 'LIGHT_GREY',
 ] as const;
 
-function colorConst(name: string, value: number): VarDecl {
+/** Well-known addresses the language names. Hardware registers live in the VIC2/SID/CIA blocks. */
+export const ADDRESS_NAMES = [
+  ['SCREEN_RAM', 0x0400],
+  ['COLOR_RAM', 0xD800],
+  ['SPRITE_PTRS', 0x07F8],
+] as const;
+
+function constDecl(name: string, value: number, type: 'u8' | 'u16'): VarDecl {
   return {
-    tag: 'varDecl', name, type: { tag: 'u8' },
+    tag: 'varDecl', name, type: { tag: type },
     annotation: { kind: 'none' },
     isConst: true,
     init: { tag: 'intLit', value, line: 0 },
@@ -16,7 +23,10 @@ function colorConst(name: string, value: number): VarDecl {
 }
 
 export function builtinDecls(): Decl[] {
-  const colors: Decl[] = COLOR_NAMES.map((n, i) => colorConst(`COLOR_${n}`, i));
+  const colors: Decl[] = [
+    ...COLOR_NAMES.map((n, i) => constDecl(`COLOR_${n}`, i, 'u8')),
+    ...ADDRESS_NAMES.map(([n, v]) => constDecl(n, v, 'u16')),
+  ];
 
   const vic2: Decl = {
     tag: 'hardware', name: 'VIC2', base: 0xD000, line: 0,
