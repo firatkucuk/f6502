@@ -1,0 +1,24 @@
+// Rainbow Border: the simplest C64Script program.
+// The border walks through all 16 C64 colours, one step every 4 frames.
+let @zp colour: u8 = 0;
+let @zp ticks: u8 = 0;
+
+program @ 0x0810 {
+  clrscr();
+  puts(11, 13, "RAINBOW BORDER", COLOR_WHITE);
+  puts(13, 9, "16 COLOURS ON ONE REGISTER", COLOR_LIGHT_GREY);
+
+  loop {
+    // wait for one video frame
+    while (VIC2.rasterLine != 200) {}
+    while (VIC2.rasterLine == 200) {}
+
+    ticks = ticks + 1;
+    if (ticks == 4) {
+      ticks = 0;
+      colour = colour + 1;
+      if (colour == 16) { colour = 0; }
+      VIC2.borderColor = colour;
+    }
+  }
+}
