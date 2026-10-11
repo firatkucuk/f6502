@@ -1,4 +1,4 @@
-import { TypeError } from './errors';
+import { C64ScriptTypeError as TypeError } from './errors';
 import { COLOR_NAMES, builtinDecls } from './builtin';
 import { ZpAllocator } from './symbols';
 import type {

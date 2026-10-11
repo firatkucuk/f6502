@@ -3,7 +3,7 @@ import { ZpAllocator } from '../../src/c64script/symbols';
 import { tokenize } from '../../src/c64script/lexer';
 import { parse } from '../../src/c64script/parser';
 import { check } from '../../src/c64script/checker';
-import { TypeError as PsTypeError } from '../../src/c64script/errors';
+import { C64ScriptTypeError as PsTypeError } from '../../src/c64script/errors';
 
 describe('ZpAllocator', () => {
   it('starts at $02', () => {

@@ -1,4 +1,4 @@
-import { TypeError } from './errors';
+import { C64ScriptTypeError as TypeError } from './errors';
 
 export type SymbolKind =
   | { kind: 'var';      zpAddr: number | null; absAddr: number | null; isConst: boolean }
