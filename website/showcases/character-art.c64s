@@ -1,8 +1,6 @@
 // Character Mode Art: a sunset painted with one solid-block character and colour RAM.
-// The screen is 40 x 25 cells; every row gets one colour from the BANDS table.
-const BANDS: u16 = 0x0C00;
-
-data @addr(BANDS) {
+// The screen is 40 x 25 cells; every row gets one colour from the table below.
+data @addr(0x0C00) {
   rows: [u8; 25] = [
     COLOR_BLUE, COLOR_BLUE, COLOR_BLUE,
     COLOR_PURPLE, COLOR_PURPLE, COLOR_PURPLE,
@@ -19,47 +17,16 @@ data @addr(BANDS) {
   ];
 }
 
-let @zp cell: u16;   // pointer into colour RAM
-
 program @ 0x0810 {
   VIC2.borderColor = COLOR_BLACK;
   VIC2.bgColor0 = COLOR_BLACK;
 
-  asm {
-    // 1. a solid block ($A0) in every cell of screen RAM
-    lda #$A0
-    ldx #0
-  fill:
-    sta ${SCREEN_RAM},x
-    sta ${SCREEN_RAM + 0x100},x
-    sta ${SCREEN_RAM + 0x200},x
-    sta ${SCREEN_RAM + 0x2E8},x
-    inx
-    bne fill
-
-    // 2. colour each row: 40 cells through a pointer that moves down one row at a time
-    lda #lo(${COLOR_RAM})
-    sta ${cell}
-    lda #hi(${COLOR_RAM})
-    sta ${cell} + 1
-    ldx #0
-  row:
-    lda ${BANDS},x
-    ldy #39
-  paint:
-    sta (${cell}),y
-    dey
-    bpl paint
-    clc
-    lda ${cell}
-    adc #40
-    sta ${cell}
-    bcc same
-    inc ${cell} + 1
-  same:
-    inx
-    cpx #25
-    bne row
+  for (let r: u8 = 0; r < 25; r++) {
+    let shade: u8 = rows[r];
+    for (let c: u8 = 0; c < 40; c++) {
+      poke(screen(r, c), 0xA0);      // a solid block in every cell
+      poke(color(r, c), shade);      // coloured by its row
+    }
   }
 
   puts(1, 14, "C64SCRIPT", COLOR_WHITE);

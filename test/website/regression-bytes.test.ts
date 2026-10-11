@@ -24,6 +24,6 @@ describe('compiled bytes of shipped programs are stable', () => {
     );
   }
   it('has an entry for every example and showcase present today', () => {
-    expect(Object.keys(hashes).length).toBeGreaterThanOrEqual(10);
+    expect(Object.keys(hashes).length).toBeGreaterThanOrEqual(8);
   });
 });

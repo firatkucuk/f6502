@@ -1,5 +1,5 @@
 // Sprite Dance: eight sprites share one round shape and chase each other along a looping path.
-// The path comes from a 128-entry sine table; indexing a table needs assembly (lda table,x).
+// The path comes from a 128-entry sine table: wave[i] reads it.
 const SHAPE: u16 = 0x0D40;   // sprite data, 64-byte aligned
 const SINE: u16 = 0x0E00;    // y = 140 + 80 * sin(2 * pi * k / 128)
 
@@ -51,8 +51,8 @@ data @addr(SINE) {
 }
 
 let @zp phase: u8 = 0;   // where the leader is on the path
-let @zp n: u8 = 0;       // sprite being placed
-let @zp reg: u8 = 0;     // 2 * n: offset of its x/y registers
+let @zp reg: u8 = 0;     // 2 * n: offset of sprite n's x register ($D000 + 2n; y is +1)
+let @zp pos: u8 = 0;     // this sprite's place on the path
 
 program @ 0x0810 {
   VIC2.borderColor = COLOR_BLACK;
@@ -87,34 +87,16 @@ program @ 0x0810 {
 
     phase = (phase + 1) & 127;
 
-    n = 7;
-    asm {
-    next:
-      lda ${n}
-      asl a
-      sta ${reg}            // 2n: this sprite's x register is $D000 + 2n, y is +1
-      lda ${n}
-      asl a
-      asl a
-      asl a
-      asl a                  // n * 16: the sprites are spread 16 steps apart
-      clc
-      adc ${phase}
-      and #127
-      tax
-      ldy ${reg}
-      lda ${SINE},x         // x follows the sine
-      sta $D000,y
-      txa
-      asl a                  // twice as fast ...
-      clc
-      adc #32                // ... and a quarter turn ahead: a figure of eight
-      and #127
-      tax
-      lda ${SINE},x
-      sta $D001,y
-      dec ${n}
-      bpl next
+    reg = 0;
+    pos = phase;
+    for (let n: u8 = 0; n < 8; n++) {
+      poke(0xD000 + reg, wave[pos]);      // x follows the sine
+      let y: u8 = pos + pos;              // twice as fast ...
+      y = y + 32;                         // ... and a quarter turn ahead: a figure of eight
+      y = y & 127;
+      poke(0xD001 + reg, wave[y]);
+      reg = reg + 2;
+      pos = (pos + 16) & 127;             // the next sprite is 16 steps further along
     }
   }
 }
