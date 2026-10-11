@@ -231,11 +231,11 @@ describe('unsupported constructs are errors, not no-ops', () => {
     );
   });
 
-  it('array indexing', () => {
+  it('indexing something that is not an array', () => {
     expectError(
       'let @zp a: u8 = 0;\nprogram @ 0x0810 {\n  a = a[1];\n  loop {}\n}',
-      'codegen',
-      /indexing/,
+      'type',
+      /'a' is not an array/,
       3,
     );
   });

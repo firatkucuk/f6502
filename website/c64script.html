@@ -431,6 +431,41 @@
 }</pre>
       </div>
     </div>
+      <h3 style="margin-top:2rem">Arrays and tables</h3>
+    <p style="color:var(--text-muted);font-size:0.9rem;margin-bottom:1rem">
+      The fields of a <code>data</code> block, and variables declared
+      <code>let @addr(…) name: [u8; N]</code> or <code>let @zp name: [u8; N]</code>, are arrays:
+      <code>name[i]</code> reads and writes an element, <code>name[i] += 1</code> and
+      <code>name[i]++</code> work, and the index is a <code>u8</code> or a <code>u16</code>
+      expression. A constant index past the end is a compile error; an index worked out while
+      running is not checked. The bare name of an array is its address (a <code>u16</code>
+      constant), so <code>spritePtr(shape)</code> works for a sprite stored in a data block.
+      Elements are bytes; <code>[u16; N]</code> is not available.
+    </p>
+    <div class="terminal reveal" style="margin-top:1rem">
+      <div class="terminal-bar">
+        <span class="terminal-dot red"></span>
+        <span class="terminal-dot yellow"></span>
+        <span class="terminal-dot green"></span>
+        <span class="terminal-title">arrays.c64s</span>
+      </div>
+      <div class="terminal-body">
+        <pre data-try><span class="cm">// A table in a data block, read by index; an array in RAM, written by index.</span>
+<span class="kw">data</span> <span class="an">@addr</span>(<span class="nu">0x0C00</span>) {
+  squares: [<span class="ty">u8</span>; <span class="nu">8</span>] = [<span class="nu">0</span>, <span class="nu">1</span>, <span class="nu">4</span>, <span class="nu">9</span>, <span class="nu">16</span>, <span class="nu">25</span>, <span class="nu">36</span>, <span class="nu">49</span>];
+}
+
+<span class="kw">let</span> <span class="an">@addr</span>(<span class="nu">0x0C10</span>) copy: [<span class="ty">u8</span>; <span class="nu">8</span>];
+
+<span class="kw">program</span> @ <span class="nu">0x0810</span> {
+  <span class="kw">for</span> (<span class="kw">let</span> i: <span class="ty">u8</span> = <span class="nu">0</span>; i &lt; <span class="nu">8</span>; i++) {
+    copy[i] = squares[i] + <span class="nu">1</span>;
+  }
+  VIC2.borderColor = copy[<span class="nu">3</span>] &amp; <span class="nu">15</span>;     <span class="cm">// 10 = light red</span>
+  <span class="kw">loop</span> {}
+}</pre>
+      </div>
+    </div>
   </section>
 
   <!-- ── Literals and expressions ──────────────────────────────────────────── -->
@@ -1216,7 +1251,7 @@
           <tr><td><code>-a</code>, <code>~a</code></td><td style="color:var(--text-muted)"><code>unary operator '-' is not supported yet</code></td><td style="color:var(--text-muted)"><code>a ^ 0xFF</code> for the complement</td></tr>
           <tr><td><code>const A: u8 = 8 / 2;</code></td><td style="color:var(--text-muted)">needs a compile-time constant initialiser</td><td style="color:var(--text-muted)">write the result</td></tr>
           <tr><td><code>for (…; …; i += 2)</code>, <code>for (; …; …)</code></td><td style="color:var(--text-muted)">parse error</td><td style="color:var(--text-muted)">a <code>while</code> loop</td></tr>
-          <tr><td><code>buf[i]</code>, pointers, structs</td><td style="color:var(--text-muted)"><code>array indexing is not supported yet</code></td><td style="color:var(--text-muted)"><code>asm</code> with <code>,x</code> / <code>,y</code> addressing, or fixed addresses</td></tr>
+          <tr><td><code>[u16; N]</code> (pointers and structs are not supported either)</td><td style="color:var(--text-muted)"><code>arrays of u16 are not supported yet</code></td><td style="color:var(--text-muted)">a <code>[u8; N]</code> array with two bytes per element</td></tr>
           <tr><td><code>/* … */</code></td><td style="color:var(--text-muted)">parse error</td><td style="color:var(--text-muted)"><code>//</code></td></tr>
           <tr><td><code>f(f(1))</code>, recursion</td><td style="color:var(--text-muted)"><code>argument of 'f' calls 'f'…</code> / <code>called from within itself</code></td><td style="color:var(--text-muted)">assign the inner call to a variable; use a loop</td></tr>
         </tbody>

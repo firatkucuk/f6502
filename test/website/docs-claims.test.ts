@@ -139,10 +139,10 @@ describe('every row of the "not in the language yet" table is true', () => {
     ['for step +=', P('for (let i: u8 = 0; i < 8; i += 2) { }'), parseErr, 'parse'],
     ['for empty init', P('let i: u8 = 0; for (; i < 3; i++) { }'), parseErr, 'parse'],
     [
-      'array indexing',
-      P('buf[1] = 5;', 'let @zp buf: [u8; 4];'),
-      /array indexing is not supported yet/,
-      'codegen',
+      'arrays of u16',
+      P('', 'let @zp buf: [u16; 4];'),
+      /arrays of u16 are not supported yet/,
+      'type',
     ],
     ['block comment', P('/* hi */ VIC2.borderColor = 1;'), parseErr, 'parse'],
     [
@@ -262,5 +262,23 @@ describe('computed addresses in the guide', () => {
       expect(c.peek(0xd800 + r * 40 + r) & 15).toBe(7);
     }
     expect(c.peek(0x0400 + 1)).not.toBe(0xa0);
+  });
+});
+
+describe('arrays in the guide', () => {
+  it('the arrays sample copies and increments a table', () => {
+    const at = html.indexOf('arrays.c64s');
+    expect(at).toBeGreaterThan(0);
+    const pre = html.slice(html.indexOf('<pre', at), html.indexOf('</pre>', at));
+    const src = pre
+      .replace(/<[^>]+>/g, '')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&amp;/g, '&');
+    const c = boot(src, 6);
+    expect(Array.from({ length: 8 }, (_, i) => c.peek(0x0c10 + i))).toEqual([
+      1, 2, 5, 10, 17, 26, 37, 50,
+    ]);
+    expect(c.peek(0xd020) & 15).toBe(10);
   });
 });

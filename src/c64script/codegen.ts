@@ -32,7 +32,6 @@ type LoopContext = { breakLabel: string; continueLabel: string };
 /** Zero page the compiler keeps for itself ($F8–$FF are outside the allocator's range). */
 const ACC = 0xf8; // 16-bit accumulator: low at $F8, high at $F9; also the pointer for (zp),Y
 const TMP2 = 0xfa; // second 16-bit temporary ($FA/$FB)
-const TMP = 0xfc; // byte temporary
 
 export function generate(cp: CheckedProgram): CodeBuffer {
   const bytes: number[] = [];
@@ -59,6 +58,7 @@ export function generate(cp: CheckedProgram): CodeBuffer {
       case 'ident': {
         const v = lookup(e.name);
         if (v === undefined) return false;
+        if (v.type.tag === 'array') return true; // its address
         return v.isConst ? (v.constValue ?? 0) > 0xff : v.type.tag === 'u16';
       }
       case 'cast':
@@ -155,6 +155,13 @@ export function generate(cp: CheckedProgram): CodeBuffer {
         emit(0xe9, 0x01); // SBC #1
       }
       emit(0x8d, addr & 0xff, (addr >> 8) & 0xff); // STA abs
+    } else if (lhs.tag === 'index') {
+      const one: Expr = { tag: 'intLit', value: 1, line: lhs.line };
+      genAssign(
+        lhs,
+        { tag: 'binary', op: op === '++' ? '+' : '-', lhs, rhs: one, line: lhs.line },
+        lhs.line,
+      );
     } else {
       throw new CodeGenError(`cannot apply '${op}' here`, lhs.line, 0);
     }
@@ -210,15 +217,15 @@ export function generate(cp: CheckedProgram): CodeBuffer {
       }
       const addrVal = evalConst(addrExpr);
       if (addrVal === null) {
-        // A computed address: the value waits in TMP while the address is built in ACC,
+        // A computed address: the value waits on the stack while the address is built in ACC,
         // which is then the pointer for STA (ACC),Y.
         assertFits8(valueExpr, e.line, 'a byte');
         const byteConst = evalConst(valueExpr);
         if (byteConst !== null) emit(0xa9, byteConst & 0xff);
         else genExpr(valueExpr);
-        emit(0x85, TMP);
+        emit(0x48); // PHA: the value waits on the stack while the address is built
         gen16(addrExpr);
-        emit(0xa5, TMP, 0xa0, 0x00, 0x91, ACC); // LDA TMP; LDY #0; STA (ACC),Y
+        emit(0x68, 0xa0, 0x00, 0x91, ACC); // PLA; LDY #0; STA (ACC),Y
         return;
       }
       assertFits8(valueExpr, e.line, 'a byte');
@@ -455,7 +462,8 @@ export function generate(cp: CheckedProgram): CodeBuffer {
         genByteOf(e.expr, true, e.line);
         break;
       case 'index':
-        throw new CodeGenError('array indexing is not supported yet', e.line, 0);
+        genIndexRead(e);
+        break;
       case 'strLit':
         throw new CodeGenError('string literals are only allowed in puts()', e.line, 0);
     }
@@ -529,6 +537,71 @@ export function generate(cp: CheckedProgram): CodeBuffer {
     throw new CodeGenError(RHS_HINT, rhs.line, 0);
   }
 
+  /** The array an index expression refers to, with its address and whether it is zero page. */
+  function arrayOf(e: Extract<Expr, { tag: 'index' }>): { base: number; zp: boolean } {
+    if (e.obj.tag !== 'ident') {
+      throw new CodeGenError('only named arrays can be indexed', e.line, 0);
+    }
+    const v = lookup(e.obj.name);
+    if (!v || v.type.tag !== 'array') {
+      throw new CodeGenError(`'${e.obj.name}' is not an array`, e.line, 0);
+    }
+    if (v.zpAddr !== null) return { base: v.zpAddr, zp: true };
+    if (v.absAddr !== null) return { base: v.absAddr, zp: false };
+    throw new CodeGenError(`cannot index '${e.obj.name}'`, e.line, 0);
+  }
+
+  /** Leaves the address of the indexed element in ACC (the 16-bit index path). */
+  function genElementAddr(e: Extract<Expr, { tag: 'index' }>, base: number): void {
+    gen16(e.idx);
+    emit(0x18, 0xa5, ACC, 0x69, base & 0xff, 0x85, ACC); // CLC; ACC.lo += lo(base)
+    emit(0xa5, ACC + 1, 0x69, (base >> 8) & 0xff, 0x85, ACC + 1); // ACC.hi += hi(base) + carry
+  }
+
+  function genIndexRead(e: Extract<Expr, { tag: 'index' }>): void {
+    const { base, zp } = arrayOf(e);
+    const k = evalConst(e.idx);
+    if (k !== null) {
+      const a = base + k;
+      if (zp) emit(0xa5, a & 0xff);
+      else emit(0xad, a & 0xff, (a >> 8) & 0xff);
+      return;
+    }
+    if (!isU16(e.idx)) {
+      genExpr(e.idx);
+      emit(0xaa); // TAX
+      if (zp)
+        emit(0xb5, base & 0xff); // LDA zp,X
+      else emit(0xbd, base & 0xff, (base >> 8) & 0xff); // LDA abs,X
+      return;
+    }
+    genElementAddr(e, base);
+    emit(0xa0, 0x00, 0xb1, ACC); // LDY #0; LDA (ACC),Y
+  }
+
+  /** Stores the byte waiting on the stack (pushed by the caller) to the indexed element. */
+  function genIndexWrite(e: Extract<Expr, { tag: 'index' }>): void {
+    const { base, zp } = arrayOf(e);
+    const k = evalConst(e.idx);
+    if (k !== null) {
+      const a = base + k;
+      emit(0x68); // PLA
+      if (zp) emit(0x85, a & 0xff);
+      else emit(0x8d, a & 0xff, (a >> 8) & 0xff);
+      return;
+    }
+    if (!isU16(e.idx)) {
+      genExpr(e.idx);
+      emit(0xaa, 0x68); // TAX; PLA
+      if (zp)
+        emit(0x95, base & 0xff); // STA zp,X
+      else emit(0x9d, base & 0xff, (base >> 8) & 0xff); // STA abs,X
+      return;
+    }
+    genElementAddr(e, base);
+    emit(0x68, 0xa0, 0x00, 0x91, ACC); // PLA; LDY #0; STA (ACC),Y
+  }
+
   /** `screen(row, col)` / `color(row, col)` with run-time arguments → ACC. */
   function genScreenAddr(e: Extract<Expr, { tag: 'call' }>): void {
     const [rowE, colE] = e.args;
@@ -548,7 +621,7 @@ export function generate(cp: CheckedProgram): CodeBuffer {
     for (let i = 0; i < 2; i++) emit(0x06, ACC, 0x26, ACC + 1); // row * 32
     emit(0x18, 0xa5, ACC, 0x65, TMP2, 0x85, ACC); // CLC; ACC.lo += TMP2.lo
     emit(0xa5, ACC + 1, 0x65, TMP2 + 1, 0x85, ACC + 1); // ACC.hi += TMP2.hi (+ carry)
-    emit(0x68, 0x85, TMP2); // PLA; STA TMP2: the column (poke keeps its value in TMP)
+    emit(0x68, 0x85, TMP2); // PLA; STA TMP2: the column
     emit(0x18, 0xa5, ACC, 0x65, TMP2, 0x85, ACC); // ACC.lo += column
     emit(0xa5, ACC + 1, 0x69, 0x00, 0x85, ACC + 1); // ACC.hi += carry
     emit(0x18, 0xa5, ACC, 0x69, base & 0xff, 0x85, ACC); // ACC.lo += lo(base)
@@ -1100,6 +1173,13 @@ export function generate(cp: CheckedProgram): CodeBuffer {
         genStore16(v, lhs.name, rhs, line);
         return;
       }
+    }
+    if (lhs.tag === 'index') {
+      assertFits8(rhs, line, 'an array element');
+      genExpr(rhs);
+      emit(0x48); // PHA: the value waits on the stack while the index is computed
+      genIndexWrite(lhs);
+      return;
     }
     assertFits8(rhs, line, lhs.tag === 'ident' ? `'${lhs.name}'` : 'a byte register');
     genExpr(rhs);
