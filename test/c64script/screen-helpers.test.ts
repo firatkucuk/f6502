@@ -39,7 +39,7 @@ describe('screen(row, col) and color(row, col)', () => {
     expect(c.peek(0xd021) & 0x0f).toBe(5);
   });
 
-  it('reject a row or column off the screen, at the call', () => {
+  it('rejects a row or column off the screen, at the call', () => {
     expectError(
       'program @ 0x0810 {\n  poke(screen(25, 0), 1);\n  loop {}\n}',
       'type',
