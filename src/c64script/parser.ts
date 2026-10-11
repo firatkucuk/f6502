@@ -63,15 +63,15 @@ export function parse(tokens: Token[]): Program {
   }
 
   function parseAnnotation(): VarAnnotation {
-    if (!at('at')) return { kind: 'none' };
+    if (!at('at')) return { tag: 'none' };
     eat('at');
     const name = eat('ident').text;
-    if (name === 'zp') return { kind: 'zp' };
+    if (name === 'zp') return { tag: 'zp' };
     if (name === 'addr') {
       eat('lparen');
       const addr = parseExpr();
       eat('rparen');
-      return { kind: 'addr', address: addr };
+      return { tag: 'addr', address: addr };
     }
     throw new ParseError(`unknown annotation @${name}`, peek().line, peek().col);
   }
@@ -158,7 +158,7 @@ export function parse(tokens: Token[]): Program {
 
   function parseDataDecl(line: number): Decl {
     eat('data');
-    let annotation: VarAnnotation = { kind: 'none' };
+    let annotation: VarAnnotation = { tag: 'none' };
     if (at('at') && peek(1).text === 'addr') annotation = parseAnnotation();
     eat('lbrace');
     const dataFields: { name: string; type: PsType; init: Expr[] }[] = [];
@@ -373,25 +373,25 @@ export function parse(tokens: Token[]): Program {
           t.col,
         );
       }
-      return { kind: 'label', name: t.text, line: t.line };
+      return { tag: 'label', name: t.text, line: t.line };
     }
     const mnemonic = t.text.toUpperCase();
-    return { kind: 'instr', mnemonic, operand: parseAsmOperand(mnemonic, t.line), line: t.line };
+    return { tag: 'instr', mnemonic, operand: parseAsmOperand(mnemonic, t.line), line: t.line };
   }
 
   /** The operand must start on the instruction's own line, so `dex` ⏎ `bne x` stays two items. */
   function parseAsmOperand(mnemonic: string, line: number): AsmOperand {
     const next = peek();
     if (next.line !== line || next.kind === 'rbrace' || next.kind === 'eof')
-      return { kind: 'none' };
-    if (isMnemonic(mnemonic) && !takesOperand(mnemonic)) return { kind: 'none' };
+      return { tag: 'none' };
+    if (isMnemonic(mnemonic) && !takesOperand(mnemonic)) return { tag: 'none' };
     if (isWord(next) && next.text.toLowerCase() !== 'a' && isMnemonic(next.text)) {
-      return { kind: 'none' }; // `asl bne …` on one line: the next word starts a new instruction
+      return { tag: 'none' }; // `asl bne …` on one line: the next word starts a new instruction
     }
 
     if (at('hash')) {
       pos++;
-      return { kind: 'imm', value: parseAsmExpr() };
+      return { tag: 'imm', value: parseAsmExpr() };
     }
     if (at('lparen')) {
       pos++;
@@ -402,7 +402,7 @@ export function parse(tokens: Token[]): Program {
           throw new ParseError(`expected 'x' in (address,x), got '${reg.text}'`, reg.line, reg.col);
         }
         eat('rparen');
-        return { kind: 'izx', value };
+        return { tag: 'izx', value };
       }
       eat('rparen');
       if (maybe('comma')) {
@@ -410,13 +410,13 @@ export function parse(tokens: Token[]): Program {
         if (reg.text.toLowerCase() !== 'y') {
           throw new ParseError(`expected 'y' in (address),y, got '${reg.text}'`, reg.line, reg.col);
         }
-        return { kind: 'izy', value };
+        return { tag: 'izy', value };
       }
-      return { kind: 'ind', value };
+      return { tag: 'ind', value };
     }
     if (at('ident') && peek().text.toLowerCase() === 'a') {
       pos++;
-      return { kind: 'acc' };
+      return { tag: 'acc' };
     }
     const value = parseAsmExpr();
     if (maybe('comma')) {
@@ -425,9 +425,9 @@ export function parse(tokens: Token[]): Program {
       if (r !== 'x' && r !== 'y') {
         throw new ParseError(`expected x or y after ',', got '${reg.text}'`, reg.line, reg.col);
       }
-      return { kind: 'addr', value, index: r };
+      return { tag: 'addr', value, index: r };
     }
-    return { kind: 'addr', value, index: null };
+    return { tag: 'addr', value, index: null };
   }
 
   function parseAsmExpr(): AsmExpr {

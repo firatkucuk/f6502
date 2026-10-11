@@ -171,7 +171,7 @@ describe('every row of the "not in the language yet" table is true', () => {
     const ctor = (caught as Error).constructor.name;
     if (kind === 'parse') expect(['ParseError', 'LexError']).toContain(ctor);
     if (kind === 'codegen') expect(ctor).toBe('CodeGenError');
-    if (kind === 'type') expect(ctor).toBe('TypeError');
+    if (kind === 'type') expect(ctor).toBe('C64ScriptTypeError');
   });
 });
 

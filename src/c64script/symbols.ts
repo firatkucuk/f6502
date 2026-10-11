@@ -1,11 +1,11 @@
 import { C64ScriptTypeError as TypeError } from './errors';
 
 export type SymbolKind =
-  | { kind: 'var';      zpAddr: number | null; absAddr: number | null; isConst: boolean }
-  | { kind: 'fn';       isInline: boolean }
-  | { kind: 'hardware'; base: number }
-  | { kind: 'struct' }
-  | { kind: 'color';    value: number };
+  | { tag: 'var';      zpAddr: number | null; absAddr: number | null; isConst: boolean }
+  | { tag: 'fn';       isInline: boolean }
+  | { tag: 'hardware'; base: number }
+  | { tag: 'struct' }
+  | { tag: 'color';    value: number };
 
 export interface C64Symbol {
   name: string;
