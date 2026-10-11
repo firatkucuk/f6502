@@ -20,13 +20,15 @@
     .pg { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 1.25rem;
           max-width: var(--max-w); margin: 0 auto; padding: 0 1.5rem 3rem; }
     @media (max-width: 900px) { .pg { grid-template-columns: minmax(0, 1fr); } }
-    .pg-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem; margin-bottom: 0.6rem; }
-    .pg-select-label { display: flex; align-items: center; gap: 0.6rem; flex: 1 1 100%;
-                       font-size: 0.8rem; color: var(--text-muted); }
-    .pg-select-label select { flex: 1; min-width: 0; background: var(--surface-2); color: var(--text);
-                              border: 1px solid var(--border-2); border-radius: 6px;
-                              padding: 0.4rem 0.5rem; font: inherit; }
-    .pg-hint { font-size: 0.75rem; color: var(--text-dim); }
+    .pg-window { margin: 0; }
+    .pg-window .terminal-bar { gap: 0.6rem; }
+    .pg-window .terminal-actions { margin-left: 0; }
+    .pg-select { flex: 1 1 0; min-width: 0; max-width: 18rem; margin: 0 auto;
+                 background: var(--surface-3); color: var(--text); border: 1px solid var(--border-2);
+                 border-radius: 6px; padding: 0.3rem 0.5rem; font: 0.8rem var(--font-mono); }
+    .term-btn.run { width: auto; padding: 0 0.65rem; gap: 0.4rem;
+                    font: 600 0.78rem var(--font-body); }
+    .pg-window .pg-editor { border: 0; border-radius: 0; }
     .pg-editor { position: relative; height: 480px; background: #0b0c1e; border: 1px solid var(--border-2);
                  border-radius: 8px; overflow: hidden; counter-reset: line; }
     .pg-editor pre, .pg-editor textarea {
@@ -94,18 +96,33 @@
 
   <main class="pg">
     <section aria-label="Editor">
-      <div class="pg-toolbar">
-        <button id="run-btn" class="btn btn-primary" type="button">&#9654; Run</button>
-        <button id="reboot-btn" class="btn btn-outline" type="button">&#8634; Reboot</button>
-        <span class="pg-hint">Ctrl/&#8984; + Enter</span>
-        <label class="pg-select-label">Example
-          <select id="example-select"></select>
-        </label>
-      </div>
-      <div class="pg-editor">
-        <pre id="highlight" data-no-copy aria-hidden="true"></pre>
-        <textarea id="editor" spellcheck="false" wrap="off" autocomplete="off"
-                  autocapitalize="off" aria-label="C64Script source"></textarea>
+      <div class="terminal pg-window">
+        <div class="terminal-bar">
+          <span class="terminal-dot red"></span>
+          <span class="terminal-dot yellow"></span>
+          <span class="terminal-dot green"></span>
+          <select id="example-select" class="pg-select" aria-label="Example program"></select>
+          <span class="terminal-actions">
+            <button id="run-btn" class="term-btn try run" type="button"
+                    title="Run (Ctrl/⌘ + Enter)" aria-label="Run">
+              <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M5 3.2v9.6a.5.5 0 0 0 .76.43l7.6-4.8a.5.5 0 0 0 0-.86l-7.6-4.8A.5.5 0 0 0 5 3.2z"/></svg>
+              <span>Run</span>
+            </button>
+            <button id="reboot-btn" class="term-btn" type="button"
+                    title="Reboot the machine" aria-label="Reboot">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13.2 8A5.2 5.2 0 1 1 11.5 4.2"/><path d="M12.6 1.8v2.8H9.8"/></svg>
+            </button>
+            <button id="copy-btn" class="term-btn" type="button"
+                    title="Copy source" aria-label="Copy source">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="5.5" y="5.5" width="8" height="8" rx="1.5"/><path d="M10.5 3.5v-.5a1 1 0 0 0-1-1h-6a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h.5"/></svg>
+            </button>
+          </span>
+        </div>
+        <div class="pg-editor">
+          <pre id="highlight" data-no-copy aria-hidden="true"></pre>
+          <textarea id="editor" spellcheck="false" wrap="off" autocomplete="off"
+                    autocapitalize="off" aria-label="C64Script source"></textarea>
+        </div>
       </div>
       <div id="status" class="pg-status" role="status" aria-live="polite">Loading emulator…</div>
     </section>
