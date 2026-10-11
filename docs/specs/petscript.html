@@ -1,0 +1,1229 @@
+<title>PetScript</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap">
+
+<style>
+/* ── tokens ─────────────────────────────────────────── */
+:root {
+  --bg:       #F7F9FD;
+  --bg2:      #EDF1FA;
+  --surf:     #FFFFFF;
+  --bdr:      #CFD8EE;
+  --tx:       #0C1628;
+  --tx2:      #526080;
+  --acc:      #1A5CE8;
+  --acc-bg:   #EBF1FD;
+  --cb:       #09111E;  /* code block bg — always dark */
+  --ct:       #CDD6F4;  /* code text */
+  --kw:       #F5A62A;
+  --ty:       #4FD1C5;
+  --li:       #FC9040;
+  --cm:       #3D5470;
+  --an:       #C49BFF;
+  --fn:       #7EC4E3;
+  --lb:       #7DEBB5;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg:#060D1A; --bg2:#0A1525; --surf:#0E1C31; --bdr:#192C46;
+    --tx:#D0DFF0; --tx2:#607898; --acc:#4A90F5; --acc-bg:#0D2248;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg:#060D1A; --bg2:#0A1525; --surf:#0E1C31; --bdr:#192C46;
+  --tx:#D0DFF0; --tx2:#607898; --acc:#4A90F5; --acc-bg:#0D2248;
+  color-scheme: dark;
+}
+
+*,*::before,*::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--tx);
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  font-size: 15px;
+  line-height: 1.65;
+}
+
+/* ── hero ─────────────────────────────────────────────── */
+.hero {
+  background: #040B17;
+  padding: 80px 24px 68px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+.hero::before {
+  content: '';
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(ellipse 70% 55% at 50% 0%,  rgba(26,92,232,.22) 0%,transparent 70%),
+    radial-gradient(ellipse 40% 35% at 75% 75%, rgba(79,209,197,.10) 0%,transparent 60%);
+  pointer-events: none;
+}
+.hero::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: repeating-linear-gradient(
+    0deg, transparent, transparent 3px,
+    rgba(0,0,0,.06) 3px, rgba(0,0,0,.06) 4px
+  );
+  pointer-events: none;
+}
+.hero-inner { position: relative; z-index: 1; max-width: 660px; margin: 0 auto; }
+
+.badge {
+  display: inline-flex; align-items: center; gap: 7px;
+  background: rgba(26,92,232,.18);
+  border: 1px solid rgba(74,144,245,.35);
+  color: #7AB5FF;
+  font-family: 'JetBrains Mono', monospace; font-size: 10.5px; font-weight: 500;
+  letter-spacing: .12em; padding: 4px 14px; border-radius: 99px; margin-bottom: 28px;
+}
+.bdot {
+  width: 6px; height: 6px; background: #4A90F5; border-radius: 50%;
+  animation: blink 2.2s infinite;
+}
+@keyframes blink { 0%,100%{opacity:1} 55%{opacity:.25} }
+
+.hero-title {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: clamp(56px, 10vw, 96px);
+  font-weight: 700; color: #fff;
+  letter-spacing: -.025em; line-height: 1; margin-bottom: 6px;
+}
+.hero-title em { color: #4A90F5; font-style: normal; }
+
+.hero-ext {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px; color: #4FD1C5; letter-spacing: .14em; margin-bottom: 18px;
+}
+
+.hero-lead {
+  color: rgba(208,228,248,.72); font-size: 16px; line-height: 1.75;
+  max-width: 460px; margin: 0 auto 36px;
+}
+
+.chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+.chip {
+  background: rgba(255,255,255,.05);
+  border: 1px solid rgba(255,255,255,.1);
+  color: rgba(208,228,248,.82);
+  font-family: 'JetBrains Mono', monospace; font-size: 11.5px;
+  padding: 5px 13px; border-radius: 4px;
+}
+
+/* ── layout ───────────────────────────────────────────── */
+.wrap { display: flex; max-width: 1060px; margin: 0 auto; align-items: flex-start; padding: 0 24px; }
+
+.nav {
+  width: 210px; flex-shrink: 0;
+  position: sticky; top: 28px;
+  padding: 36px 0 36px;
+  max-height: calc(100vh - 56px); overflow-y: auto;
+}
+.nav-label {
+  font-size: 10px; font-weight: 600; letter-spacing: .12em;
+  color: var(--tx2); text-transform: uppercase; padding: 0 16px 10px;
+}
+.nav ul { list-style: none; }
+.nav a {
+  display: block; padding: 5px 16px;
+  color: var(--tx2); text-decoration: none; font-size: 13px;
+  border-left: 2px solid transparent;
+  transition: color .14s, border-color .14s;
+}
+.nav a:hover, .nav a.on { color: var(--acc); border-left-color: var(--acc); }
+.nav a.on { font-weight: 600; }
+
+.main { flex: 1; min-width: 0; padding: 52px 0 100px 44px; }
+
+/* ── sections ─────────────────────────────────────────── */
+.sec { margin-bottom: 72px; scroll-margin-top: 28px; }
+
+.sec-h {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 23px; font-weight: 700; color: var(--tx);
+  letter-spacing: -.01em; padding-bottom: 12px; margin-bottom: 8px;
+  border-bottom: 1px solid var(--bdr);
+}
+.sec-p { color: var(--tx2); font-size: 14.5px; margin-bottom: 20px; line-height: 1.75; }
+
+h3 {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 15px; font-weight: 600; color: var(--tx);
+  margin: 28px 0 8px;
+}
+p { margin-bottom: 12px; }
+
+/* ── code blocks ──────────────────────────────────────── */
+.cb {
+  background: var(--cb);
+  border: 1px solid rgba(255,255,255,.07);
+  border-radius: 8px; overflow: hidden; margin: 14px 0;
+}
+.cb-hdr {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 7px 14px;
+  background: rgba(255,255,255,.03);
+  border-bottom: 1px solid rgba(255,255,255,.05);
+}
+.cb-lang { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #4FD1C5; letter-spacing: .07em; }
+.wdots { display: flex; gap: 5px; }
+.wd { width: 9px; height: 9px; border-radius: 50%; }
+.wd:nth-child(1) { background: #FF5F57; }
+.wd:nth-child(2) { background: #FFBC2E; }
+.wd:nth-child(3) { background: #28CA42; }
+
+pre {
+  padding: 16px 18px; overflow-x: auto;
+  font-family: 'JetBrains Mono', monospace; font-size: 12.5px;
+  line-height: 1.78; color: var(--ct);
+}
+pre code { font-family: inherit; background: none; padding: 0; border: none; color: inherit; }
+
+.kw { color: #F5A62A; }
+.ty { color: #4FD1C5; font-style: italic; }
+.li { color: #FC9040; }
+.cm { color: #3D5470; font-style: italic; }
+.an { color: #C49BFF; }
+.fn { color: #7EC4E3; }
+.lb { color: #7DEBB5; }
+
+code:not(pre code) {
+  background: var(--bg2); border: 1px solid var(--bdr);
+  color: var(--acc);
+  font-family: 'JetBrains Mono', monospace; font-size: 12px;
+  padding: 1px 6px; border-radius: 4px;
+}
+
+/* ── tables ───────────────────────────────────────────── */
+.tw { overflow-x: auto; margin: 14px 0; }
+table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+th {
+  background: var(--bg2); color: var(--tx2);
+  font-size: 10.5px; font-weight: 600; letter-spacing: .09em; text-transform: uppercase;
+  text-align: left; padding: 8px 14px; border-bottom: 1px solid var(--bdr);
+}
+td { padding: 9px 14px; border-bottom: 1px solid var(--bdr); vertical-align: top; line-height: 1.5; }
+tr:last-child td { border-bottom: none; }
+td:first-child { font-family: 'JetBrains Mono', monospace; font-size: 12.5px; color: var(--ty); white-space: nowrap; }
+td.plain { font-family: inherit; color: var(--tx); }
+
+/* ── cards ────────────────────────────────────────────── */
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; margin: 18px 0 28px; }
+.card { background: var(--surf); border: 1px solid var(--bdr); border-radius: 8px; padding: 18px; }
+.card-ico { font-size: 22px; margin-bottom: 10px; line-height: 1; }
+.card-t { font-weight: 600; font-size: 14px; margin-bottom: 4px; color: var(--tx); }
+.card-d { font-size: 13px; color: var(--tx2); line-height: 1.55; }
+
+/* ── note ─────────────────────────────────────────────── */
+.note {
+  background: var(--acc-bg); border-left: 3px solid var(--acc);
+  border-radius: 0 6px 6px 0; padding: 12px 16px; margin: 14px 0;
+  font-size: 13.5px; line-height: 1.6;
+}
+.note strong { color: var(--acc); }
+
+/* ── pipeline ─────────────────────────────────────────── */
+.pipeline { margin: 18px 0; }
+.pipe { display: flex; align-items: flex-start; gap: 14px; padding: 13px 0; border-bottom: 1px solid var(--bdr); }
+.pipe:last-child { border-bottom: none; }
+.pipe-n {
+  flex-shrink: 0; width: 26px; height: 26px;
+  background: var(--acc); color: #fff;
+  font-family: 'Space Grotesk', sans-serif; font-size: 12px; font-weight: 700;
+  border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  margin-top: 2px;
+}
+.pipe-title { font-weight: 600; font-size: 14px; color: var(--tx); margin-bottom: 2px; }
+.pipe-desc { font-size: 13px; color: var(--tx2); }
+
+/* ── responsive ───────────────────────────────────────── */
+@media (max-width: 740px) {
+  .nav { display: none; }
+  .wrap { display: block; padding: 0; }
+  .main { padding: 32px 20px 72px; }
+}
+</style>
+
+<!-- ═══════════════════════════════════ HERO -->
+<header class="hero">
+  <div class="hero-inner">
+    <div class="badge"><span class="bdot"></span>LANGUAGE SPEC · v0.1 DRAFT</div>
+    <h1 class="hero-title">Pet<em>Script</em></h1>
+    <p class="hero-ext">· petscript · .pet ·</p>
+    <p class="hero-lead">
+      A TypeScript-inspired statically typed language that compiles directly to
+      Commodore 64 PRG files — no runtime, no dependencies, pure 6502 machine code.
+    </p>
+    <div class="chips">
+      <span class="chip">TypeScript syntax</span>
+      <span class="chip">u8 / u16 / bool</span>
+      <span class="chip">6502 target</span>
+      <span class="chip">zero dependencies</span>
+      <span class="chip">PRG output</span>
+      <span class="chip">inline asm</span>
+    </div>
+  </div>
+</header>
+
+<!-- ═══════════════════════════════════ BODY -->
+<div class="wrap">
+
+  <!-- sidebar nav -->
+  <nav class="nav" aria-label="Spec sections">
+    <div class="nav-label">Sections</div>
+    <ul>
+      <li><a href="#overview">Overview</a></li>
+      <li><a href="#types">Types</a></li>
+      <li><a href="#variables">Variables</a></li>
+      <li><a href="#structs">Structs</a></li>
+      <li><a href="#functions">Functions</a></li>
+      <li><a href="#control">Control Flow</a></li>
+      <li><a href="#operators">Operators</a></li>
+      <li><a href="#asm">Inline Assembly</a></li>
+      <li><a href="#hardware">Hardware Blocks</a></li>
+      <li><a href="#program">Program Block</a></li>
+      <li><a href="#example">Full Example</a></li>
+      <li><a href="#compiler">Compiler</a></li>
+    </ul>
+  </nav>
+
+  <!-- main content -->
+  <main class="main">
+
+    <!-- ── Overview ── -->
+    <section class="sec" id="overview">
+      <h2 class="sec-h">Overview</h2>
+      <p class="sec-p">
+        PetScript is a statically typed compiled language targeting the 6502 CPU and
+        Commodore 64. Its syntax deliberately mirrors TypeScript so that the language
+        feels familiar while being radically constrained by 8-bit hardware. Every
+        construct has a predictable, low-cost 6502 translation — there are no hidden
+        allocations, no garbage collector, and no standard library.
+      </p>
+
+      <div class="cards">
+        <div class="card">
+          <div class="card-ico">🔬</div>
+          <div class="card-t">No hidden cost</div>
+          <div class="card-d">Every operator maps to one or two 6502 instructions. Nothing is free.</div>
+        </div>
+        <div class="card">
+          <div class="card-ico">🗺️</div>
+          <div class="card-t">Hardware is visible</div>
+          <div class="card-d">VIC-II and CIA registers are first-class named fields, not magic numbers.</div>
+        </div>
+        <div class="card">
+          <div class="card-ico">🧠</div>
+          <div class="card-t">Memory is explicit</div>
+          <div class="card-d"><code>@zp</code> and <code>@addr</code> give exact control over placement.</div>
+        </div>
+        <div class="card">
+          <div class="card-ico">🔩</div>
+          <div class="card-t">Escape hatch</div>
+          <div class="card-d"><code>asm {}</code> drops to raw 6502 at any point with variable interpolation.</div>
+        </div>
+      </div>
+
+      <h3>Hello, C64</h3>
+      <div class="cb">
+        <div class="cb-hdr"><div class="wdots"><div class="wd"></div><div class="wd"></div><div class="wd"></div></div><span class="cb-lang">petscript</span></div>
+        <pre><code class="pet">// Border color cycles through all 16 C64 colors
+program @ 0xC000 {
+  loop {
+    for (let c: u8 = 0; c &lt; 16; c++) {
+      VIC2.borderColor = c;
+    }
+  }
+}</code></pre>
+      </div>
+
+      <p>Design principles:</p>
+      <ol style="padding-left:20px;color:var(--tx2);font-size:14px;line-height:2">
+        <li>Types reflect the machine — <code>u8</code> is the atom, <code>u16</code> is two atoms</li>
+        <li>Every construct has a direct, predictable 6502 translation</li>
+        <li>Zero-page placement is explicit and programmer-controlled</li>
+        <li>No runtime, no GC, no heap — what you write is what runs</li>
+        <li>The hardware is always visible; no abstraction hides memory-mapped I/O</li>
+      </ol>
+    </section>
+
+    <!-- ── Types ── -->
+    <section class="sec" id="types">
+      <h2 class="sec-h">Type System</h2>
+      <p class="sec-p">
+        PetScript has four primitive types and two composite forms. All types are
+        value types packed with no padding. There are no signed integers, no floats,
+        no strings, and no nullable types.
+      </p>
+
+      <h3>Primitives</h3>
+      <div class="tw">
+        <table>
+          <tr><th>Type</th><th>Size</th><th>Description</th><th>6502 mapping</th></tr>
+          <tr><td>u8</td><td class="plain">1 byte</td><td class="plain">Unsigned 8-bit integer — native register type</td><td class="plain">A, X, or Y register; single memory byte</td></tr>
+          <tr><td>u16</td><td class="plain">2 bytes</td><td class="plain">Unsigned 16-bit integer, little-endian</td><td class="plain">Two bytes; requires carry-chain arithmetic</td></tr>
+          <tr><td>bool</td><td class="plain">1 byte</td><td class="plain">Distinct type; stores canonical 0 (false) or 1 (true)</td><td class="plain">BEQ / BNE branch on the byte; <code>true</code> = 1, <code>false</code> = 0</td></tr>
+          <tr><td>void</td><td class="plain">—</td><td class="plain">Only valid as function return type</td><td class="plain">—</td></tr>
+        </table>
+      </div>
+
+      <h3>Composite types</h3>
+      <div class="cb">
+        <div class="cb-hdr"><div class="wdots"><div class="wd"></div><div class="wd"></div><div class="wd"></div></div><span class="cb-lang">petscript</span></div>
+        <pre><code class="pet">// Fixed-size array — size must be a compile-time constant
+let buf: [u8; 256];
+
+// Struct (see Structs section)
+let pos: Point;
+
+// Pointer — a u16 address; must live in zero page to dereference
+let @zp p: ptr&lt;u8&gt; = SCREEN_RAM;</code></pre>
+      </div>
+
+      <h3>Type conversions</h3>
+      <div class="tw">
+        <table>
+          <tr><th>Conversion</th><th>Syntax</th><th>Notes</th></tr>
+          <tr><td>bool → u8</td><td class="plain">implicit</td><td class="plain">Widens to 0 or 1 (canonical values)</td></tr>
+          <tr><td>u8 → bool</td><td class="plain"><code>x as bool</code></td><td class="plain">Normalizes to 0 or 1; non-zero input becomes 1</td></tr>
+          <tr><td>u8 → u16</td><td class="plain"><code>x as u16</code></td><td class="plain">Explicit widening — zero-extends</td></tr>
+          <tr><td>u16 → u8</td><td class="plain"><code>addr as u8</code></td><td class="plain">Explicit truncation — keeps low byte</td></tr>
+          <tr><td>ptr&lt;T&gt; ↔ u16</td><td class="plain"><code>p as u16</code> / <code>n as ptr&lt;u8&gt;</code></td><td class="plain">Reinterpret the 16-bit value</td></tr>
+        </table>
+      </div>
+
+      <div class="note"><strong>Note:</strong> All comparisons are unsigned. There are no signed types — use manual two's-complement conventions when needed.</div>
+      <div class="note"><strong>bool encoding:</strong> <code>true</code> is stored as byte value <code>1</code>; <code>false</code> as <code>0</code>. The compiler always emits canonical values — hardware registers and asm output must also write 0 or 1 when assigning to a <code>bool</code> variable. Comparing a <code>bool</code> with <code>== true</code> is safe; comparing with a non-canonical value like <code>0xFF</code> will not match.</div>
+    </section>
+
+    <!-- ── Variables ── -->
+    <section class="sec" id="variables">
+      <h2 class="sec-h">Variables &amp; Constants</h2>
+      <p class="sec-p">
+        Variables are statically allocated at compile time. There is no stack frame
+        for locals — every variable lives at a fixed address chosen either by the
+        compiler or pinned explicitly by the programmer.
+      </p>
+
+      <div class="cb">
+        <div class="cb-hdr"><div class="wdots"><div class="wd"></div><div class="wd"></div><div class="wd"></div></div><span class="cb-lang">petscript</span></div>
+        <pre><code class="pet">// Compiler-allocated — placed in RAM above the code
+let count: u8 = 0;
+let score: u16 = 0;
+
+// Zero-page — @zp gives fast 2-byte absolute addressing (vs 3-byte)
+// Allocates from $02 upward; the range $F8–$FF is ABI-reserved
+let @zp frame:  u8 = 0;
+let @zp cursor: u8 = 0;
+let @zp dest:   ptr&lt;u8&gt; = 0x0400;   // screen RAM pointer
+
+// Fixed address alias — no storage allocated; addr is the variable
+let @addr(0xD020) borderReg: u8;
+let @addr(0x0400) screen:    [u8; 1000];
+
+// Compile-time constant — folded into immediates, no RAM used
+const COLS:    u8  = 40;
+const ROWS:    u8  = 25;
+const SCREEN:  u16 = 0x0400;
+const LOAD_AT: u16 = 0xC000;</code></pre>
+      </div>
+
+      <div class="note">
+        <strong>@zp budget:</strong> Zero page is 256 bytes. The compiler allocates <code>@zp</code>
+        vars from <code>$02</code>. Addresses <code>$F8–$FF</code> are reserved for the function-call
+        ABI (u16 parameter passing). Exceeding the budget is a compile error.
+        <br><br>
+        <strong>KERNAL / BASIC conflict:</strong> The C64 KERNAL and BASIC ROM use much of ZP
+        ($00–$8F and beyond). When the KERNAL is enabled (default), only approximately
+        <code>$02–$0F</code> and <code>$FB–$FE</code> are safely free. The compiler supports
+        execution profiles: <code>--profile kernal-off</code> (ZP fully available after
+        <code>SEI; LDA #$35; STA $01</code>) and <code>--profile basic-off</code> (partial).
+        Choose a profile matching your startup sequence to avoid clobbering KERNAL state.
+      </div>
+    </section>
+
+    <!-- ── Structs ── -->
+    <section class="sec" id="structs">
+      <h2 class="sec-h">Structs</h2>
+      <p class="sec-p">
+        Structs are value types packed sequentially with no padding. Fields are
+        accessed via compile-time offset arithmetic — <code>player.x</code> resolves
+        to the base address of <code>player</code> plus the field's byte offset.
+        Structs cannot contain functions and cannot be more than one level deep in
+        zero page.
+      </p>
+
+      <div class="cb">
+        <div class="cb-hdr"><div class="wdots"><div class="wd"></div><div class="wd"></div><div class="wd"></div></div><span class="cb-lang">petscript</span></div>
+        <pre><code class="pet">struct Point {
+  x: u8,
+  y: u8,
+}
+
+struct Sprite {
+  x:       u8,
+  y:       u8,
+  color:   u8,
+  enabled: bool,   // bool is 1 byte — packed, no gap
+}
+
+// Instance in zero page — fast field access
+let @zp player: Sprite = { x: 100, y: 100, color: YELLOW, enabled: true };
+
+// Array of structs at a fixed address — 8 × 4 bytes = 32 bytes
+let @addr(0xC800) enemies: [Sprite; 8];
+
+// Field reads and writes resolve to base + offset at compile time
+player.x = 120;             // STA $ZP_BASE+0
+enemies[3].color = RED;     // STA $C80E  (3×4 + 2 = $C800 + 14 = $C80E)</code></pre>
+      </div>
+    </section>
+
+    <!-- ── Functions ── -->
+    <section class="sec" id="functions">
+      <h2 class="sec-h">Functions</h2>
+      <p class="sec-p">
+        Functions compile to subroutines with a defined calling convention.
+        The 6502 has no hardware frame pointer, so PetScript uses registers for
+        small argument lists and zero-page ABI slots for larger ones.
+      </p>
+
+      <h3>Calling convention</h3>
+      <div class="tw">
+        <table>
+          <tr><th>Scenario</th><th>How</th></tr>
+          <tr><td>1 u8 param</td><td class="plain">A register</td></tr>
+          <tr><td>2 u8 params</td><td class="plain">A (1st), X (2nd)</td></tr>
+          <tr><td>3 u8 params</td><td class="plain">A (1st), X (2nd), Y (3rd)</td></tr>
+          <tr><td>4+ params or any u16</td><td class="plain">Zero-page ABI slots $F8–$FF (compiler-managed)</td></tr>
+          <tr><td>Return u8</td><td class="plain">A register</td></tr>
+          <tr><td>Return u16</td><td class="plain">A = lo byte, Y = hi byte</td></tr>
+          <tr><td>Return void</td><td class="plain">—</td></tr>
+        </table>
+      </div>
+
+      <div class="cb">
+        <div class="cb-hdr"><div class="wdots"><div class="wd"></div><div class="wd"></div><div class="wd"></div></div><span class="cb-lang">petscript</span></div>
+        <pre><code class="pet">// 1 param → A; return → A
+// compiles to: CMP #200 / BCC skip / LDA #200 / skip: RTS
+fn clamp(val: u8): u8 {
+  if (val &gt; 200) return 200;
+  return val;
+}
+
+// 2 params → A, X; return → A
+// 6502 has no register-to-register ADC; compiler spills X:
+//   STX $tmp; CLC; ADC $tmp; RTS
+fn add(a: u8, b: u8): u8 {
+  return a + b;
+}
+
+// u16 return — A=lo, Y=hi
+fn screenAddr(col: u8, row: u8): u16 {
+  return SCREEN + (row as u16) * 40 + col as u16;
+}
+
+// @inline — body pasted at call site, no JSR/RTS overhead
+@inline fn setBorder(c: u8): void {
+  VIC2.borderColor = c;
+}
+
+// 4-param — all params go through ZP ABI block $F8–$FB (no register mixing)
+// caller: STA $F8; STX $F9; STY $FA; LDA color; STA $FB; JSR drawTile
+fn drawTile(x: u8, y: u8, tile: u8, color: u8): void {
+  // x→$F8, y→$F9, tile→$FA, color→$FB (all via ZP ABI slots)
+}</code></pre>
+      </div>
+
+      <div class="note">
+        <strong>Stack budget:</strong> The 6502 hardware stack is 256 bytes at
+        <code>$0100–$01FF</code>. Each <code>JSR</code> pushes 2 bytes (return address).
+        The compiler statically estimates call depth and warns when the budget may be exceeded.
+        Mutual recursion is a compile error.
+      </div>
+      <div class="note">
+        <strong>Re-entrancy / u16 params:</strong> Because there is no stack frame, ZP ABI
+        slots (<code>$F8–$FF</code>) are global. A function receiving a <code>u16</code>
+        parameter <em>must</em> copy it into a function-owned ZP variable before making any
+        nested call — otherwise the nested call's own argument setup will overwrite the
+        in-progress slot. The compiler enforces this and emits a copy sequence automatically;
+        do not rely on reading an ABI slot after a JSR.
+      </div>
+    </section>
+
+    <!-- ── Control Flow ── -->
+    <section class="sec" id="control">
+      <h2 class="sec-h">Control Flow</h2>
+      <p class="sec-p">
+        All control flow compiles to branch instructions (<code>BEQ</code>,
+        <code>BNE</code>, <code>BCC</code>, <code>BCS</code>) and unconditional
+        jumps. The compiler chooses the shortest branch form when the target is
+        within ±127 bytes, and inserts a bridging <code>JMP</code> otherwise.
+      </p>
+
+      <div class="cb">
+        <div class="cb-hdr"><div class="wdots"><div class="wd"></div><div class="wd"></div><div class="wd"></div></div><span class="cb-lang">petscript</span></div>
+        <pre><code class="pet">// if / else if / else
+if (lives == 0) {
+  gameOver();
+} else if (score &gt; 9999) {
+  displayWin();
+} else {
+  update();
+}
+
+// while — evaluates condition before body
+while (VIC2.rasterLine != 255) {}   // busy-wait for raster line
+
+// for — compiler tries to hold the counter in X or Y
+for (let i: u8 = 0; i &lt; 40; i++) {
+  screen[i] = 0x20;   // fill with spaces
+}
+
+// Downcount — maps directly to DEX/BNE (tightest loop)
+for (let i: u8 = 40; i != 0; i--) {
+  screen[i - 1] = 0x20;
+}
+
+// loop — infinite; use break to exit
+loop {
+  update();
+  render();
+  if (quit) break;
+}
+
+// break and continue compile to forward/back JMP
+while (idx &lt; 64) {
+  if (data[idx] == 0) break;
+  if (data[idx] == 0xFF) { idx++; continue; }
+  process(data[idx]);
+  idx++;
+}</code></pre>
+      </div>
+    </section>
+
+    <!-- ── Operators ── -->
+    <section class="sec" id="operators">
+      <h2 class="sec-h">Operators</h2>
+      <p class="sec-p">
+        Operators map predictably to 6502 instructions. Division and modulo are
+        emitted as software routines and annotated with a performance note. Shift
+        amounts must be compile-time constants; the compiler unrolls them.
+      </p>
+
+      <div class="tw">
+        <table>
+          <tr><th>Operator</th><th>6502 output</th><th>Notes</th></tr>
+          <tr><td>a + b</td><td class="plain"><code>CLC; LDA a; ADC b</code></td><td class="plain">u8 wraps; u16 uses carry chain</td></tr>
+          <tr><td>a - b</td><td class="plain"><code>SEC; LDA a; SBC b</code></td><td class="plain"></td></tr>
+          <tr><td>a * b</td><td class="plain">shift-and-add routine</td><td class="plain">u8×u8 → u8 (low byte); u16×u8 → u16 (for address arithmetic like <code>row * 40</code>)</td></tr>
+          <tr><td>a / b</td><td class="plain">software divide</td><td class="plain">Compiler emits a note per use; expensive</td></tr>
+          <tr><td>a % b</td><td class="plain">software modulo</td><td class="plain">Same caveat</td></tr>
+          <tr><td>a &amp; b</td><td class="plain"><code>LDA a; AND b</code></td><td class="plain">Bitwise AND</td></tr>
+          <tr><td>a | b</td><td class="plain"><code>LDA a; ORA b</code></td><td class="plain">Bitwise OR</td></tr>
+          <tr><td>a ^ b</td><td class="plain"><code>LDA a; EOR b</code></td><td class="plain">Bitwise XOR</td></tr>
+          <tr><td>~a</td><td class="plain"><code>LDA a; EOR #$FF</code></td><td class="plain">Bitwise NOT</td></tr>
+          <tr><td>a &lt;&lt; n</td><td class="plain"><code>ASL</code> × n</td><td class="plain">n must be a compile-time constant 0–7 (u8) or 0–15 (u16); unrolled</td></tr>
+          <tr><td>a &gt;&gt; n</td><td class="plain"><code>LSR</code> × n</td><td class="plain">Same range; logical (unsigned) shift</td></tr>
+          <tr><td>a == b</td><td class="plain"><code>CMP b; BNE →false</code></td><td class="plain">Result is bool; u16: two CMP steps (hi byte, then lo)</td></tr>
+          <tr><td>a != b</td><td class="plain"><code>CMP b; BEQ →false</code></td><td class="plain"></td></tr>
+          <tr><td>a &lt; b</td><td class="plain"><code>CMP b; BCS →false</code></td><td class="plain">Unsigned</td></tr>
+          <tr><td>a &gt; b</td><td class="plain"><code>CMP b; BEQ/BCC →false</code></td><td class="plain">Unsigned</td></tr>
+          <tr><td>a &amp;&amp; b</td><td class="plain">branch chain</td><td class="plain">Short-circuits</td></tr>
+          <tr><td>a || b</td><td class="plain">branch chain</td><td class="plain">Short-circuits</td></tr>
+          <tr><td>x++ / x--</td><td class="plain"><code>INC $x</code> / <code>DEC $x</code></td><td class="plain">u8 only; in-place</td></tr>
+          <tr><td>x += n</td><td class="plain"><code>CLC; LDA $x; ADC #n; STA $x</code></td><td class="plain">Also -=, &amp;=, |=, ^=, &lt;&lt;=, &gt;&gt;=</td></tr>
+        </table>
+      </div>
+      <div class="note">
+        <strong>u16 comparisons</strong> are not a single <code>CMP</code>. The compiler
+        emits a two-step sequence: compare the high byte first, branch on that, then compare
+        the low byte. Equality requires both bytes to match; ordered comparisons (<code>&lt;</code>,
+        <code>&gt;</code>) use the high byte result unless it is equal.
+      </div>
+    </section>
+
+    <!-- ── Inline Assembly ── -->
+    <section class="sec" id="asm">
+      <h2 class="sec-h">Inline Assembly</h2>
+      <p class="sec-p">
+        <code>asm {}</code> blocks emit raw 6502 bytes inline. They use standard
+        6502 mnemonics. PetScript variables can be referenced inside the block with
+        <code>${name}</code> — the compiler resolves these to the variable's address
+        or immediate value at link time.
+      </p>
+
+      <div class="cb">
+        <div class="cb-hdr"><div class="wdots"><div class="wd"></div><div class="wd"></div><div class="wd"></div></div><span class="cb-lang">petscript</span></div>
+        <pre><code class="pet">// Basic block — standard 6502 mnemonics
+asm {
+  sei              // disable interrupts
+  lda #$1b
+  sta $D011        // set text mode
+  cli
+}
+
+// ${name} for PetScript variables
+// @zp var → its zero-page address (used as ZP operand)
+// const  → its immediate value
+let @zp count: u8 = 10;
+const MAX: u8 = 200;
+
+asm {
+  lda ${count}     // LDA $02 (ZP address of count)
+  cmp #${MAX}      // CMP #200 (immediate constant)
+  bcc done
+  lda #${MAX}
+  sta ${count}
+  done:
+}
+
+// Indirect addressing — ptr&lt;u8&gt; in ZP enables (zp),y
+let @zp dst: ptr&lt;u8&gt; = 0x0400;
+asm {
+  lda #0x20        // space char
+  ldy #0
+  sta (${dst}),y   // store via ZP indirect+Y
+}
+
+// Clobber annotation — compiler will not keep live values
+// in the listed registers across this block.
+// Plain asm {} conservatively clobbers A, X, Y and all flags.
+// List only what you actually touch to allow the compiler
+// to keep the rest live.
+asm clobbers(A, X, flags) {
+  ldx #39
+  lda #0x20
+clear: sta 0x0400,x
+  dex
+  bpl clear
+}
+
+// Struct field reference — ${struct.field} resolves to base+offset address
+let @zp player: Sprite = { x: 100, y: 100, color: YELLOW, enabled: true };
+asm clobbers(A) {
+  lda ${player.x}     // LDA $ZP_BASE+0 (player.x offset resolved at compile time)
+  clc
+  adc #4
+  sta ${player.x}
+}
+
+// lo() / hi() — extract address bytes for indirect/self-modifying patterns
+const TABLE: u16 = 0xCC00;
+asm clobbers(A) {
+  lda #lo(TABLE)      // LDA #$00  (low byte of 0xCC00)
+  sta ptr_lo
+  lda #hi(TABLE)      // LDA #$CC  (high byte of 0xCC00)
+  sta ptr_hi
+}</code></pre>
+      </div>
+
+      <div class="note">
+        <strong>Rules:</strong> Labels inside <code>asm {}</code> are scoped to that block.
+        <code>${struct.field}</code> interpolation resolves struct field offsets at compile time
+        and is fully supported. <code>lo(expr)</code> and <code>hi(expr)</code> extract the low
+        and high bytes of any compile-time constant address. A plain <code>asm {}</code> without
+        a <code>clobbers()</code> annotation is treated as clobbering <strong>A, X, Y and all
+        flags</strong>; annotate to relax that assumption.
+      </div>
+    </section>
+
+    <!-- ── Hardware Blocks ── -->
+    <section class="sec" id="hardware">
+      <h2 class="sec-h">Hardware Blocks</h2>
+      <p class="sec-p">
+        A <code>hardware</code> block defines a memory-mapped register layout at a
+        fixed base address. Fields are not allocated — they are compile-time aliases
+        for <code>base + offset</code>. Access looks identical to struct field access
+        but never copies any data.
+      </p>
+
+      <div class="note">
+        <strong>All hardware block fields are implicitly volatile.</strong> The compiler
+        never caches, reorders, or eliminates reads or writes to hardware block fields —
+        every access emits a real <code>LDA</code> or <code>STA</code>. This is essential
+        for memory-mapped I/O: the VIC-II, SID, and CIA chips react to every individual
+        access. Do <em>not</em> use normal variables as aliases for hardware registers;
+        only <code>hardware</code> block fields carry volatile semantics.
+        <br><br>
+        <strong>NMOS 6502 hazard:</strong> Never use <code>INC</code> / <code>DEC</code>
+        on hardware registers — the NMOS 6502 performs a spurious intermediate write that
+        corrupts the register. Use read-modify-write via A instead:
+        <code>VIC2.spriteEnable = VIC2.spriteEnable | mask</code>.
+      </div>
+
+      <h3>Access modifiers</h3>
+      <div class="cb">
+        <div class="cb-hdr"><div class="wdots"><div class="wd"></div><div class="wd"></div><div class="wd"></div></div><span class="cb-lang">petscript</span></div>
+        <pre><code class="pet">hardware VIC2_detail @ 0xD000 {
+  // readonly — compiler rejects writes (e.g. read-only status register)
+  readonly  lpX:         u8 @ 0x13,   // light pen X
+  readonly  lpY:         u8 @ 0x14,
+
+  // writeonly — compiler rejects reads (register has no readable state)
+  writeonly irqAck:      u8 @ 0x19,   // write 1 to clear IRQ flag
+
+  // read_to_clear — reading the register clears it as a hardware side-effect
+  read_to_clear spSprCol: u8 @ 0x1E,  // sprite–sprite collision (cleared on read)
+  read_to_clear spBgCol:  u8 @ 0x1F,  // sprite–bg   collision (cleared on read)
+
+  // Separate aliases for a register that is different on read vs write
+  readonly  rasterLine: u8 @ 0x12,    // current raster line (read)
+  writeonly rasterIRQ:  u8 @ 0x12,    // raster compare IRQ trigger (write)
+}</code></pre>
+      </div>
+
+      <div class="cb">
+        <div class="cb-hdr"><div class="wdots"><div class="wd"></div><div class="wd"></div><div class="wd"></div></div><span class="cb-lang">petscript</span></div>
+        <pre><code class="pet">// Field @ offset within the base address block
+hardware VIC2 @ 0xD000 {
+  sprite0x:      u8 @ 0x00,   // $D000
+  sprite0y:      u8 @ 0x01,
+  sprite1x:      u8 @ 0x02,
+  sprite1y:      u8 @ 0x03,
+  // ...sprite 2–7 follow the same pattern...
+  spriteXmsb:    u8 @ 0x10,   // 9th X bit for all 8 sprites (bitmask)
+  ctrl1:         u8 @ 0x11,   // DEN, RSEL, YSCROLL, screen mode
+  readonly  rasterLine: u8 @ 0x12,   // current raster line (read)
+  writeonly rasterIRQ:  u8 @ 0x12,   // raster compare value (write)
+  spriteEnable:  u8 @ 0x15,   // bitmask: bit N enables sprite N
+  ctrl2:         u8 @ 0x16,   // CSEL, XSCROLL, multicolour mode
+  spriteYexp:    u8 @ 0x17,
+  memPointers:   u8 @ 0x18,   // video matrix + char/bitmap base
+  irqStatus:     u8 @ 0x19,
+  irqMask:       u8 @ 0x1A,
+  spritePriority:u8 @ 0x1B,
+  spriteMcol:    u8 @ 0x1C,
+  spriteXexp:    u8 @ 0x1D,
+  read_to_clear spSprCol: u8 @ 0x1E,  // sprite–sprite collision (cleared on read)
+  read_to_clear spBgCol:  u8 @ 0x1F,  // sprite–bg   collision (cleared on read)
+  borderColor:   u8 @ 0x20,   // $D020
+  bgColor0:      u8 @ 0x21,   // $D021
+  bgColor1:      u8 @ 0x22,
+  bgColor2:      u8 @ 0x23,
+  bgColor3:      u8 @ 0x24,
+  spMcol0:       u8 @ 0x25,
+  spMcol1:       u8 @ 0x26,
+  sprite0color:  u8 @ 0x27,
+  sprite1color:  u8 @ 0x28,
+  sprite2color:  u8 @ 0x29,
+  sprite3color:  u8 @ 0x2A,
+  sprite4color:  u8 @ 0x2B,
+  sprite5color:  u8 @ 0x2C,
+  sprite6color:  u8 @ 0x2D,
+  sprite7color:  u8 @ 0x2E,
+}
+
+hardware CIA1 @ 0xDC00 {
+  portA:    u8 @ 0x00,   // keyboard columns / joystick
+  portB:    u8 @ 0x01,
+  ddrA:     u8 @ 0x02,
+  ddrB:     u8 @ 0x03,
+  timerAlo: u8 @ 0x04,
+  timerAhi: u8 @ 0x05,
+  icr:      u8 @ 0x0D,
+  cra:      u8 @ 0x0E,
+}
+
+// Field access compiles directly to LDA/STA at the absolute address
+VIC2.borderColor = RED;         // STA $D020 with immediate value 2
+let col: u8 = VIC2.borderColor; // LDA $D020
+</code></pre>
+      </div>
+
+      <h3>Pre-defined SID block</h3>
+      <div class="cb">
+        <div class="cb-hdr"><div class="wdots"><div class="wd"></div><div class="wd"></div><div class="wd"></div></div><span class="cb-lang">petscript</span></div>
+        <pre><code class="pet">hardware SID @ 0xD400 {
+  v1freq_lo:  u8 @ 0x00,   // voice 1 frequency low
+  v1freq_hi:  u8 @ 0x01,   // voice 1 frequency high
+  v1pw_lo:    u8 @ 0x02,   // voice 1 pulse width low
+  v1pw_hi:    u8 @ 0x03,   // voice 1 pulse width high (bits 0–3)
+  v1ctrl:     u8 @ 0x04,   // voice 1 control (GATE, SYNC, RING, TEST, waveform)
+  v1atk_dec:  u8 @ 0x05,   // voice 1 attack/decay
+  v1sus_rel:  u8 @ 0x06,   // voice 1 sustain/release
+  v2freq_lo:  u8 @ 0x07,
+  v2freq_hi:  u8 @ 0x08,
+  v2pw_lo:    u8 @ 0x09,
+  v2pw_hi:    u8 @ 0x0A,
+  v2ctrl:     u8 @ 0x0B,
+  v2atk_dec:  u8 @ 0x0C,
+  v2sus_rel:  u8 @ 0x0D,
+  v3freq_lo:  u8 @ 0x0E,
+  v3freq_hi:  u8 @ 0x0F,
+  v3pw_lo:    u8 @ 0x10,
+  v3pw_hi:    u8 @ 0x11,
+  v3ctrl:     u8 @ 0x12,
+  v3atk_dec:  u8 @ 0x13,
+  v3sus_rel:  u8 @ 0x14,
+  filterFreqLo: u8 @ 0x15,
+  filterFreqHi: u8 @ 0x16,
+  resFilt:    u8 @ 0x17,   // resonance + filter routing
+  modeVol:    u8 @ 0x18,   // filter mode + master volume (bits 0–3)
+  readonly potX:   u8 @ 0x19,
+  readonly potY:   u8 @ 0x1A,
+  readonly oscOut: u8 @ 0x1B,  // voice 3 oscillator output
+  readonly envOut: u8 @ 0x1C,  // voice 3 envelope output
+}
+
+// Example: start a square-wave note on voice 1
+SID.v1freq_lo = 0x1C;   // A4 ≈ 440 Hz at 985248 Hz clock
+SID.v1freq_hi = 0x09;
+SID.v1ctrl    = 0x11;   // triangle + GATE on
+SID.v1atk_dec = 0x08;
+SID.v1sus_rel = 0xF0;
+SID.modeVol   = 0x0F;   // full volume, no filter
+</code></pre>
+      </div>
+
+      <p class="sec-p">
+        <code>VIC2</code>, <code>CIA1</code>, <code>CIA2</code>, and <code>SID</code> are
+        <strong>pre-defined</strong> in every PetScript compilation unit. Programs can
+        re-declare or extend them. The built-in color constants
+        (<code>BLACK</code>, <code>WHITE</code>, <code>RED</code> … <code>LIGHT_GREY</code>)
+        map to the 16 standard C64 palette values 0–15.
+      </p>
+    </section>
+
+    <!-- ── Program Block ── -->
+    <section class="sec" id="program">
+      <h2 class="sec-h">Program Block</h2>
+      <p class="sec-p">
+        The <code>program</code> block is the entry point — exactly one per
+        compilation unit. The load address sets the two-byte PRG header, and
+        execution begins at the first statement in the block.
+      </p>
+
+      <div class="cb">
+        <div class="cb-hdr"><div class="wdots"><div class="wd"></div><div class="wd"></div><div class="wd"></div></div><span class="cb-lang">petscript</span></div>
+        <pre><code class="pet">// Machine-code entry at $C000 (default safe zone)
+program @ 0xC000 {
+  asm { sei }   // disable IRQs while initialising
+  asm { cld }   // clear decimal mode — NMOS 6502 power-on state is undefined
+  VIC2.borderColor = BLACK;
+  VIC2.bgColor0 = BLACK;
+  init();
+  loop {
+    update();
+    render();
+  }
+}
+
+// BASIC auto-run variant — load at $0801
+// Compiler prepends the BASIC stub: 10 SYS 2062
+// so typing RUN starts the program from BASIC
+program @ 0x0801 {
+  init();
+  loop { mainLoop(); }
+}
+</code></pre>
+      </div>
+
+      <h3>Data sections</h3>
+      <div class="cb">
+        <div class="cb-hdr"><div class="wdots"><div class="wd"></div><div class="wd"></div><div class="wd"></div></div><span class="cb-lang">petscript</span></div>
+        <pre><code class="pet">// Binary data embedded in the PRG at a fixed address
+data @addr(0x0340) {
+  // Sprite data must be 63 bytes; pointer block at $07F8 holds block number
+  ballSprite: [u8; 63] = [
+    0b00000000, 0b11111100, 0b00000000,
+    0b00000011, 0b11111111, 0b00000000,
+    0b00000111, 0b11111111, 0b10000000,
+    // ... 60 more bytes ...
+  ];
+}
+
+// Sine lookup table for smooth animation
+data @addr(0xCC00) {
+  sinTab: [u8; 256] = [ 128, 131, 134, /* ... */ ];
+}
+
+// Compiler-placed data — address assigned by the linker, sits after code in PRG.
+// Use when runtime address != load address (e.g. sprite data copied to $0340 at startup).
+data {
+  ballSprite: [u8; 63] = [
+    0b00000000, 0b11111100, 0b00000000,
+    // ... 60 more bytes ...
+  ];
+}
+// initSprite() then copies ballSprite[] to ptr&lt;u8&gt; @zp dst = 0x0340 at runtime.
+</code></pre>
+      </div>
+
+      <div class="note">
+        <strong>Load address vs runtime address:</strong> <code>@addr(N)</code> sets both
+        the address where the data appears in the PRG binary <em>and</em> where it is
+        accessed at runtime — they must be the same. If your data needs to live at an
+        address that is not contiguous with the code (e.g. sprite block at $0340 and
+        code at $C000), use a plain <code>data {}</code> block (no <code>@addr</code>) and
+        copy the bytes to their runtime destination in <code>program</code>. A future
+        <code>data @load(A) @runtime(B)</code> syntax will automate this copy in the
+        startup routine.
+      </div>
+    </section>
+
+    <!-- ── Full Example ── -->
+    <section class="sec" id="example">
+      <h2 class="sec-h">Full Example — Bouncing Sprite</h2>
+      <p class="sec-p">
+        A complete program: one hardware sprite bouncing around the screen,
+        synchronized to the VIC-II raster. Demonstrates structs, hardware
+        block access, zero-page variables, and the main loop pattern.
+      </p>
+
+      <div class="cb">
+        <div class="cb-hdr"><div class="wdots"><div class="wd"></div><div class="wd"></div><div class="wd"></div></div><span class="cb-lang">petscript · bounce.pet</span></div>
+        <pre><code class="pet">// Sprite block 13 is at runtime address $0340 ($0340 / 64 = 13)
+// ballSprite bitmap lives in the PRG at a compiler-chosen address;
+// initSprite() copies it to $0340 at startup.
+const SP_BLOCK: u8  = 13;
+const SP_PTR:   u16 = 0x07F8;   // sprite pointer 0 in screen RAM
+
+// Zero-page state — fast access every frame
+let @zp sx:    u8    = 100;
+let @zp sy:    u8    = 100;
+let @zp dx:    u8    = 2;
+let @zp dy:    u8    = 1;
+let @zp goR:   bool  = true;    // moving right?
+let @zp goD:   bool  = true;    // moving down?
+
+fn initSprite(): void {
+  // @addr inside function scope is valid — aliases the fixed address, no stack allocation
+  let @addr(0x07F8) ptr0: u8;
+  ptr0 = SP_BLOCK;               // point sprite 0 to block 13
+
+  VIC2.spriteEnable = 0x01;      // enable sprite 0 only
+  VIC2.sprite0color = YELLOW;
+
+  // Copy sprite bitmap from PRG payload into block 13 at $0340
+  // ballSprite lives at a compiler-chosen PRG address (not $0340);
+  // this loop copies it to the runtime destination.
+  let @zp dst: ptr&lt;u8&gt; = 0x0340 as ptr&lt;u8&gt;;
+  for (let i: u8 = 0; i &lt; 63; i++) {
+    dst[i] = ballSprite[i];
+  }
+}
+
+fn moveSprite(): void {
+  if (goR) {
+    sx += dx;
+    if (sx &gt; 220) { goR = false; }
+  } else {
+    sx -= dx;
+    if (sx &lt; 24)  { goR = true; }
+  }
+
+  if (goD) {
+    sy += dy;
+    if (sy &gt; 220) { goD = false; }
+  } else {
+    sy -= dy;
+    if (sy &lt; 50)  { goD = true; }
+  }
+
+  VIC2.sprite0x   = sx;
+  VIC2.sprite0y   = sy;
+  VIC2.spriteXmsb = VIC2.spriteXmsb &amp; 0xFE; // clear MSB (X &lt; 256)
+}
+
+// @inline with loops is valid — the compiler pastes the entire loop body inline.
+// No JSR/RTS overhead; the poll runs in-place at every call site.
+@inline fn waitVsync(): void {
+  while (VIC2.rasterLine != 255) {}
+  while (VIC2.rasterLine == 255) {}
+}
+
+// Sprite payload — compiler assigns PRG address; startup copies to $0340.
+// Using plain data {} (no @addr) avoids the self-copy bug that would arise
+// if the source were declared @addr(0x0340) — the same address as the destination.
+data {
+  ballSprite: [u8; 63] = [
+    0b00000000, 0b11111100, 0b00000000,
+    0b00000011, 0b11111111, 0b00000000,
+    0b00000111, 0b11111111, 0b10000000,
+    0b00001111, 0b11111111, 0b11000000,
+    0b00011111, 0b11111111, 0b11100000,
+    0b00111111, 0b11111111, 0b11110000,
+    0b00111111, 0b11111111, 0b11110000,
+    0b00111111, 0b11111111, 0b11110000,
+    0b00011111, 0b11111111, 0b11100000,
+    0b00001111, 0b11111111, 0b11000000,
+    0b00000111, 0b11111111, 0b10000000,
+    0b00000011, 0b11111111, 0b00000000,
+    0b00000000, 0b11111100, 0b00000000,
+    0b00000000, 0b00000000, 0b00000000,
+    0b00000000, 0b00000000, 0b00000000,
+    0b00000000, 0b00000000, 0b00000000,
+    0b00000000, 0b00000000, 0b00000000,
+    0b00000000, 0b00000000, 0b00000000,
+    0b00000000, 0b00000000, 0b00000000,
+    0b00000000, 0b00000000, 0b00000000,
+    0b00000000, 0b00000000, 0b00000000,
+  ];
+}
+
+program @ 0xC000 {
+  asm { sei }                      // disable IRQs during init
+  asm { cld }                      // clear decimal mode (NMOS power-on undefined)
+  VIC2.borderColor = DARK_GREY;
+  VIC2.bgColor0    = BLACK;
+  initSprite();
+  loop {
+    waitVsync();
+    moveSprite();
+  }
+}
+</code></pre>
+      </div>
+    </section>
+
+    <!-- ── Compiler ── -->
+    <section class="sec" id="compiler">
+      <h2 class="sec-h">Compiler</h2>
+      <p class="sec-p">
+        The entire compiler is a single TypeScript file with no external imports,
+        matching the zero-dependency ethos of the f6502 emulator. Output is a
+        raw <code>Uint8Array</code>: two LE header bytes followed by machine code.
+      </p>
+
+      <div class="pipeline">
+        <div class="pipe"><div class="pipe-n">1</div><div><div class="pipe-title">Lexer</div><div class="pipe-desc">Hand-written character scanner; no regex library. Produces a flat token stream.</div></div></div>
+        <div class="pipe"><div class="pipe-n">2</div><div><div class="pipe-title">Parser</div><div class="pipe-desc">Recursive descent over the token stream. Produces a typed AST with source positions.</div></div></div>
+        <div class="pipe"><div class="pipe-n">3</div><div><div class="pipe-title">Type Checker</div><div class="pipe-desc">Verifies u8/u16/struct consistency, ABI compatibility, zero-page budget, and stack depth.</div></div></div>
+        <div class="pipe"><div class="pipe-n">4</div><div><div class="pipe-title">Code Generator</div><div class="pipe-desc">Walks the AST and emits a byte array with a parallel label/fixup table. Branch targets use forward fixups.</div></div></div>
+        <div class="pipe"><div class="pipe-n">5</div><div><div class="pipe-title">Linker</div><div class="pipe-desc">Resolves all label references. Patches branch offsets (±127 bytes; inserts bridging JMP otherwise). Patches absolute u16 addresses.</div></div></div>
+        <div class="pipe"><div class="pipe-n">6</div><div><div class="pipe-title">PRG Writer</div><div class="pipe-desc">Prepends the 2-byte little-endian load address. If load address is $0801, also prepends the BASIC SYS stub. Writes the final <code>.prg</code>.</div></div></div>
+      </div>
+
+      <h3>PRG output format</h3>
+      <div class="cb">
+        <div class="cb-hdr"><div class="wdots"><div class="wd"></div><div class="wd"></div><div class="wd"></div></div><span class="cb-lang">binary layout</span></div>
+        <pre><code class="pet">offset 0:  lo(load_address)
+offset 1:  hi(load_address)
+offset 2+: [zero-page init routine]   // LDA/STA pairs for @zp initializers
+           [program / function code]  // main + all fn bodies
+           [data sections]            // @addr data blocks, in declaration order</code></pre>
+      </div>
+
+      <h3>Construct → 6502 cheat sheet</h3>
+      <div class="tw">
+        <table>
+          <tr><th>PetScript</th><th>6502 emitted</th></tr>
+          <tr><td>let @zp x: u8 = 5</td><td class="plain"><code>LDA #5; STA $zp</code> in init block</td></tr>
+          <tr><td>let @addr(A) x: u8</td><td class="plain">No allocation; A is the operand everywhere</td></tr>
+          <tr><td>x = y</td><td class="plain"><code>LDA $y; STA $x</code></td></tr>
+          <tr><td>x = y + z</td><td class="plain"><code>CLC; LDA $y; ADC $z; STA $x</code></td></tr>
+          <tr><td>x++</td><td class="plain"><code>INC $x</code></td></tr>
+          <tr><td>if (x == 5)</td><td class="plain"><code>LDA $x; CMP #5; BNE end_if</code></td></tr>
+          <tr><td>while (x != 0)</td><td class="plain"><code>top: LDA $x; BEQ end; …; JMP top</code></td></tr>
+          <tr><td>for i: u8 (fits X)</td><td class="plain"><code>LDX #0; loop: …; INX; CPX #N; BCC loop</code></td></tr>
+          <tr><td>fn f(a,b): u8</td><td class="plain"><code>f: …; RTS</code> — caller: <code>LDA a; LDX b; JSR f</code></td></tr>
+          <tr><td>@inline fn</td><td class="plain">Body pasted inline, no JSR/RTS</td></tr>
+          <tr><td>VIC2.borderColor = x</td><td class="plain"><code>LDA $x; STA $D020</code></td></tr>
+          <tr><td>loop { … }</td><td class="plain"><code>top: …; JMP top</code></td></tr>
+          <tr><td>break</td><td class="plain"><code>JMP past_loop</code></td></tr>
+        </table>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+// ── Syntax highlighter ────────────────────────────────────────
+const KW = new Set([
+  'fn','let','const','if','else','while','for','loop','break','continue',
+  'return','struct','hardware','data','asm','program','import','private',
+  'as','out','clobbers','true','false',
+  'readonly','writeonly','read_to_clear','inline','lo','hi'
+]);
+const TY = new Set(['u8','u16','bool','void','ptr']);
+
+function esc(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function sp(cls, s) { return `<span class="${cls}">${esc(s)}</span>`; }
+
+function highlight(src) {
+  let out = '', i = 0;
+  while (i < src.length) {
+    // comment
+    if (src[i] === '/' && src[i+1] === '/') {
+      let s = i;
+      while (i < src.length && src[i] !== '\n') i++;
+      out += sp('cm', src.slice(s, i));
+      continue;
+    }
+    // ${...} interpolation
+    if (src[i] === '$' && src[i+1] === '{') {
+      let s = i; i += 2;
+      while (i < src.length && src[i] !== '}') i++;
+      i++;
+      out += sp('an', src.slice(s, i));
+      continue;
+    }
+    // @annotation
+    if (src[i] === '@') {
+      let s = i++;
+      while (i < src.length && /[a-zA-Z0-9_]/.test(src[i])) i++;
+      out += sp('an', src.slice(s, i));
+      continue;
+    }
+    // hex
+    if (src[i] === '0' && (src[i+1] === 'x' || src[i+1] === 'X')) {
+      let s = i; i += 2;
+      while (i < src.length && /[0-9a-fA-F_]/.test(src[i])) i++;
+      out += sp('li', src.slice(s, i));
+      continue;
+    }
+    // binary
+    if (src[i] === '0' && (src[i+1] === 'b' || src[i+1] === 'B')) {
+      let s = i; i += 2;
+      while (i < src.length && /[01_]/.test(src[i])) i++;
+      out += sp('li', src.slice(s, i));
+      continue;
+    }
+    // decimal
+    if (/[0-9]/.test(src[i])) {
+      let s = i;
+      while (i < src.length && /[0-9_]/.test(src[i])) i++;
+      out += sp('li', src.slice(s, i));
+      continue;
+    }
+    // identifier / keyword / type
+    if (/[a-zA-Z_]/.test(src[i])) {
+      let s = i;
+      while (i < src.length && /[a-zA-Z0-9_]/.test(src[i])) i++;
+      const w = src.slice(s, i);
+      out += KW.has(w) ? sp('kw', w) : TY.has(w) ? sp('ty', w) : esc(w);
+      continue;
+    }
+    out += esc(src[i++]);
+  }
+  return out;
+}
+
+document.querySelectorAll('pre code.pet').forEach(el => {
+  el.innerHTML = highlight(el.textContent);
+});
+
+// ── Sidebar active tracking ───────────────────────────────────
+const links = [...document.querySelectorAll('.nav a')];
+const secs  = links.map(a => document.querySelector(a.getAttribute('href')));
+
+const obs = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      links.forEach(l => l.classList.remove('on'));
+      const link = links[secs.indexOf(e.target)];
+      if (link) link.classList.add('on');
+    }
+  });
+}, { rootMargin: '-30% 0px -60% 0px' });
+
+secs.forEach(s => s && obs.observe(s));
+</script>
