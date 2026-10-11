@@ -5,7 +5,6 @@ import { check } from '../../src/c64script/checker';
 import { generate } from '../../src/c64script/codegen';
 import { link } from '../../src/c64script/linker';
 import { writePrg } from '../../src/c64script/prg-writer';
-import { CodeGenError } from '../../src/c64script/errors';
 import { boot } from './helpers';
 
 function compile(src: string): Uint8Array {
@@ -63,10 +62,8 @@ describe('code generator', () => {
     expect(bytes.some((b) => b === 0xf0 || b === 0xd0)).toBe(true);
   });
 
-  it('rejects 16-bit addition instead of emitting an 8-bit add', () => {
-    expect(() => compile('let @zp s: u16 = 0; program @ 0xC000 { s = s + 1; }')).toThrow(
-      CodeGenError,
-    );
+  it('compiles 16-bit addition (it is no longer rejected)', () => {
+    expect(() => compile('let @zp s: u16 = 0; program @ 0xC000 { s = s + 1; }')).not.toThrow();
   });
 
   it('rejects a call to an undefined function', () => {

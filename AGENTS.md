@@ -85,10 +85,13 @@ highlighted code. There is no PRG to commit, no build script and no CI step.
 ### 1 — Write the program
 
 Create `website/showcases/<id>.c64s`. Every showcase starts at `program @ 0x0810` (the stub KERNAL
-jumps there). Look at `rainbow-border.c64s` (smallest), `character-art.c64s` (inline assembly
-filling screen and colour RAM) and `sprite-dance.c64s` (sprites, a data table indexed in assembly).
-The language guide (`website/c64script.html`) lists what the compiler supports; arrays cannot be
-indexed at runtime and there is no runtime multiply, so tables and loops over memory use `asm {}`.
+jumps there). Look at `rainbow-border.c64s` (smallest), `character-art.c64s` (a table-driven fill
+of screen and colour RAM) and `sprite-dance.c64s` (sprites, a sine table read with `wave[i]`).
+The language guide (`website/c64script.html`) lists what the compiler supports. Tables are arrays
+(`data` blocks and `@addr` arrays) read and written with `t[i]`, and `poke`/`peek`/`screen`/`color`
+take computed addresses, so loops over memory are ordinary `for` loops. There is no runtime
+multiply; build products with additions. `asm {}` is available when you need an exact instruction
+sequence, but the showcases are written without it.
 
 ### 2 — Register it
 

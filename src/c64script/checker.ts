@@ -61,6 +61,7 @@ const BUILTIN_FNS: ReadonlyMap<string, readonly [min: number, max: number]> = ne
   ['screen', [2, 2]],
   ['color', [2, 2]],
   ['spritePtr', [1, 1]],
+  ['peek', [1, 1]],
   ['puts', [3, 4]],
 ]);
 
@@ -88,6 +89,7 @@ export function foldConst(
       return e.value ? 1 : 0;
     case 'ident': {
       const v = lookup(e.name);
+      if (v !== undefined && v.type.tag === 'array') return v.absAddr ?? v.zpAddr; // its address
       return v !== undefined && v.isConst ? v.constValue : null;
     }
     case 'cast': {
@@ -211,6 +213,9 @@ export function check(userProg: Program): CheckedProgram {
       throw new TypeError(`'${d.name}' is already defined as a function`, d.line, 0);
     }
     const lookup = (n: string) => resolveVar(scope, n);
+    if (d.type.tag === 'array' && d.type.elem.tag === 'u16') {
+      throw new TypeError('arrays of u16 are not supported yet', d.line, 0);
+    }
     const ann = d.annotation;
     const isInt = d.type.tag === 'u8' || d.type.tag === 'bool';
     const fits = (v: number): void => {
@@ -285,6 +290,15 @@ export function check(userProg: Program): CheckedProgram {
         }
         if (a > 0xffff) {
           throw new TypeError(`address ${a} is out of range 0..65535`, d.line, 0);
+        }
+        // $F8-$FF hold the compiler's 16-bit accumulator and temporaries.
+        const size = Math.max(1, sizeOf(d.type, structs));
+        if (a < 0x100 && a + size > 0xf8) {
+          throw new TypeError(
+            `address $${a.toString(16).toUpperCase()} overlaps $F8-$FF, which are reserved by the compiler`,
+            d.line,
+            0,
+          );
         }
         absAddr = a;
       } else zpAddr = zp.alloc(sizeOf(d.type, structs), d.line);
@@ -380,6 +394,30 @@ export function check(userProg: Program): CheckedProgram {
       throw new TypeError(`address ${a} is out of range 0..65535`, d.line, 0);
     }
     dataAddrs.set(d, a);
+  }
+
+  // Each field of a data block is a global array at the block's address plus the sizes before it.
+  for (const d of allDecls) {
+    if (d.tag !== 'data') continue;
+    let offset = 0;
+    for (const f of d.fields) {
+      if (f.type.tag === 'array' && f.type.elem.tag === 'u16') {
+        throw new TypeError('arrays of u16 are not supported yet', d.line, 0);
+      }
+      if (vars.has(f.name) || fns.has(f.name) || BUILTIN_FNS.has(f.name)) {
+        throw new TypeError(`'${f.name}' already defined`, d.line, 0);
+      }
+      vars.set(f.name, {
+        type: f.type,
+        zpAddr: null,
+        absAddr: (dataAddrs.get(d) ?? 0) + offset,
+        isConst: false,
+        constValue: null,
+        initValue: null,
+        isGlobal: true,
+      });
+      offset += sizeOf(f.type, structs);
+    }
   }
 
   // Pass 3: parameters, locals, name resolution
@@ -723,10 +761,26 @@ export function check(userProg: Program): CheckedProgram {
       case 'hi':
         checkExpr(e.expr, 'read', scope, parent);
         break;
-      case 'index':
+      case 'index': {
+        if (e.obj.tag !== 'ident') {
+          throw new TypeError('only named arrays can be indexed', e.line, 0);
+        }
         checkExpr(e.obj, 'read', scope, parent);
+        const arr = resolveVar(scope, e.obj.name);
+        if (arr === undefined || arr.type.tag !== 'array') {
+          throw new TypeError(`'${e.obj.name}' is not an array`, e.line, 0);
+        }
         checkExpr(e.idx, 'read', scope, parent);
+        const k = foldConst(e.idx, (n) => resolveVar(scope, n));
+        if (k !== null && k >= arr.type.size) {
+          throw new TypeError(
+            `index ${k} is out of range for '${e.obj.name}' (length ${arr.type.size})`,
+            e.line,
+            0,
+          );
+        }
         break;
+      }
       default:
         break; // literals
     }

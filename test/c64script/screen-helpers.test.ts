@@ -69,13 +69,12 @@ describe('screen(row, col) and color(row, col)', () => {
     );
   });
 
-  it('explain why a runtime row or column is rejected', () => {
-    expectError(
+  it('accept a runtime row or column', () => {
+    const c = boot(
       'let @zp r: u8 = 3;\nprogram @ 0x0810 {\n  poke(screen(r, 0), 1);\n  loop {}\n}',
-      'codegen',
-      /row and column must be compile-time constants/,
-      3,
+      2,
     );
+    expect(c.peek(0x0400 + 3 * 40)).toBe(1);
   });
 
   it('do not fit in a u8: the address is 16-bit', () => {

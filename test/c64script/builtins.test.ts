@@ -61,15 +61,19 @@ describe('poke()', () => {
     expect(c64.peek(0x05ef)).toBe(9);
   });
 
-  it('rejects a non-constant address with a located CodeGenError', () => {
-    const src = 'let @zp a: u8 = 0;\nprogram @ 0x0810 {\n  poke(a, 1);\n  loop {}\n}';
+  it('takes a computed address (a variable)', () => {
+    const c = boot('let @zp a: u8 = 0x40;\nprogram @ 0x0810 {\n  poke(a, 1);\n  loop {}\n}', 2);
+    expect(c.peek(0x0040)).toBe(1);
+  });
+
+  it('rejects a 16-bit value that does not fit the byte it stores', () => {
+    const src = 'let w: u16 = 300;\nprogram @ 0x0810 {\n  poke(0x0400, w);\n  loop {}\n}';
     try {
       compile(src);
       expect.unreachable('compile should have thrown');
     } catch (err) {
       expect(err).toBeInstanceOf(CodeGenError);
       expect((err as CodeGenError).line).toBe(3);
-      expect((err as CodeGenError).message).toMatch(/poke/);
     }
   });
 });
