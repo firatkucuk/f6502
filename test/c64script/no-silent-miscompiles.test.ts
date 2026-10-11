@@ -47,9 +47,9 @@ describe('name resolution', () => {
       3,
     );
     expectError(
-      'program @ 0x0810 {\n  RED = 3;\n  loop {}\n}',
+      'program @ 0x0810 {\n  COLOR_RED = 3;\n  loop {}\n}',
       'type',
-      /cannot assign to constant 'RED'/,
+      /cannot assign to constant 'COLOR_RED'/,
       2,
     );
   });
@@ -114,7 +114,7 @@ describe('variables', () => {
   it('global initialisers may be constant expressions', () => {
     const c = boot(`
       const A: u8 = 2;
-      let @zp c: u8 = A + RED + 1;
+      let @zp c: u8 = A + COLOR_RED + 1;
       program @ 0x0810 { VIC2.borderColor = c; loop {} }`);
     expect(border(c)).toBe(5);
   });
