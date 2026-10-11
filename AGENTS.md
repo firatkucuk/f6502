@@ -31,7 +31,6 @@ npm run test:conformance  # heavy conformance suite (slow)
 npm run typecheck      # tsc --noEmit (no emit, just type-check)
 npm run lint           # eslint + prettier
 node scripts/serve.mjs # local dev server → http://localhost:3000
-node scripts/build-nyancat-prg.mjs  # rebuild a specific demo PRG
 node scripts/make-stub-roms.mjs     # regenerate stub ROMs
 ```
 
@@ -79,250 +78,73 @@ code  160    → solid block ($A0, used for rainbow trail)
 
 ## Creating a new showcase demo
 
-### 1 — Write the PRG builder script
+Showcases are C64Script programs. The page `website/showcase.html?id=<id>` fetches the source,
+compiles it in the browser with `F6502.compile` and runs it on the emulator next to the
+highlighted code. There is no PRG to commit, no build script and no CI step.
 
-Create `scripts/build-<name>-prg.mjs`. Model it on `scripts/build-nyancat-prg.mjs`.
+### 1 — Write the program
 
-```js
-import { writeFileSync, mkdirSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+Create `website/showcases/<id>.c64s`. Every showcase starts at `program @ 0x0810` (the stub KERNAL
+jumps there). Look at `rainbow-border.c64s` (smallest), `character-art.c64s` (inline assembly
+filling screen and colour RAM) and `sprite-dance.c64s` (sprites, a data table indexed in assembly).
+The language guide (`website/c64script.html`) lists what the compiler supports; arrays cannot be
+indexed at runtime and there is no runtime multiply, so tables and loops over memory use `asm {}`.
 
-const LOAD = 0x0810;   // all demos load here
+### 2 — Register it
 
-export function buildMyDemoPrg() {
-  const code = [];
-  const labels = new Map();
-  const fixups = [];
+Add `{ id, title, blurb }` to `website/js/showcase-list.js`.
 
-  const lo = (v) => v & 0xFF;
-  const hi = (v) => (v >> 8) & 0xFF;
-  const b  = (...bytes) => code.push(...bytes);
+### 3 — Add a card with a screenshot
 
-  // ── 6502 instruction helpers ──────────────────────────────────────────────
-  const lda    = (v) => b(0xA9, v);          // LDA immediate
-  const ldx    = (v) => b(0xA2, v);          // LDX immediate
-  const ldy    = (v) => b(0xA0, v);          // LDY immediate
-  const ldaZp  = (z) => b(0xA5, z);          // LDA zero-page
-  const staZp  = (z) => b(0x85, z);          // STA zero-page
-  const staAbs = (a) => b(0x8D, lo(a), hi(a)); // STA absolute
-  const inx    = ()  => b(0xE8);
-  const dex    = ()  => b(0xCA);
-  const dey    = ()  => b(0x88);
-  const clcOp  = ()  => b(0x18);
-  const secOp  = ()  => b(0x38);
-  const rts    = ()  => b(0x60);
-  const cld    = ()  => b(0xD8);
+In `website/showcases.html` add a `<a class="showcase-card" href="showcase.html?id=<id>">` card
+(copy an existing one). Its thumbnail is a screenshot of the running canvas, saved as
+`website/img/showcases/<id>.png`: open `showcase.html?id=<id>` and capture `#showcase-canvas`.
 
-  const label  = (n) => labels.set(n, code.length);
-  const jmp    = (n) => { b(0x4C, 0, 0); fixups.push({ at: code.length - 2, name: n, kind: 'abs' }); };
-  const jsr    = (n) => { b(0x20, 0, 0); fixups.push({ at: code.length - 2, name: n, kind: 'abs' }); };
-  const bne    = (n) => { b(0xD0, 0); fixups.push({ at: code.length - 1, name: n, kind: 'rel' }); };
-  const beq    = (n) => { b(0xF0, 0); fixups.push({ at: code.length - 1, name: n, kind: 'rel' }); };
-  const bpl    = (n) => { b(0x10, 0); fixups.push({ at: code.length - 1, name: n, kind: 'rel' }); };
+### 4 — Test it
 
-  // Smart poke: ZP store (2 bytes) for page-0, absolute (3 bytes) otherwise
-  const poke = (addr, val) => { lda(val); addr < 0x100 ? staZp(addr) : staAbs(addr); };
+Add a `describe('showcase: <id>', …)` block to `test/website/showcase-sources.test.ts`. It boots
+the source with `boot(source('<id>'), frames)` and asserts on memory (`c.peek(addr)`): screen
+codes, colours, sprite registers, and anything that should move between frames.
+`test/c64script/shipped-examples.test.ts` already checks that every source compiles.
 
-  // Screen/colour RAM helpers
-  const scr = (row, col) => 0x0400 + row * 40 + col;
-  const clr = (row, col) => 0xD800 + row * 40 + col;
+---
 
-  // PETSCII → screen code
-  const sc = (c) => {
-    if (c === ' ') return 0x20;
-    if (c >= '0' && c <= '9') return 0x30 + (c.charCodeAt(0) - 48);
-    if (c >= 'A' && c <= 'Z') return c.charCodeAt(0) - 64;
-    if (c === '.') return 0x2E;
-    if (c === '*') return 0x2A;
-    return 0x20;
-  };
-  const str = (s) => [...s].map(sc);
+## Hardware reference for showcase authors
 
-  // ── C64 colour constants ──────────────────────────────────────────────────
-  const BLACK=0, WHITE=1, RED=2, CYAN=3, PURPLE=4, GREEN=5, BLUE=6, YELLOW=7;
-  const ORANGE=8, BROWN=9, LIGHT_RED=10, DARK_GREY=11, GREY=12;
-  const LIGHT_GREEN=13, LIGHT_BLUE=14, LIGHT_GREY=15;
+### Sprite data format
 
-  // ── VIC-II register addresses ─────────────────────────────────────────────
-  const VIC_SPR0X  = 0xD000;  // sprite 0 X (low byte; high bit in $D010)
-  const VIC_SPR0Y  = 0xD001;  // sprite 0 Y
-  const VIC_RASTER = 0xD012;  // current raster line
-  const VIC_SPREN  = 0xD015;  // sprite enable (bit per sprite)
-  const VIC_CTRL2  = 0xD016;  // control register 2
-  const VIC_MEMCTRL= 0xD018;  // VIC memory control (screen/charset bank)
-  const VIC_BORDER = 0xD020;  // border colour
-  const VIC_BG0    = 0xD021;  // background colour 0
-  const VIC_SPR0C  = 0xD027;  // sprite 0 colour
-  const VIC_SPRXEX = 0xD01D;  // sprite X-expand (bit per sprite)
-  const VIC_SPRYEX = 0xD017;  // sprite Y-expand (bit per sprite)
-  const SPR_PTR0   = 0x07F8;  // sprite 0 data pointer (value = addr/64)
+- 24 px wide × 21 px tall, monochrome = 63 bytes (3 bytes per row × 21 rows), padded to 64.
+- Must be 64-byte aligned inside VIC bank 0 (below `$4000`). `$0D40` is the first slot after a
+  typical program. The pointer value is `address / 64`: use `spritePtr(address)`.
+- Pointer table `$07F8`..`$07FF` (constant `SPRITE_PTRS`; sprite *n* is `SPRITE_PTRS + n`).
+- Each row is 3 bytes, most significant bit first: bit 7 of byte 0 is the leftmost pixel.
 
-  // ── ZP layout (pick free zero-page addresses) ─────────────────────────────
-  // $00-$01: CPU port (reserved)
-  // $02+:    free to use
-  // Nyancat demo uses $02-$0B; pick addresses above what you need.
+| Column | Byte / bits |
+|---|---|
+| 0–7 | byte 0, bits 7–0 |
+| 8–15 | byte 1, bits 7–0 |
+| 16–23 | byte 2, bits 7–0 |
 
-  // ── YOUR CODE HERE ───────────────────────────────────────────────────────
-  cld();
-  // ... emit instructions ...
+Visible sprite coordinates: x 24..255 (without the MSB register), y 50..229.
+`VIC2.sprite0x` … `VIC2.sprite7y` and `VIC2.sprite0color` … `VIC2.sprite7color` are declared;
+`VIC2.spriteEnable` is one bit per sprite.
 
-  // ── Resolve fixups ────────────────────────────────────────────────────────
-  for (const f of fixups) {
-    const target = labels.get(f.name);
-    if (target === undefined) throw new Error(`undefined label: '${f.name}'`);
-    if (f.kind === 'rel') {
-      const rel = target - (f.at + 1);
-      if (rel < -128 || rel > 127) throw new Error(`branch to '${f.name}' out of range`);
-      code[f.at] = rel & 0xFF;
-    } else {
-      code[f.at]     = lo(LOAD + target);
-      code[f.at + 1] = hi(LOAD + target);
-    }
-  }
-
-  return Uint8Array.from([lo(LOAD), hi(LOAD), ...code]);
-}
-
-// Run directly
-const root = join(dirname(fileURLToPath(import.meta.url)), '..');
-mkdirSync(join(root, 'website', 'demos'), { recursive: true });
-const prg = buildMyDemoPrg();
-writeFileSync(join(root, 'website', 'demos', 'mydemo.prg'), prg);
-console.log(`wrote mydemo.prg (${prg.length} bytes)`);
-```
-
-### 2 — Sprite data format (if using sprites)
-
-- 24 px wide × 21 px tall, monochrome = 63 bytes (3 bytes/row × 21 rows)
-- Must be 64-byte aligned in RAM. First free slot: `$0D40` (pointer = 53)
-- Second frame for animation: `$0D80` (pointer = 54)
-- Sprite pointer register: `$07F8` for sprite 0
-- Each row: 3 bytes MSB-first. Bit 7 of byte 0 = leftmost pixel (col 0).
-
-**Column → byte/bit mapping:**
-```
-col  0-7  → byte 0, bits 7-0
-col  8-15 → byte 1, bits 7-0
-col 16-23 → byte 2, bits 7-0
-```
-
-**Visualise sprite bytes:**
-```js
-node -e "
-const bytes = [ /* your 63 bytes */ ];
-for(let r=0;r<21;r++){
-  const line=[bytes[r*3],bytes[r*3+1],bytes[r*3+2]]
-    .map(b=>b.toString(2).padStart(8,'0').replace(/0/g,'.').replace(/1/g,'#'))
-    .join('');
-  console.log('row'+String(r).padStart(2)+': '+line);
-}
-"
-```
-
-**Pad to sprite address before emitting sprite bytes:**
-```js
-const SPRITE_ADDR = 0x0D40;
-const codeEnd = LOAD + code.length;
-if (codeEnd > SPRITE_ADDR) throw new Error(`Code overflow at $${codeEnd.toString(16)}`);
-while (LOAD + code.length < SPRITE_ADDR) b(0x00);
-b( /* sprite bytes */ );
-```
-
-**2× sprite expansion (double-size on screen):**
-```js
-poke(VIC_SPRYEX, 1);   // $D017 bit 0 = sprite 0 Y×2
-poke(VIC_SPRXEX, 1);   // $D01D bit 0 = sprite 0 X×2
-```
-
-### 3 — Screen RAM quick reference
+### Screen RAM quick reference
 
 ```
-Screen RAM:  $0400–$07E7  (40×25 chars)
-Colour RAM:  $D800–$DBFF  (same layout, 4-bit colour per cell)
-scr(row,col) = $0400 + row*40 + col
-clr(row,col) = $D800 + row*40 + col
+Screen RAM:  $0400–$07E7  (40×25 chars)    SCREEN_RAM, screen(row, col)
+Colour RAM:  $D800–$DBE7  (4-bit colour)   COLOR_RAM,  color(row, col)
 ```
 
-**Clear screen + colour RAM (X-indexed, 256-byte pages):**
-```js
-lda(0x20); ldx(0);
-label('clr1');
-b(0x9D, 0x00, 0x04); b(0x9D, 0x00, 0x05); b(0x9D, 0x00, 0x06); inx(); bne('clr1');
-ldx(231);
-label('clr2');
-b(0x9D, 0x00, 0x07); dex(); bpl('clr2');
-// colour RAM
-lda(0); ldx(0);
-label('clrc1');
-b(0x9D, 0x00, 0xD8); b(0x9D, 0x00, 0xD9); b(0x9D, 0x00, 0xDA); inx(); bne('clrc1');
-ldx(231);
-label('clrc2');
-b(0x9D, 0x00, 0xDB); dex(); bpl('clrc2');
+The stub CHARGEN only has A–Z, 0–9, space, `*`, `.` and the solid block `$A0`; there are no
+PETSCII graphics characters. Art is built from coloured solid blocks.
+
+### Raster sync (one frame per iteration)
+
 ```
-
-### 4 — Raster sync (vsync equivalent)
-
-```js
-// Wait for raster line 200, then wait past it (clean frame boundary)
-label('wait1');
-b(0xAD, 0x12, 0xD0); b(0xC9, 200); bne('wait1');  // LDA $D012; CMP #200; BNE
-label('wait2');
-b(0xAD, 0x12, 0xD0); b(0xC9, 200); beq('wait2');  // wait until line changes
+while (VIC2.rasterLine != 200) {}
+while (VIC2.rasterLine == 200) {}
 ```
-
-### 5 — Delay subroutine (~0.33 s at 1 MHz)
-
-```js
-label('delay');
-ldx(0);
-label('delay_outer');
-ldy(0);
-label('delay_inner');
-dey(); bne('delay_inner');
-dex(); bne('delay_outer');
-rts();
-```
-Call with `jsr('delay')`. Chain 5× for ~1.6 s splash hold.
-
-### 6 — Create the demo HTML page
-
-Copy `website/demos/nyancat.html` and replace the PRG filename and walkthrough text. The critical JS block:
-
-```html
-<script>
-async function start() {
-  const [kernal, basic, chargen, prgBuf] = await Promise.all([
-    fetchBin('kernal.bin'), fetchBin('basic.bin'),
-    fetchBin('chargen.bin'), fetchBin('mydemo.prg'),
-  ]);
-  player = await F6502.start({
-    canvas,
-    roms: { kernal, basic, chargen },
-    scale: 'fit',
-    audio: false,
-  });
-  await player.load(new File([prgBuf], 'mydemo.prg'));
-}
-</script>
-```
-
-The stub ROMs (`kernal.bin`, `basic.bin`, `chargen.bin`) in `website/demos/` are shared by all demos — do not regenerate them unless you change `scripts/make-stub-roms.mjs`.
-
-### 7 — Add a card to `website/showcases.html`
-
-Find the `<!-- showcase grid -->` section and add a new `<div class="showcase-card reveal">` block following the existing pattern. Mark it `COMING SOON` until the demo is live, or `LIVE` with a link once deployed.
-
-### 8 — Wire up CI
-
-Add two lines to `.github/workflows/pages.yml` before the "Stage emulator bundle" step:
-
-```yaml
-- name: Build <name> PRG
-  run: node scripts/build-<name>-prg.mjs
-```
-
-The workflow uploads the entire `website/` directory to GitHub Pages, so any file under `website/demos/` is automatically served.
 
 ---
 
@@ -346,12 +168,12 @@ The workflow uploads the entire `website/` directory to GitHub Pages, so any fil
 | Symptom | Cause | Fix |
 |---|---|---|
 | `BASIC READY. prompt did not appear within 600 frames` | Stub KERNAL doesn't write "READY." to screen RAM, or `$D018` not set to `$15` | Check `make-stub-roms.mjs`: init must set `$D018=$15` before writing READY. at `$04C8` |
-| `Code overflow: code ends at $XXXX, sprite at $0D40` | PRG machine code grew past the sprite address | Move sprite to a higher 64-byte boundary or trim code |
+| `code reaches $XXXX, which overlaps the data block at $0D40` | The program grew past a `data @addr(…)` block | Move the data block to a higher 64-byte boundary |
 | Screen stays black | `$D011` not set (screen off) or `$D018` wrong | KERNAL init sets `$D011=$1B` and `$D018=$15` |
-| Sprite not visible | `$D015` bit 0 not set, or sprite Y off-screen | `poke(VIC_SPREN, 1)` and check Y value (visible: ~30-230) |
-| Walking animation doesn't change | Second sprite frame at wrong address | Sprite pointer = address/64; `$0D80/64=54` |
+| Sprite not visible | Its `VIC2.spriteEnable` bit is clear, or Y is off-screen | `VIC2.spriteEnable = 1` and check the Y value (visible: 50..229) |
+| Animation doesn't change | Second frame at the wrong address | The pointer is `spritePtr(address)`; the address must be a multiple of 64 |
 | Text looks garbled | Wrong screen codes | A=1, B=2 … Z=26; digits: '0'=0x30, '1'=0x31 … |
-| Branch out of range | Loop body too large for BNE/BEQ | Break into nested loops or use JMP |
+| `asm`: branch to 'x' is out of range | An assembly branch spans more than 127 bytes | Shorten the loop, or branch over a `jmp` |
 
 ---
 
@@ -359,10 +181,12 @@ The workflow uploads the entire `website/` directory to GitHub Pages, so any fil
 
 | File | What to read it for |
 |---|---|
-| `scripts/build-nyancat-prg.mjs` | Complete reference PRG builder — all helper functions, sprite layout, animation loop, color RAM update pattern |
+| `website/showcases/*.c64s` | The showcase programs; start from `rainbow-border.c64s` |
+| `website/js/showcase.js`, `showcase-list.js` | The page that fetches, compiles and runs a showcase; the list of ids |
+| `src/c64script/` | The compiler (lexer, parser, checker, codegen, linker) |
 | `scripts/make-stub-roms.mjs` | KERNAL boot sequence, `$D018` setup, READY. handshake |
 | `src/browser/player.ts` | `start()` + `player.load()` API, `runUntilReady`, `isReady`, `screenText` |
 | `src/machine/c64.ts` | `screenCodeToChar`, `pumpTypeQueue`, `applyPrg`, memory banking |
-| `website/demos/nyancat.html` | Complete demo page template |
+| `website/showcase.html` | The showcase page template |
 | `website/showcases.html` | Showcase grid — add cards here |
 | `.github/workflows/pages.yml` | CI build + deploy pipeline |

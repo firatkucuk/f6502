@@ -37,9 +37,6 @@ jobs:
       - name: Build stub ROMs
         run: node scripts/make-stub-roms.mjs
 
-      - name: Build demo PRGs
-        run: node scripts/build-nyancat-prg.mjs
-
       - name: Stage emulator bundle
         run: mkdir -p website/dist && cp dist/f6502.min.js website/dist/
 
