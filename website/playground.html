@@ -108,10 +108,6 @@
               <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M5 3.2v9.6a.5.5 0 0 0 .76.43l7.6-4.8a.5.5 0 0 0 0-.86l-7.6-4.8A.5.5 0 0 0 5 3.2z"/></svg>
               <span>Run</span>
             </button>
-            <button id="reboot-btn" class="term-btn" type="button"
-                    title="Reboot the machine" aria-label="Reboot">
-              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13.2 8A5.2 5.2 0 1 1 11.5 4.2"/><path d="M12.6 1.8v2.8H9.8"/></svg>
-            </button>
             <button id="copy-btn" class="term-btn" type="button"
                     title="Copy source" aria-label="Copy source">
               <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="5.5" y="5.5" width="8" height="8" rx="1.5"/><path d="M10.5 3.5v-.5a1 1 0 0 0-1-1h-6a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h.5"/></svg>
@@ -128,7 +124,22 @@
     </section>
 
     <section aria-label="Emulator">
-      <div class="pg-crt"><canvas id="emu-canvas" width="384" height="272"></canvas></div>
+      <div class="pg-crt emu-crt" id="emu-crt">
+        <canvas id="emu-canvas" width="384" height="272" tabindex="0"></canvas>
+        <div class="emu-bar" role="toolbar" aria-label="Emulator controls">
+          <button type="button" id="pause-btn" title="Pause" aria-label="Pause" aria-pressed="false" disabled>
+            <svg class="off-state" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M4 2.5h3v11H4zM9 2.5h3v11H9z"/></svg>
+            <svg class="on-state" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M5 3.2v9.6a.5.5 0 0 0 .76.43l7.6-4.8a.5.5 0 0 0 0-.86l-7.6-4.8A.5.5 0 0 0 5 3.2z"/></svg>
+          </button>
+          <button type="button" id="reboot-btn" title="Reboot" aria-label="Reboot" disabled>
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 8a5 5 0 1 1-1.6-3.7"/><path d="M13 2.5v3h-3"/></svg>
+          </button>
+          <button type="button" id="fullscreen-btn" title="Fullscreen" aria-label="Fullscreen" aria-pressed="false">
+            <svg class="off-state" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 6V2.5H6M10 2.5h3.5V6M13.5 10v3.5H10M6 13.5H2.5V10"/></svg>
+            <svg class="on-state" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 2.5V6H2.5M13.5 6H10V2.5M10 13.5V10h3.5M2.5 10H6v3.5"/></svg>
+          </button>
+        </div>
+      </div>
       <p class="pg-note">Click the screen to give it keyboard focus.</p>
     </section>
   </main>

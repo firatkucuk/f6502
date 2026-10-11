@@ -2,6 +2,7 @@ import { codeFromHash } from './code-hash.js';
 import { GRAMMAR } from './c64script-grammar.js';
 import { renderLines } from './editor-render.js';
 import { EXAMPLES } from './playground-examples.js';
+import { wireEmuControls } from './emu-controls.js';
 
 const $ = (id) => document.getElementById(id);
 const editor = $('editor');
@@ -11,6 +12,7 @@ const statusEl = $('status');
 const canvas = $('emu-canvas');
 
 let player = null;
+let controls = null;
 
 function setStatus(text, kind = '') {
   statusEl.textContent = text;
@@ -48,6 +50,9 @@ async function run(focusScreen = false) {
   try {
     player.reset();
     await player.load(new File([prg], 'play.prg'));
+    // Run after Pause would otherwise load into a frozen machine.
+    if (!player.running) player.resume();
+    controls?.sync();
     const load = prg[0] | (prg[1] << 8);
     setStatus(`Compiled · ${prg.length - 2} bytes · loads at $${hex4(load)}`, 'ok');
     if (focusScreen) canvas.focus();
@@ -112,11 +117,6 @@ function setup() {
       setTimeout(() => (btn.title = 'Copy source'), 1500);
     });
   });
-  $('reboot-btn').addEventListener('click', () => {
-    if (!player) return;
-    player.reset();
-    setStatus('Machine rebooted. Press Run to start your program again.');
-  });
 }
 
 async function main() {
@@ -140,6 +140,18 @@ async function main() {
     setStatus(`Could not start the emulator: ${err instanceof Error ? err.message : err}`, 'err');
     return;
   }
+  controls = wireEmuControls({
+    player,
+    crt: $('emu-crt'),
+    canvas,
+    pauseBtn: $('pause-btn'),
+    rebootBtn: $('reboot-btn'),
+    fullscreenBtn: $('fullscreen-btn'),
+    reboot: async () => {
+      player.reset();
+      setStatus('Machine rebooted. Press Run to start your program again.');
+    },
+  });
   setStatus('Ready.');
   await run();
 }

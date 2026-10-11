@@ -1001,3 +1001,25 @@ kbd {
 .slideshow-source .token.string { color: #9ae29b; }
 .slideshow-source .token.operator { color: #6070a0; }
 .slideshow-source .token.punctuation { color: #4a4d70; }
+
+/* ── Emulator control bar (showcase and playground): pause, reboot, fullscreen ── */
+.emu-bar { display: flex; gap: 0.4rem; margin-top: 10px; }
+.emu-bar button {
+  width: 2rem; height: 2rem; padding: 0; display: inline-flex; align-items: center;
+  justify-content: center; background: none; color: var(--text-muted);
+  border: 1px solid var(--border-2); border-radius: 6px; cursor: pointer;
+}
+.emu-bar button svg { width: 15px; height: 15px; display: block; }
+.emu-bar button:hover:not(:disabled) { color: var(--text); border-color: var(--primary); }
+.emu-bar button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.emu-bar button:disabled { opacity: 0.5; cursor: default; }
+.emu-bar .on-state, .emu-bar [aria-pressed="true"] .off-state { display: none; }
+.emu-bar [aria-pressed="true"] .on-state { display: block; }
+
+/* Fullscreen shows the screen and the bar on the whole display. */
+.emu-crt:fullscreen {
+  display: flex; flex-direction: column; justify-content: center; align-items: center;
+  border: 0; border-radius: 0; padding: 0; background: #000;
+}
+.emu-crt:fullscreen canvas { width: min(100vw, calc((100vh - 52px) * 384 / 272)); height: auto; }
+.emu-crt:fullscreen .emu-bar { margin-top: 0; padding: 8px 0; }

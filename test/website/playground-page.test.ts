@@ -60,18 +60,28 @@ describe('usage docs', () => {
   });
 });
 
-// Run, Reboot, copy and the example picker live in the editor window's title bar, like every
-// other code window on the site. No separate toolbar row, no "Example" label, no shortcut text.
+// Run, copy and the example picker live in the editor window's title bar, like every other code
+// window on the site. No separate toolbar row, no "Example" label, no shortcut text. Pause, Reboot
+// and Fullscreen are icon buttons in a bar under the emulator screen.
 describe('playground toolbar', () => {
   const page = readFileSync('website/playground.html', 'utf8');
   const bar = page.slice(page.indexOf('class="terminal-bar"'), page.indexOf('class="pg-editor"'));
 
-  it('has Run, Reboot, copy and the picker inside the title bar', () => {
+  it('has Run, copy and the picker inside the title bar, and no Reboot', () => {
     expect(bar).toMatch(/id="example-select"/);
     expect(bar).toMatch(/id="run-btn"/);
-    expect(bar).toMatch(/id="reboot-btn"/);
     expect(bar).toMatch(/id="copy-btn"/);
     expect(bar).toMatch(/terminal-actions/);
+    expect(bar).not.toMatch(/id="reboot-btn"/);
+  });
+
+  it('has Pause, Reboot and Fullscreen in a bar under the emulator screen', () => {
+    const screen = page.slice(page.indexOf('id="emu-crt"'), page.indexOf('</main>'));
+    expect(screen.indexOf('<canvas')).toBeGreaterThan(-1);
+    expect(screen.indexOf('class="emu-bar"')).toBeGreaterThan(screen.indexOf('<canvas'));
+    for (const id of ['pause-btn', 'reboot-btn', 'fullscreen-btn']) {
+      expect(screen).toMatch(new RegExp(`id="${id}"`));
+    }
   });
 
   it('has no separate toolbar row, label or visible shortcut hint', () => {
@@ -83,7 +93,7 @@ describe('playground toolbar', () => {
   });
 
   it('labels the icon buttons for assistive technology', () => {
-    for (const id of ['run-btn', 'reboot-btn', 'copy-btn']) {
+    for (const id of ['run-btn', 'reboot-btn', 'pause-btn', 'fullscreen-btn', 'copy-btn']) {
       expect(page).toMatch(new RegExp(`id="${id}"[^>]*aria-label="[^"]+"`));
     }
     expect(page).toMatch(/id="example-select"[^>]*aria-label="[^"]+"/);
