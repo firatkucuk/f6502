@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { compile } from '../../src/c64script/index';
+import { C64 } from '../../src/machine/index';
 import { boot } from '../c64script/helpers';
 
 const source = (id: string): string => readFileSync(`website/showcases/${id}.c64s`, 'utf8');
@@ -64,6 +65,7 @@ describe('showcase page', () => {
       'showcase-title',
       'showcase-blurb',
       'showcase-file',
+      'showcase-hint',
     ]) {
       expect(page).toContain(`id="${id}"`);
       expect(script).toContain(`'${id}'`);
@@ -142,5 +144,208 @@ describe('showcases page header', () => {
       /<a class="btn btn-primary" href="playground\.html">[^<]*playground<\/a>/,
     );
     expect(cards).not.toMatch(/index\.html#demo/);
+  });
+});
+
+describe('showcase: flappy-bird', () => {
+  // A character ROM whose block character ($A0) is solid, so the VIC-II can see a pipe.
+  function newGame() {
+    const chargen = new Uint8Array(4096);
+    chargen.fill(0xff, 0xa0 * 8, 0xa0 * 8 + 8);
+    const c = new C64({
+      kernal: new Uint8Array(8192).fill(0xea),
+      basic: new Uint8Array(8192),
+      chargen,
+    });
+    const prg = compile(source('flappy-bird'));
+    for (let i = 2; i < prg.length; i++) c.pokeRam(0x0810 + i - 2, prg[i]!);
+    c.cpu.regs.pc = 0x0810;
+    return c;
+  }
+  type Game = ReturnType<typeof newGame>;
+
+  const BIRD_COL = 7;
+  const cell = (c: Game, r: number, col: number) => c.peek(0x0400 + r * 40 + col);
+  const text = (c: Game, r: number, col: number, len: number) =>
+    Array.from({ length: len }, (_, i) => cell(c, r, col + i))
+      .map((v) =>
+        v >= 1 && v <= 26 ? String.fromCharCode(64 + v) : v === 32 ? ' ' : v === 0xa0 ? '#' : '?',
+      )
+      .join('');
+  const y = (c: Game) => c.peek(0xd001);
+  const score = (c: Game) => (cell(c, 0, 38) - 0x30) * 10 + (cell(c, 0, 39) - 0x30);
+  const run = (c: Game, frames: number) => {
+    for (let i = 0; i < frames; i++) c.runFrame();
+  };
+  const tap = (c: Game) => {
+    c.keyDown('SPACE');
+    run(c, 3);
+    c.keyUp('SPACE');
+  };
+  /** The first pipe column at or right of the bird, and the rows of its hole. */
+  const nextHole = (c: Game): { col: number; first: number; last: number } | null => {
+    for (let col = BIRD_COL; col < 40; col++) {
+      if (cell(c, 1, col) === 0xa0 || cell(c, 21, col) === 0xa0) {
+        const open = [...Array(21).keys()]
+          .map((r) => r + 1)
+          .filter((r) => cell(c, r, col) !== 0xa0);
+        if (open.length > 0) return { col, first: open[0]!, last: open[open.length - 1]! };
+      }
+    }
+    return null;
+  };
+  /** Presses space when the bird is below the middle of the next hole. */
+  const autopilot = (
+    c: Game,
+    frames: number,
+    aim = (h: { first: number; last: number }) => 50 + 8 * h.first + 22,
+  ) => {
+    for (let i = 0; i < frames; i++) {
+      const hole = nextHole(c);
+      const target = hole === null ? 110 : aim(hole);
+      // tap: SPACE is down on every other frame, because only a fresh press flaps
+      if (y(c) > target && i % 2 === 0) c.keyDown('SPACE');
+      else c.keyUp('SPACE');
+      c.runFrame();
+    }
+    c.keyUp('SPACE');
+  };
+
+  it('opens on a title: sky, ground, a waiting bird', () => {
+    const c = newGame();
+    run(c, 4);
+    expect(text(c, 11, 14, 11)).toBe('PRESS SPACE');
+    expect(text(c, 7, 14, 11)).toBe('FLAPPY BIRD');
+    expect(c.peek(0xd021) & 15).toBe(14);
+    expect(c.peek(0xd015)).toBe(1);
+    expect(c.peek(0xd000)).toBe(80);
+    expect(y(c)).toBe(100);
+    expect(cell(c, 22, 0)).toBe(0xa0);
+    expect(cell(c, 24, 39)).toBe(0xa0);
+    expect(c.peek(0xd800 + 22 * 40) & 15).toBe(9); // brown ground
+    expect(c.peek(0xd800 + 5 * 40 + 20) & 15).toBe(5); // green everywhere else
+    expect(c.peek(0x07f8)).toBe(128); // sprite data at $2000
+  });
+
+  it('waits for SPACE: the bird does not move until it is pressed', () => {
+    const c = newGame();
+    run(c, 90);
+    expect(y(c)).toBe(100);
+    expect(text(c, 11, 14, 11)).toBe('PRESS SPACE');
+  });
+
+  it('flaps up, then falls faster and faster', () => {
+    const c = newGame();
+    run(c, 3);
+    c.keyDown('SPACE');
+    run(c, 2);
+    c.keyUp('SPACE');
+    const climb: number[] = [];
+    for (let i = 0; i < 40; i++) {
+      c.runFrame();
+      climb.push(y(c));
+    }
+    const top = Math.min(...climb);
+    expect(top).toBeLessThan(100 - 20);
+    const peak = climb.indexOf(top);
+    const steps = climb.slice(peak + 1).map((v, i, a) => (i === 0 ? v - top : v - a[i - 1]!));
+    expect(steps.every((s) => s >= 0)).toBe(true);
+    expect(steps[steps.length - 1]).toBeGreaterThan(steps[0]!);
+  });
+
+  it('the ceiling is safe: the VIC-II border idle byte at $3FFF is clear', () => {
+    const c = newGame();
+    c.pokeRam(0x3fff, 0xff); // a machine that powers up with it set
+    run(c, 3);
+    tap(c);
+    // keep climbing: tap every 12 frames, the bird reaches the ceiling and stays alive
+    for (let f = 0; f < 120; f++) {
+      if (f % 12 === 0) c.keyDown('SPACE');
+      else if (f % 12 === 2) c.keyUp('SPACE');
+      c.runFrame();
+    }
+    expect(c.peek(0x3fff)).toBe(0);
+    expect(y(c)).toBeLessThan(70);
+    expect(text(c, 9, 15, 9)).not.toBe('GAME OVER');
+  });
+
+  it('each tap of SPACE is one flap, holding it is not a flap per frame', () => {
+    const c = newGame();
+    run(c, 3);
+    c.keyDown('SPACE');
+    run(c, 60);
+    expect(y(c)).toBeGreaterThan(100); // held: one flap only, then it fell
+  });
+
+  it('draws pipes with an 8-row hole, scrolling in from the right', () => {
+    const c = newGame();
+    run(c, 3);
+    tap(c);
+    autopilot(c, 70);
+    const hole = nextHole(c);
+    expect(hole).not.toBeNull();
+    expect(hole!.last - hole!.first).toBe(7);
+    expect(hole!.first).toBeGreaterThanOrEqual(3);
+    expect(hole!.first).toBeLessThanOrEqual(10);
+    // the column is solid outside the hole, from row 1 down to the ground; row 0 is the score
+    for (let r = 1; r < 22; r++) {
+      const inHole = r >= hole!.first && r <= hole!.last;
+      expect(cell(c, r, hole!.col)).toBe(inHole ? 0x20 : 0xa0);
+    }
+    expect(cell(c, 22, hole!.col)).toBe(0xa0); // ground untouched
+    expect(cell(c, 0, hole!.col)).not.toBe(0xa0);
+  });
+
+  it('a pipe that is flown through scores a point', () => {
+    const c = newGame();
+    run(c, 3);
+    tap(c);
+    autopilot(c, 900);
+    expect(text(c, 9, 15, 9)).not.toBe('GAME OVER');
+    expect(score(c)).toBeGreaterThanOrEqual(3);
+    for (const col of [38, 39]) {
+      expect(cell(c, 0, col)).toBeGreaterThanOrEqual(0x30);
+      expect(cell(c, 0, col)).toBeLessThanOrEqual(0x39);
+    }
+  });
+
+  it('falling to the ground ends the game', () => {
+    const c = newGame();
+    run(c, 3);
+    tap(c);
+    run(c, 120);
+    expect(text(c, 9, 15, 9)).toBe('GAME OVER');
+    expect(text(c, 11, 13, 14)).toBe('SPACE TO RETRY');
+  });
+
+  it('flying into a pipe ends the game, in mid-air', () => {
+    const c = newGame();
+    run(c, 3);
+    tap(c);
+    // hug the ceiling: every hole starts below row 3, so the first pipe is solid there
+    autopilot(c, 400, () => 56);
+    expect(text(c, 9, 15, 9)).toBe('GAME OVER');
+    expect(y(c)).toBeLessThan(150);
+  });
+
+  it('the game over screen waits for SPACE, then a fresh game starts at once', () => {
+    const c = newGame();
+    run(c, 3);
+    tap(c);
+    autopilot(c, 400, () => 56);
+    expect(text(c, 9, 15, 9)).toBe('GAME OVER');
+    run(c, 200); // it stays
+    expect(text(c, 9, 15, 9)).toBe('GAME OVER');
+    tap(c);
+    run(c, 2);
+    expect(text(c, 9, 15, 9)).toBe('         '); // cleared
+    expect(text(c, 11, 14, 11)).toBe('           '); // and no title the second time
+    expect(score(c)).toBe(0);
+    expect(nextHole(c)).toBeNull();
+    expect(y(c)).toBeGreaterThan(80);
+    expect(y(c)).toBeLessThan(110);
+    run(c, 30);
+    expect(y(c)).toBeGreaterThan(70); // flying again
+    expect(c.peek(0xd015)).toBe(1);
   });
 });
