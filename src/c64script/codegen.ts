@@ -31,6 +31,8 @@ type LoopContext = { breakLabel: string; continueLabel: string };
 
 /** Zero page the compiler keeps for itself ($F8–$FF are outside the allocator's range). */
 const ACC = 0xf8; // 16-bit accumulator: low at $F8, high at $F9; also the pointer for (zp),Y
+const TMP2 = 0xfa; // second 16-bit temporary ($FA/$FB)
+const TMP = 0xfc; // byte temporary
 
 export function generate(cp: CheckedProgram): CodeBuffer {
   const bytes: number[] = [];
@@ -208,11 +210,16 @@ export function generate(cp: CheckedProgram): CodeBuffer {
       }
       const addrVal = evalConst(addrExpr);
       if (addrVal === null) {
-        // screen()/color() with a runtime row or column explain themselves better.
-        if (addrExpr.tag === 'call' && (addrExpr.name === 'screen' || addrExpr.name === 'color')) {
-          genCall(addrExpr);
-        }
-        throw new CodeGenError('poke() address must be a compile-time constant', e.line, 0);
+        // A computed address: the value waits in TMP while the address is built in ACC,
+        // which is then the pointer for STA (ACC),Y.
+        assertFits8(valueExpr, e.line, 'a byte');
+        const byteConst = evalConst(valueExpr);
+        if (byteConst !== null) emit(0xa9, byteConst & 0xff);
+        else genExpr(valueExpr);
+        emit(0x85, TMP);
+        gen16(addrExpr);
+        emit(0xa5, TMP, 0xa0, 0x00, 0x91, ACC); // LDA TMP; LDY #0; STA (ACC),Y
+        return;
       }
       assertFits8(valueExpr, e.line, 'a byte');
       const byteVal = evalConst(valueExpr);
@@ -265,6 +272,20 @@ export function generate(cp: CheckedProgram): CodeBuffer {
       return;
     }
 
+    // ── built-in: peek(addr) — the byte at any address ──
+    if (e.name === 'peek') {
+      const a = e.args[0];
+      if (a === undefined) throw new CodeGenError('peek() takes an address', e.line, 0);
+      const c = evalConst(a);
+      if (c !== null) {
+        emit(0xad, c & 0xff, (c >> 8) & 0xff); // LDA abs
+        return;
+      }
+      gen16(a);
+      emit(0xa0, 0x00, 0xb1, ACC); // LDY #0; LDA (ACC),Y
+      return;
+    }
+
     // ── built-ins: spritePtr(addr) — the pointer value for sprite data at addr ──
     if (e.name === 'spritePtr') {
       const value = evalConst(e);
@@ -283,12 +304,9 @@ export function generate(cp: CheckedProgram): CodeBuffer {
     if (e.name === 'screen' || e.name === 'color') {
       const address = evalConst(e);
       if (address === null) {
-        throw new CodeGenError(
-          `${e.name}(): row and column must be compile-time constants ` +
-            '(runtime positions need 16-bit arithmetic, which is not available yet)',
-          e.line,
-          0,
-        );
+        genScreenAddr(e);
+        emit(0xa5, ACC); // the low byte, as for any address in an 8-bit context
+        return;
       }
       emit(0xa9, address & 0xff);
       return;
@@ -511,6 +529,32 @@ export function generate(cp: CheckedProgram): CodeBuffer {
     throw new CodeGenError(RHS_HINT, rhs.line, 0);
   }
 
+  /** `screen(row, col)` / `color(row, col)` with run-time arguments → ACC. */
+  function genScreenAddr(e: Extract<Expr, { tag: 'call' }>): void {
+    const [rowE, colE] = e.args;
+    if (rowE === undefined || colE === undefined) {
+      throw new CodeGenError(`${e.name}() takes a row and a column`, e.line, 0);
+    }
+    if (isU16(rowE) || isU16(colE)) {
+      throw new CodeGenError(`${e.name}(): the row and the column must be 8-bit values`, e.line, 0);
+    }
+    const base = e.name === 'screen' ? 0x0400 : 0xd800;
+    genExpr(colE);
+    emit(0x48); // PHA: the column waits on the stack while the row is scaled
+    genExpr(rowE);
+    emit(0x85, ACC, 0xa9, 0x00, 0x85, ACC + 1); // ACC = row
+    for (let i = 0; i < 3; i++) emit(0x06, ACC, 0x26, ACC + 1); // ASL lo; ROL hi: row * 8
+    emit(0xa5, ACC, 0x85, TMP2, 0xa5, ACC + 1, 0x85, TMP2 + 1); // TMP2 = row * 8
+    for (let i = 0; i < 2; i++) emit(0x06, ACC, 0x26, ACC + 1); // row * 32
+    emit(0x18, 0xa5, ACC, 0x65, TMP2, 0x85, ACC); // CLC; ACC.lo += TMP2.lo
+    emit(0xa5, ACC + 1, 0x65, TMP2 + 1, 0x85, ACC + 1); // ACC.hi += TMP2.hi (+ carry)
+    emit(0x68, 0x85, TMP2); // PLA; STA TMP2: the column (poke keeps its value in TMP)
+    emit(0x18, 0xa5, ACC, 0x65, TMP2, 0x85, ACC); // ACC.lo += column
+    emit(0xa5, ACC + 1, 0x69, 0x00, 0x85, ACC + 1); // ACC.hi += carry
+    emit(0x18, 0xa5, ACC, 0x69, base & 0xff, 0x85, ACC); // ACC.lo += lo(base)
+    emit(0xa5, ACC + 1, 0x69, (base >> 8) & 0xff, 0x85, ACC + 1); // ACC.hi += hi(base) + carry
+  }
+
   /** Evaluates `e` as a 16-bit value into ACC (low) / ACC+1 (high). */
   function gen16(e: Expr): void {
     const c = evalConst(e);
@@ -546,6 +590,10 @@ export function generate(cp: CheckedProgram): CodeBuffer {
       emit(0x85, ACC, 0xa5, ACC + 1); // STA lo; LDA hi
       r.load(1, imm!, zp!, abs!);
       emit(0x85, ACC + 1);
+      return;
+    }
+    if (e.tag === 'call' && (e.name === 'screen' || e.name === 'color')) {
+      genScreenAddr(e);
       return;
     }
     if (isU16(e)) {

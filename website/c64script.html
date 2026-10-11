@@ -407,6 +407,30 @@
 }</pre>
       </div>
     </div>
+      <h3 style="margin-top:2rem">Computed addresses</h3>
+    <p style="color:var(--text-muted);font-size:0.9rem;margin-bottom:1rem">
+      <code>poke(addr, value)</code>, <code>peek(addr)</code>, <code>screen(row, col)</code> and
+      <code>color(row, col)</code> accept values worked out while the program runs.
+      Constant arguments are still folded at compile time and range-checked.
+    </p>
+    <div class="terminal reveal" style="margin-top:1rem">
+      <div class="terminal-bar">
+        <span class="terminal-dot red"></span>
+        <span class="terminal-dot yellow"></span>
+        <span class="terminal-dot green"></span>
+        <span class="terminal-title">computed-address.c64s</span>
+      </div>
+      <div class="terminal-body">
+        <pre data-try><span class="cm">// Computed addresses: a diagonal of solid blocks.</span>
+<span class="kw">program</span> @ <span class="nu">0x0810</span> {
+  <span class="kw">for</span> (<span class="kw">let</span> r: <span class="ty">u8</span> = <span class="nu">0</span>; r &lt; <span class="nu">25</span>; r++) {
+    <span class="fn">poke</span>(<span class="fn">screen</span>(r, r), <span class="nu">0xA0</span>);          <span class="cm">// row and column are variables</span>
+    <span class="fn">poke</span>(<span class="fn">color</span>(r, r), COLOR_YELLOW);
+  }
+  <span class="kw">loop</span> {}
+}</pre>
+      </div>
+    </div>
   </section>
 
   <!-- ── Literals and expressions ──────────────────────────────────────────── -->
@@ -874,7 +898,7 @@
           </tr>
           <tr>
             <td><code>screen(row, col)</code></td>
-            <td style="color:var(--text-muted)">The screen RAM address of a character cell: <code>$0400 + row × 40 + col</code>. Rows are 0–24, columns 0–39; both must be constants.</td>
+            <td style="color:var(--text-muted)">The screen RAM address of a character cell: <code>$0400 + row × 40 + col</code>. Rows are 0–24, columns 0–39. Constants are checked at compile time; <code>u8</code> variables and expressions work too (not range-checked while running).</td>
           </tr>
           <tr>
             <td><code>color(row, col)</code></td>
@@ -883,6 +907,10 @@
           <tr>
             <td><code>spritePtr(addr)</code></td>
             <td style="color:var(--text-muted)">The value for a sprite pointer (<code>addr / 64</code>). The address must be a constant on a 64-byte boundary inside the first 16 KB; anything else is a compile error.</td>
+          </tr>
+          <tr>
+            <td><code>peek(addr)</code></td>
+            <td style="color:var(--text-muted)">The byte at any address: a constant, or a <code>u16</code> expression computed while running.</td>
           </tr>
           <tr>
             <td><code>lo(x), hi(x)</code></td>
@@ -1232,8 +1260,8 @@
       <div class="chip-card">
         <div class="chip-card-num">CONST ADDR</div>
         <h3>poke() needs a constant address</h3>
-        <p class="chip-label">No computed addresses yet</p>
-        <p><code>poke(screen(12, 15), value)</code> works and <code>value</code> can be any expression, but the address must be known at compile time, so <code>screen()</code> and <code>color()</code> take constant rows and columns. A computed address is a compile error.</p>
+        <p class="chip-label">Computed addresses</p>
+        <p><code>poke(addr, value)</code> and <code>peek(addr)</code> take any address expression, and <code>screen()</code> / <code>color()</code> take variable rows and columns. A computed address costs a few dozen cycles; a constant one compiles to a single instruction.</p>
       </div>
       <div class="chip-card">
         <div class="chip-card-num">NO RECURSION</div>

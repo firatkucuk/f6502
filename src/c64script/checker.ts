@@ -61,6 +61,7 @@ const BUILTIN_FNS: ReadonlyMap<string, readonly [min: number, max: number]> = ne
   ['screen', [2, 2]],
   ['color', [2, 2]],
   ['spritePtr', [1, 1]],
+  ['peek', [1, 1]],
   ['puts', [3, 4]],
 ]);
 

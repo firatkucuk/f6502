@@ -245,3 +245,22 @@ describe('16-bit values in the guide', () => {
     expect(c.peek(0xd020) & 15).toBe(5);
   });
 });
+
+describe('computed addresses in the guide', () => {
+  it('the diagonal sample fills the diagonal', () => {
+    const at = html.indexOf('computed-address.c64s');
+    expect(at).toBeGreaterThan(0);
+    const pre = html.slice(html.indexOf('<pre', at), html.indexOf('</pre>', at));
+    const src = pre
+      .replace(/<[^>]+>/g, '')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&amp;/g, '&');
+    const c = boot(src, 6);
+    for (const r of [0, 7, 24]) {
+      expect(c.peek(0x0400 + r * 40 + r)).toBe(0xa0);
+      expect(c.peek(0xd800 + r * 40 + r) & 15).toBe(7);
+    }
+    expect(c.peek(0x0400 + 1)).not.toBe(0xa0);
+  });
+});
