@@ -23,13 +23,16 @@
     .sc-crt { background: #000; border: 1px solid var(--border-2); border-radius: 10px; padding: 12px; }
     .sc-crt canvas { display: block; width: 100%; aspect-ratio: 384 / 272; image-rendering: pixelated;
                      background: #000; }
-    .sc-bar { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 10px; }
-    .sc-bar button { font-family: var(--font-mono); font-size: 0.78rem; padding: 0.35rem 0.8rem;
-                     background: none; color: var(--text-muted); border: 1px solid var(--border-2);
-                     border-radius: 6px; cursor: pointer; }
+    .sc-bar { display: flex; gap: 0.4rem; margin-top: 10px; }
+    .sc-bar button { width: 2rem; height: 2rem; padding: 0; display: inline-flex; align-items: center;
+                     justify-content: center; background: none; color: var(--text-muted);
+                     border: 1px solid var(--border-2); border-radius: 6px; cursor: pointer; }
+    .sc-bar button svg { width: 15px; height: 15px; display: block; }
     .sc-bar button:hover:not(:disabled) { color: var(--text); border-color: var(--primary); }
     .sc-bar button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
     .sc-bar button:disabled { opacity: 0.5; cursor: default; }
+    .sc-bar .on-state, .sc-bar [aria-pressed="true"] .off-state { display: none; }
+    .sc-bar [aria-pressed="true"] .on-state { display: block; }
     .sc-crt:fullscreen { display: flex; flex-direction: column; justify-content: center; align-items: center;
                          border: 0; border-radius: 0; padding: 0; background: #000; }
     .sc-crt:fullscreen canvas { width: min(100vw, calc((100vh - 52px) * 384 / 272)); height: auto; }
@@ -86,9 +89,17 @@
         <canvas id="showcase-canvas" width="384" height="272" tabindex="0"
                 aria-label="A Commodore 64 screen running the showcase"></canvas>
         <div class="sc-bar" role="toolbar" aria-label="Emulator controls">
-          <button type="button" id="showcase-pause" disabled>Pause</button>
-          <button type="button" id="showcase-reboot" disabled>Reboot</button>
-          <button type="button" id="showcase-fullscreen">Fullscreen</button>
+          <button type="button" id="showcase-pause" title="Pause" aria-label="Pause" aria-pressed="false" disabled>
+            <svg class="off-state" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M4 2.5h3v11H4zM9 2.5h3v11H9z"/></svg>
+            <svg class="on-state" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M5 3.2v9.6a.5.5 0 0 0 .76.43l7.6-4.8a.5.5 0 0 0 0-.86l-7.6-4.8A.5.5 0 0 0 5 3.2z"/></svg>
+          </button>
+          <button type="button" id="showcase-reboot" title="Reboot" aria-label="Reboot" disabled>
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 8a5 5 0 1 1-1.6-3.7"/><path d="M13 2.5v3h-3"/></svg>
+          </button>
+          <button type="button" id="showcase-fullscreen" title="Fullscreen" aria-label="Fullscreen" aria-pressed="false">
+            <svg class="off-state" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 6V2.5H6M10 2.5h3.5V6M13.5 10v3.5H10M6 13.5H2.5V10"/></svg>
+            <svg class="on-state" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 2.5V6H2.5M13.5 6H10V2.5M10 13.5V10h3.5M2.5 10H6v3.5"/></svg>
+          </button>
         </div>
       </div>
       <div id="showcase-status" class="sc-status" role="status" aria-live="polite">Starting the emulator…</div>
