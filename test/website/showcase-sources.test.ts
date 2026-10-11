@@ -381,6 +381,14 @@ describe('showcase: space-invaders', () => {
     run(c, frames);
     c.keyUp(key);
   };
+  /** Holds the cursor key, with LEFT SHIFT too for the browser's left arrow. */
+  const holdArrow = (c: C64, left: boolean, frames: number) => {
+    c.keyDown('CRSR_RIGHT');
+    if (left) c.keyDown('LSHIFT');
+    run(c, frames);
+    c.keyUp('CRSR_RIGHT');
+    if (left) c.keyUp('LSHIFT');
+  };
   /** The game on screen after SPACE starts it from the title. */
   const started = (): C64 => {
     const c = boot(source('space-invaders'), 10);
@@ -443,6 +451,16 @@ describe('showcase: space-invaders', () => {
     expect(cannonCentre(c)).toBeGreaterThan(left);
   });
 
+  it('moves the cannon with the arrow keys as well as A and D', () => {
+    const c = started();
+    const x = cannonCentre(c);
+    holdArrow(c, true, 8);
+    const left = cannonCentre(c);
+    expect(left).toBeLessThan(x);
+    holdArrow(c, false, 8);
+    expect(cannonCentre(c)).toBeGreaterThan(left);
+  });
+
   it('fires one bullet at a time and the bullet climbs', () => {
     const c = started();
     const shots = () => {
@@ -499,5 +517,46 @@ describe('showcase: space-invaders', () => {
     expect(cell(c, 13, 14)).toBe(0x20);
     expect(blocks(c, INVADER_ROWS)).toBe(120); // a fresh block of 40
     expect(score(c)).toBe(0);
+  });
+
+  it('with the bottom row shot away, the game lasts until the next row reaches the cannon', () => {
+    const c = started();
+    const CYAN = 3;
+    const GREEN = 5;
+    const cells = Array.from({ length: 40 }, (_, col) => col);
+    const cyanLeft = () => {
+      for (let r = 3; r < 22; r++)
+        for (const col of cells)
+          if (cell(c, r, col) === BLOCK && colour(c, r, col) === CYAN) return true;
+      return false;
+    };
+    // The lowest invader row on screen, and the centre column of its leftmost invader.
+    const lowestTarget = (): [number, number] | undefined => {
+      for (let r = 21; r >= 3; r--) {
+        const left = cells.find((col) => cell(c, r, col) === BLOCK);
+        if (left !== undefined) return [r, left + 1];
+      }
+      return undefined;
+    };
+    for (let attempt = 0; attempt < 60 && cyanLeft(); attempt++) {
+      const target = lowestTarget();
+      if (target === undefined) break;
+      const delta = target[1] - cannonCentre(c);
+      if (delta !== 0) tap(c, delta > 0 ? 'D' : 'A', 4 * Math.abs(delta)); // one column per 4 frames
+      tap(c, 'SPACE');
+      run(c, 12); // the bullet reaches the lowest row, or climbs on after a miss
+    }
+    expect(cyanLeft()).toBe(false);
+    let frames = 0;
+    while (cell(c, 13, 14) !== 7 && frames < 4000) {
+      run(c, 10);
+      frames += 10;
+    }
+    expect(cell(c, 13, 14)).toBe(7); // G of GAME OVER
+    // The row left on the cannon's row is the green one: the block kept coming after its cyan
+    // row was gone, and lost only when its lowest live row reached the cannon.
+    const bottom = cells.filter((col) => cell(c, 22, col) === BLOCK);
+    expect(bottom.length).toBeGreaterThan(0);
+    for (const col of bottom) expect(colour(c, 22, col)).toBe(GREEN);
   });
 });
