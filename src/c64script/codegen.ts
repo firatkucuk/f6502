@@ -529,17 +529,24 @@ export function generate(cp: CheckedProgram): CodeBuffer {
     }
   }
 
+  /**
+   * Emits code that continues at `label` when the condition is false (`invertForFalse`) or
+   * true (otherwise). A 6502 branch reaches only ±127 bytes, so this never branches to `label`
+   * directly: it branches the opposite way over a JMP, which can go anywhere.
+   */
   function genCondBranch(cond: Expr, label: string, invertForFalse: boolean): void {
     if (cond.tag === 'binary' && (cond.op === '&&' || cond.op === '||')) {
       throw new CodeGenError(`'${cond.op}' is not supported yet`, cond.line, 0);
     }
+    const stay = freshLabel('cond_stay');
     if (cond.tag === 'binary' && COMPARE_OPS.has(cond.op)) {
       if (isU16(cond.lhs) || isU16(cond.rhs)) {
         throw new CodeGenError('16-bit comparison is not supported yet', cond.line, 0);
       }
       genExpr(cond.lhs);
       genCmpRhs(cond.rhs);
-      emitCondJump(cond.op, label, invertForFalse);
+      // Stay (fall into the body / loop) when the jump to `label` is NOT wanted.
+      emitCondJump(cond.op, stay, !invertForFalse);
     } else {
       if (isU16(cond)) {
         throw new CodeGenError('16-bit comparison is not supported yet', cond.line, 0);
@@ -548,9 +555,12 @@ export function generate(cp: CheckedProgram): CodeBuffer {
       // after a function call returned it.
       genExpr(cond);
       emit(0xC9, 0x00);
-      emit(invertForFalse ? 0xF0 : 0xD0);
-      addFixup({ kind: 'branch8', label }, 1);
+      emit(invertForFalse ? 0xD0 : 0xF0); // BNE / BEQ over the jump
+      addFixup({ kind: 'branch8', label: stay }, 1);
     }
+    emit(0x4C); // JMP label
+    addFixup({ kind: 'abs16', label }, 2);
+    emitLabel(stay);
   }
 
   const COMPOUND_OPS: Record<string, string> = {

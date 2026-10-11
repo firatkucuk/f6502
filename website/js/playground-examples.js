@@ -3,6 +3,58 @@
 
 export const EXAMPLES = [
   {
+    id: 'slideshow',
+    title: 'Slideshow',
+    source: `// Slideshow: one slide every 3 seconds.
+let slide: u8 = 0;
+
+program @ 0x0810 {
+  loop {
+    clrscr();
+
+    if (slide == 0) {
+      VIC2.borderColor = COLOR_BLUE;
+      puts(8, 17, "F6502", COLOR_WHITE);
+      puts(11, 5, "A COMMODORE 64 IN YOUR BROWSER", COLOR_LIGHT_BLUE);
+      puts(14, 7, "CYCLE ACCURATE TYPESCRIPT", COLOR_LIGHT_GREY);
+    } else if (slide == 1) {
+      VIC2.borderColor = COLOR_PURPLE;
+      puts(6, 14, "WHAT IT RUNS", COLOR_WHITE);
+      puts(10, 12, "VIC II GRAPHICS", COLOR_YELLOW);
+      puts(12, 12, "SID SOUND", COLOR_YELLOW);
+      puts(14, 12, "CIA TIMERS", COLOR_YELLOW);
+      puts(16, 12, "DISKS AND TAPES", COLOR_YELLOW);
+    } else if (slide == 2) {
+      VIC2.borderColor = COLOR_GREEN;
+      puts(7, 15, "C64SCRIPT", COLOR_WHITE);
+      puts(11, 5, "A SMALL LANGUAGE THAT COMPILES", COLOR_LIGHT_GREEN);
+      puts(13, 8, "TO 6502 MACHINE CODE", COLOR_LIGHT_GREEN);
+      puts(15, 7, "RIGHT IN YOUR BROWSER", COLOR_LIGHT_GREEN);
+    } else if (slide == 3) {
+      VIC2.borderColor = COLOR_ORANGE;
+      puts(8, 13, "THIS SLIDESHOW", COLOR_WHITE);
+      puts(11, 7, "IS A FEW LINES OF C64SCRIPT", COLOR_YELLOW);
+      puts(13, 9, "SEE THE SOURCE BESIDE IT", COLOR_YELLOW);
+    } else {
+      VIC2.borderColor = COLOR_RED;
+      puts(8, 12, "TRY IT YOURSELF", COLOR_WHITE);
+      puts(11, 10, "OPEN THE PLAYGROUND", COLOR_LIGHT_RED);
+      puts(13, 13, "PRESS RUN", COLOR_LIGHT_RED);
+    }
+
+    // Hold the slide: wait for 150 video frames (3 seconds).
+    for (let n: u8 = 0; n < 150; n++) {
+      while (VIC2.rasterLine != 200) {}
+      while (VIC2.rasterLine == 200) {}
+    }
+
+    slide++;
+    if (slide == 5) { slide = 0; }
+  }
+}
+`,
+  },
+  {
     id: 'rainbow',
     title: 'Rainbow border',
     source: `// Cycle the border through all 16 C64 colours
