@@ -42,4 +42,24 @@ export default tseslint.config(
       ],
     },
   },
+  {
+    files: ['website/js/{code-hash,playground,playground-examples,try-now}.js'],
+    languageOptions: {
+      sourceType: 'module',
+      globals: {
+        window: 'readonly',
+        document: 'readonly',
+        location: 'readonly',
+        history: 'readonly',
+        navigator: 'readonly',
+        console: 'readonly',
+        File: 'readonly',
+        URL: 'readonly',
+        TextEncoder: 'readonly',
+        TextDecoder: 'readonly',
+        btoa: 'readonly',
+        atob: 'readonly',
+      },
+    },
+  },
 );
