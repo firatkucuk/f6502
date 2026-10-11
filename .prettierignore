@@ -5,3 +5,5 @@ dist
 node_modules
 package-lock.json
 .playwright-mcp
+website/*.html
+website/css

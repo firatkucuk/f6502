@@ -1,11 +1,11 @@
 import { C64ScriptTypeError as TypeError } from './errors';
 
 export type SymbolKind =
-  | { tag: 'var';      zpAddr: number | null; absAddr: number | null; isConst: boolean }
-  | { tag: 'fn';       isInline: boolean }
+  | { tag: 'var'; zpAddr: number | null; absAddr: number | null; isConst: boolean }
+  | { tag: 'fn'; isInline: boolean }
   | { tag: 'hardware'; base: number }
   | { tag: 'struct' }
-  | { tag: 'color';    value: number };
+  | { tag: 'color'; value: number };
 
 export interface C64Symbol {
   name: string;
@@ -16,8 +16,12 @@ export interface C64Symbol {
 export class SymbolTable {
   private readonly scopes: Map<string, C64Symbol>[] = [new Map()];
 
-  push(): void { this.scopes.push(new Map()); }
-  pop(): void  { if (this.scopes.length > 1) this.scopes.pop(); }
+  push(): void {
+    this.scopes.push(new Map());
+  }
+  pop(): void {
+    if (this.scopes.length > 1) this.scopes.pop();
+  }
 
   define(sym: C64Symbol): void {
     const top = this.scopes[this.scopes.length - 1]!;
@@ -35,11 +39,11 @@ export class SymbolTable {
 }
 
 // ZP: $00-$01 CPU port, $02-$F7 usable (246 bytes), $F8-$FF ABI reserved
-const ZP_START  = 0x02;
-const ZP_ABI_LO = 0xF8;
+const ZP_START = 0x02;
+const ZP_ABI_LO = 0xf8;
 
 export class ZpAllocator {
-  private next  = ZP_START;
+  private next = ZP_START;
   private _used = 0;
 
   alloc(bytes: number, line = 0): number {
@@ -47,14 +51,17 @@ export class ZpAllocator {
     if (addr + bytes >= ZP_ABI_LO) {
       throw new TypeError(
         `zero-page budget exhausted: need ${bytes} byte(s) at $${addr.toString(16).toUpperCase()}, ` +
-        `but $F8 is the ABI boundary`,
-        line, 0,
+          `but $F8 is the ABI boundary`,
+        line,
+        0,
       );
     }
-    this.next  += bytes;
+    this.next += bytes;
     this._used += bytes;
     return addr;
   }
 
-  used(): number { return this._used; }
+  used(): number {
+    return this._used;
+  }
 }

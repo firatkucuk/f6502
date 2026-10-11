@@ -382,8 +382,7 @@ export function parse(tokens: Token[]): Program {
   /** The operand must start on the instruction's own line, so `dex` ⏎ `bne x` stays two items. */
   function parseAsmOperand(mnemonic: string, line: number): AsmOperand {
     const next = peek();
-    if (next.line !== line || next.kind === 'rbrace' || next.kind === 'eof')
-      return { tag: 'none' };
+    if (next.line !== line || next.kind === 'rbrace' || next.kind === 'eof') return { tag: 'none' };
     if (isMnemonic(mnemonic) && !takesOperand(mnemonic)) return { tag: 'none' };
     if (isWord(next) && next.text.toLowerCase() !== 'a' && isMnemonic(next.text)) {
       return { tag: 'none' }; // `asl bne …` on one line: the next word starts a new instruction
