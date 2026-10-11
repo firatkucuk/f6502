@@ -121,11 +121,11 @@ program @ 0x0810 {
   VIC2.bgColor0 = COLOR_BLACK;
 
   puts(12, 15, "HELLO C64", COLOR_WHITE);
-  puts(14, 14, "WRITTEN IN C64SCRIPT", COLOR_LIGHT_BLUE);
+  puts(14, 9, "WRITTEN IN C64SCRIPT", COLOR_LIGHT_BLUE);
 
   // A single character: poke it and its colour.
-  poke(screen(10, 20), 'H');
-  poke(color(10, 20), COLOR_YELLOW);
+  poke(screen(10, 19), 'H');
+  poke(color(10, 19), COLOR_YELLOW);
   loop {}
 }
 `,
