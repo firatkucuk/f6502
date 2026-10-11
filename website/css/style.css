@@ -435,20 +435,6 @@ body::before {
 .terminal-body .token-fn   { color: #a090e8; }
 .terminal-body .token-ann  { color: #c9934a; }
 
-.copy-btn {
-  float: right;
-  background: var(--surface-3);
-  border: 1px solid var(--border-2);
-  border-radius: 5px;
-  padding: 3px 8px;
-  font-size: 0.75rem;
-  color: var(--text-muted);
-  cursor: pointer;
-  font-family: var(--font-body);
-  margin-top: -2px;
-  transition: all 0.2s;
-}
-.copy-btn:hover { color: var(--text); border-color: var(--primary); }
 
 /* ── Timeline ───────────────────────────────────────────────────── */
 .timeline {
@@ -963,23 +949,39 @@ kbd {
 /* ── Focus ──────────────────────────────────────────────────────── */
 :focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; border-radius: 4px; }
 
-/* ── "Try now" link on C64Script samples ──────────────────────────────── */
-/* Floats beside .copy-btn (same box metrics) so the two always share a baseline. */
-.try-now {
-  float: right;
-  margin: -2px 0.4rem 0 0;
-  padding: 3px 8px;
-  border: 1px solid var(--accent);
-  border-radius: 5px;
-  background: var(--accent);
-  color: var(--bg);
-  font-family: var(--font-body);
-  font-size: 0.75rem;
-  line-height: normal;
-  text-decoration: none;
-  transition: all 0.2s;
+/* ── Code block buttons: small icon buttons in the title bar ───────────── */
+.terminal-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-left: auto;
 }
-.try-now:hover { filter: brightness(1.15); }
+.terminal-actions.floating {
+  position: absolute;
+  top: 0.4rem;
+  right: 0.4rem;
+  z-index: 2;
+}
+.term-btn {
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border-2);
+  border-radius: 6px;
+  background: var(--surface-3);
+  color: var(--text-muted);
+  cursor: pointer;
+  text-decoration: none;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+.term-btn svg { width: 14px; height: 14px; display: block; }
+.term-btn:hover { color: var(--text); border-color: var(--primary); }
+.term-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.term-btn.try { background: var(--accent); border-color: var(--accent); color: var(--bg); }
+.term-btn.try:hover { filter: brightness(1.15); color: var(--bg); }
 
 /* ── Home page: "See it run" slideshow ───────────────────────────────────── */
 .slideshow-grid {
@@ -1010,6 +1012,3 @@ kbd {
 .slideshow-source .token.string { color: #9ae29b; }
 .slideshow-source .token.operator { color: #6070a0; }
 .slideshow-source .token.punctuation { color: #4a4d70; }
-.slideshow-actions { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.9rem;
-  font-size: 0.78rem; color: var(--text-dim); }
-.slideshow-actions .try-now { float: none; margin: 0; }
