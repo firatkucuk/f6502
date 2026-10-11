@@ -306,6 +306,9 @@ export function check(userProg: Program): CheckedProgram {
     }
 
     if (d.tag === 'program') {
+      if (hasProgramDecl) {
+        throw new TypeError('only one program block is allowed', d.line, 0);
+      }
       loadAddr = d.address;
       hasProgramDecl = true;
     }
