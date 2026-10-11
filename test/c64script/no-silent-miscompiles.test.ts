@@ -176,13 +176,7 @@ describe('u16', () => {
     expect(background(c)).toBe(0);
   });
 
-  it('rejects 16-bit arithmetic and comparison instead of using the low byte', () => {
-    expectError(
-      'let @zp w: u16 = 0;\nprogram @ 0x0810 {\n  w = w + 1;\n  loop {}\n}',
-      'codegen',
-      /16-bit/,
-      3,
-    );
+  it('rejects 16-bit comparison instead of using the low byte', () => {
     expectError(
       'let @zp w: u16 = 0;\nprogram @ 0x0810 {\n  if (w < 300) { VIC2.borderColor = 1; }\n  loop {}\n}',
       'codegen',

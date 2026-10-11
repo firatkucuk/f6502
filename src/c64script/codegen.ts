@@ -31,8 +31,6 @@ type LoopContext = { breakLabel: string; continueLabel: string };
 
 /** Zero page the compiler keeps for itself ($F8–$FF are outside the allocator's range). */
 const ACC = 0xf8; // 16-bit accumulator: low at $F8, high at $F9; also the pointer for (zp),Y
-const TMP2 = 0xfa; // second 16-bit temporary ($FA/$FB)
-const TMP = 0xfc; // byte temporary
 
 export function generate(cp: CheckedProgram): CodeBuffer {
   const bytes: number[] = [];

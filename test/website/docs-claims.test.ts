@@ -157,12 +157,6 @@ describe('every row of the "not in the language yet" table is true', () => {
       /argument of 'twice' calls 'twice'/,
       'type',
     ],
-    [
-      '16-bit arithmetic',
-      P('w = w + 1;', 'let @zp w: u16 = 0;'),
-      /16-bit arithmetic is not supported yet/,
-      'codegen',
-    ],
   ];
 
   it.each(rows)('%s', (_name, source, message, kind) => {

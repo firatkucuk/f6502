@@ -1159,7 +1159,6 @@
           <tr><td><code>const A: u8 = 8 / 2;</code></td><td style="color:var(--text-muted)">needs a compile-time constant initialiser</td><td style="color:var(--text-muted)">write the result</td></tr>
           <tr><td><code>for (…; …; i += 2)</code>, <code>for (; …; …)</code></td><td style="color:var(--text-muted)">parse error</td><td style="color:var(--text-muted)">a <code>while</code> loop</td></tr>
           <tr><td><code>buf[i]</code>, pointers, structs</td><td style="color:var(--text-muted)"><code>array indexing is not supported yet</code></td><td style="color:var(--text-muted)"><code>asm</code> with <code>,x</code> / <code>,y</code> addressing, or fixed addresses</td></tr>
-          <tr><td><code>w = w + 1</code> on a <code>u16</code></td><td style="color:var(--text-muted)"><code>16-bit arithmetic is not supported yet</code></td><td style="color:var(--text-muted)">use <code>u8</code>, or <code>asm</code></td></tr>
           <tr><td><code>/* … */</code></td><td style="color:var(--text-muted)">parse error</td><td style="color:var(--text-muted)"><code>//</code></td></tr>
           <tr><td><code>f(f(1))</code>, recursion</td><td style="color:var(--text-muted)"><code>argument of 'f' calls 'f'…</code> / <code>called from within itself</code></td><td style="color:var(--text-muted)">assign the inner call to a variable; use a loop</td></tr>
         </tbody>
@@ -1198,7 +1197,7 @@
         <div class="chip-card-num">PARTIAL</div>
         <h3>u16 type is partial</h3>
         <p class="chip-label">16-bit operations need more work</p>
-        <p><code>u16</code> variables can be assigned, copied, incremented and read with <code>lo()</code> / <code>hi()</code>. Arithmetic and comparison on them is a compile error until 16-bit support lands; use <code>u8</code> for that.</p>
+        <p><code>u16</code> variables can be assigned, copied, incremented, added to and subtracted from (<code>+</code>, <code>-</code>, <code>+=</code>, <code>-=</code>, mixing in <code>u8</code> values) and read with <code>lo()</code> / <code>hi()</code>. Comparison on them is a compile error until 16-bit comparison lands; use <code>u8</code> for that.</p>
       </div>
       <div class="chip-card">
         <div class="chip-card-num">CONST ADDR</div>
