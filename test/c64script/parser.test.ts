@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { tokenize } from '../../src/c64script/lexer';
 import { parse } from '../../src/c64script/parser';
 
-function p(src: string) { return parse(tokenize(src)); }
+function p(src: string) {
+  return parse(tokenize(src));
+}
 
 describe('parser — types', () => {
   it('parses u8 variable declaration', () => {
@@ -26,13 +28,19 @@ describe('parser — types', () => {
   it('parses @addr annotation', () => {
     const prog = p('let @addr(0xD020) borderReg: u8;');
     const d = prog.decls[0]!;
-    if (d.tag === 'varDecl') expect(d.annotation).toEqual({ kind: 'addr', address: 0xD020 });
+    if (d.tag === 'varDecl') {
+      expect(d.annotation).toMatchObject({
+        kind: 'addr',
+        address: { tag: 'intLit', value: 0xd020 },
+      });
+    }
   });
 
   it('parses fixed array type', () => {
     const prog = p('let buf: [u8; 256];');
     const d = prog.decls[0]!;
-    if (d.tag === 'varDecl') expect(d.type).toEqual({ tag: 'array', elem: { tag: 'u8' }, size: 256 });
+    if (d.tag === 'varDecl')
+      expect(d.type).toEqual({ tag: 'array', elem: { tag: 'u8' }, size: 256 });
   });
 
   it('parses ptr<u8> type', () => {
@@ -75,7 +83,7 @@ describe('parser — types', () => {
     expect(d.tag).toBe('hardware');
     if (d.tag === 'hardware') {
       expect(d.name).toBe('VIC2');
-      expect(d.base).toBe(0xD000);
+      expect(d.base).toBe(0xd000);
       expect(d.fields[0]?.name).toBe('borderColor');
       expect(d.fields[0]?.offset).toBe(0x20);
     }
@@ -85,7 +93,7 @@ describe('parser — types', () => {
     const prog = p('program @ 0xC000 { }');
     const d = prog.decls[0]!;
     expect(d.tag).toBe('program');
-    if (d.tag === 'program') expect(d.address).toBe(0xC000);
+    if (d.tag === 'program') expect(d.address).toMatchObject({ tag: 'intLit', value: 0xc000 });
   });
 
   it('parses if/else', () => {

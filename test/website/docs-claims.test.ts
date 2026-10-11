@@ -200,3 +200,38 @@ describe('the types table', () => {
     expect(table).toMatch(/compile error/);
   });
 });
+
+describe('named addresses', () => {
+  it('the guide says constants work in address positions', () => {
+    expect(html).toMatch(/Naming an address/);
+    expect(text).toMatch(/program @ START/);
+    expect(text).toMatch(/data @addr\(TABLE\)/);
+  });
+
+  it('the addresses sample does what its comments say', () => {
+    const at = html.indexOf('addresses.c64s');
+    const pre = html.slice(html.indexOf('<pre', at), html.indexOf('</pre>', at));
+    const source = pre
+      .replace(/<[^>]+>/g, '')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&amp;/g, '&');
+    expect(source).toMatch(/counting down, so it ends on the first entry: red/);
+    const c = boot(source, 3);
+    expect(c.peek(0xd020) & 15).toBe(2); // COLOR_RED, shades[0]
+    expect(c.peek(0x0c00)).toBe(2);
+    expect(c.peek(0x0c03)).toBe(1);
+  });
+
+  it('what it promises is true', () => {
+    // program and data addresses may use a constant declared anywhere; let @addr needs it above
+    const c = boot('program @ START { loop {} }\nconst START: u16 = 0x0810;');
+    expect(c.peek(0xd020) & 15).toBeGreaterThanOrEqual(0);
+    expectError(
+      'let @addr(LATER) cell: u8;\nconst LATER: u16 = 0x0400;\nprogram @ 0x0810 { loop {} }',
+      'type',
+      /@addr\(\.\.\.\) must be a compile-time constant/,
+      1,
+    );
+  });
+});
