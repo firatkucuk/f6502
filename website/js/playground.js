@@ -105,6 +105,13 @@ function setup() {
     }
   });
   $('run-btn').addEventListener('click', () => run(true));
+  $('copy-btn').addEventListener('click', () => {
+    navigator.clipboard.writeText(editor.value).then(() => {
+      const btn = $('copy-btn');
+      btn.title = 'Copied';
+      setTimeout(() => (btn.title = 'Copy source'), 1500);
+    });
+  });
   $('reboot-btn').addEventListener('click', () => {
     if (!player) return;
     player.reset();
