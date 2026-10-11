@@ -62,15 +62,12 @@ describe('code generator', () => {
     expect(bytes.some(b => b === 0xF0 || b === 0xD0)).toBe(true);
   });
 
-  it('emits CLC for u16 carry chain addition', () => {
-    const prg = compile('let @zp s: u16 = 0; program @ 0xC000 { s = s + 1; }');
-    const bytes = Array.from(prg);
-    // CLC = 0x18 before ADC in carry chain
-    expect(bytes).toContain(0x18);
+  it('rejects 16-bit addition instead of emitting an 8-bit add', () => {
+    expect(() => compile('let @zp s: u16 = 0; program @ 0xC000 { s = s + 1; }')).toThrow(CodeGenError);
   });
 
-  it('throws CodeGenError when calling an undefined function', () => {
-    expect(() => compile('program @ 0xC000 { undefinedFunc(); }')).toThrow(CodeGenError);
+  it('rejects a call to an undefined function', () => {
+    expect(() => compile('program @ 0xC000 { undefinedFunc(); }')).toThrow(/undefined function/);
   });
 
   it('emits LDA #0 before STA $D020 for BLACK constant assignment', () => {

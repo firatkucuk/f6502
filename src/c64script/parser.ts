@@ -179,7 +179,7 @@ export function parse(tokens: Token[]): Program {
     const type = parseType();
     const init = maybe('eq') ? parseExpr() : null;
     eat('semicolon');
-    return { tag: 'varDecl', name, type, annotation, init, line };
+    return { tag: 'varDecl', name, type, annotation, isConst, init, line };
   }
 
   function parseBlock(): Stmt[] {
