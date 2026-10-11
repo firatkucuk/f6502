@@ -34,6 +34,13 @@ export const SHOWCASES = [
     hint: 'Press SPACE to start. A, D or the arrow keys move the cannon.',
   },
   {
+    id: 'crystal-climb',
+    title: 'Crystal Climb',
+    blurb:
+      'Climb the cave, collect four gems and reach the exit. Jump between stone ledges, clear the patrolling crawler and keep out of the lava. Three lives, one summit, all in C64Script.',
+    hint: 'Press SPACE to start or jump. A, D or the left/right arrow keys move. Collect every gem to open the exit.',
+  },
+  {
     id: 'music-box',
     title: 'Music Box',
     blurb:

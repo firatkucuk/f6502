@@ -362,11 +362,212 @@ describe('showcases are written in plain C64Script', () => {
     'rainbow-border',
     'space-invaders',
     'music-box',
+    'crystal-climb',
   ]) {
     it(`${id} has no inline assembly`, () => {
       expect(source(id)).not.toMatch(/\basm\b\s*(clobbers\s*\([^)]*\)\s*)?\{/);
     });
   }
+});
+
+describe('showcase: crystal-climb', () => {
+  const run = (c: C64, frames: number) => {
+    for (let i = 0; i < frames; i++) c.runFrame();
+  };
+  const cell = (c: C64, r: number, col: number) => c.peek(0x0400 + r * 40 + col);
+  const x = (c: C64) => c.peek(0xd000) + ((c.peek(0xd010) & 1) << 8);
+  const y = (c: C64) => c.peek(0xd001);
+  const gems = (c: C64) => cell(c, 0, 23) - 0x30;
+  const lives = (c: C64) => cell(c, 0, 38) - 0x30;
+  const hold = (c: C64, key: 'A' | 'D' | 'SPACE', frames: number) => {
+    c.keyDown(key);
+    run(c, frames);
+    c.keyUp(key);
+  };
+  const started = () => {
+    const c = boot(source('crystal-climb'), 90);
+    hold(c, 'SPACE', 3);
+    run(c, 3);
+    return c;
+  };
+  const jump = (c: C64, key: 'A' | 'D', frames: number) => {
+    c.keyDown(key);
+    c.keyDown('SPACE');
+    run(c, frames);
+    c.keyUp(key);
+    c.keyUp('SPACE');
+    run(c, 30);
+  };
+  const firstLedge = (c: C64) => {
+    hold(c, 'D', 12);
+    jump(c, 'D', 30);
+  };
+  const summit = (c: C64, collectSecond: boolean) => {
+    firstLedge(c);
+    hold(c, 'D', 13);
+    jump(c, 'D', collectSecond ? 35 : 20);
+    expect(y(c)).toBe(146);
+    hold(c, 'A', collectSecond ? 16 : 1);
+    jump(c, 'A', 30);
+    expect(y(c)).toBe(114);
+    hold(c, 'A', 10);
+    jump(c, 'A', 24);
+    expect(y(c)).toBe(82);
+    hold(c, 'D', 8);
+    jump(c, 'D', 38);
+    expect(y(c)).toBe(66);
+    hold(c, 'D', 12);
+    run(c, 3);
+  };
+
+  it('waits on the title with platforms, gems and three lives', () => {
+    const c = boot(source('crystal-climb'), 90);
+    expect(cell(c, 14, 2)).toBe(19); // SPACE TO START
+    expect(cell(c, 22, 1)).toBe(0xa0);
+    expect(cell(c, 18, 10)).toBe(0xa0);
+    expect(cell(c, 16, 14)).toBe(42); // first gem
+    expect(c.peek(0xd015) & 3).toBe(3);
+    expect(gems(c)).toBe(0);
+    expect(lives(c)).toBe(3);
+    const before = [x(c), y(c)];
+    run(c, 20);
+    expect([x(c), y(c)]).toEqual(before);
+  });
+
+  it('moves with A/D and shifted cursor keys, staying inside the screen', () => {
+    const c = started();
+    const before = x(c);
+    hold(c, 'D', 8);
+    expect(x(c)).toBeGreaterThan(before);
+    hold(c, 'A', 60);
+    expect(x(c)).toBe(32);
+    c.keyDown('CRSR_RIGHT');
+    run(c, 6);
+    c.keyUp('CRSR_RIGHT');
+    expect(x(c)).toBeGreaterThan(32);
+    c.keyDown('LSHIFT');
+    c.keyDown('CRSR_RIGHT');
+    run(c, 6);
+    c.keyUp('CRSR_RIGHT');
+    c.keyUp('LSHIFT');
+    expect(x(c)).toBe(32);
+  });
+
+  it('jumps once per press, falls, and lands back on the ground', () => {
+    const c = started();
+    const floor = y(c);
+    c.keyDown('SPACE');
+    run(c, 8);
+    expect(y(c)).toBeLessThan(floor - 20);
+    run(c, 60);
+    expect(y(c)).toBe(floor);
+    run(c, 20);
+    expect(y(c)).toBe(floor); // holding cannot auto-jump
+    c.keyUp('SPACE');
+    run(c, 2);
+    hold(c, 'SPACE', 6);
+    expect(y(c)).toBeLessThan(floor);
+  });
+
+  it('lands on a raised platform and collects a gem only once', () => {
+    const c = started();
+    hold(c, 'D', 12); // approach the first jump, before the patrol
+    c.keyDown('D');
+    c.keyDown('SPACE');
+    run(c, 30);
+    c.keyUp('SPACE');
+    c.keyUp('D');
+    run(c, 25);
+    expect(y(c)).toBe(178); // feet on the platform at Y=194
+    expect(gems(c)).toBe(1);
+    expect(cell(c, 16, 14)).toBe(32);
+    run(c, 30);
+    expect(gems(c)).toBe(1);
+    expect(lives(c)).toBe(3);
+  });
+
+  it('a patrol hit costs a life and respawns the climber', () => {
+    const c = started();
+    c.keyDown('D');
+    for (let f = 0; f < 80 && lives(c) === 3; f++) c.runFrame();
+    c.keyUp('D');
+    run(c, 3);
+    expect(lives(c)).toBe(2);
+    expect(x(c)).toBeLessThan(80);
+    expect(y(c)).toBe(210);
+  });
+
+  it('keeps platforms and movement correct across the ninth sprite X bit', () => {
+    const c = started();
+    firstLedge(c);
+    hold(c, 'D', 13);
+    jump(c, 'D', 35);
+    hold(c, 'D', 18);
+    expect(x(c)).toBe(264);
+    expect(c.peek(0xd010) & 1).toBe(1);
+    expect(y(c)).toBe(146);
+    hold(c, 'D', 60);
+    run(c, 30);
+    expect(x(c)).toBe(324);
+    expect(y(c)).toBe(210); // right-hand ground catches a fall
+    expect(lives(c)).toBe(3);
+  });
+
+  it('lava costs a life without restoring collected gems; game over can restart', () => {
+    const c = started();
+    firstLedge(c);
+    hold(c, 'D', 35);
+    run(c, 30);
+    expect(lives(c)).toBe(2);
+    expect(gems(c)).toBe(1);
+    expect(x(c)).toBe(48);
+    expect(y(c)).toBe(210);
+    c.keyDown('D');
+    run(c, 160);
+    c.keyUp('D');
+    expect(lives(c)).toBe(0);
+    expect(cell(c, 12, 15)).toBe(7); // GAME OVER
+    const before = [x(c), y(c)];
+    run(c, 20);
+    expect([x(c), y(c)]).toEqual(before);
+    hold(c, 'SPACE', 3);
+    run(c, 90);
+    expect(lives(c)).toBe(3);
+    expect(gems(c)).toBe(0);
+    expect(cell(c, 16, 14)).toBe(42);
+    expect(cell(c, 12, 15)).toBe(32);
+  });
+
+  it('keeps the exit locked until every gem has been collected', () => {
+    const c = started();
+    summit(c, false);
+    expect(gems(c)).toBe(3);
+    expect(c.peek(0xd800 + 2 * 40 + 20) & 15).toBe(9); // brown door
+    expect(cell(c, 12, 13)).toBe(32); // no victory message
+    const before = x(c);
+    hold(c, 'A', 4);
+    expect(x(c)).toBeLessThan(before); // still playing
+  });
+
+  it('can collect every gem, reach the exit, win, and replay', () => {
+    const c = started();
+    summit(c, true);
+    expect(gems(c)).toBe(4);
+    expect(lives(c)).toBe(3);
+    expect(c.peek(0xd800 + 2 * 40 + 20) & 15).toBe(13); // green door
+    expect(cell(c, 12, 13)).toBe(3); // CAVE COMPLETE
+    const before = x(c);
+    hold(c, 'A', 10);
+    expect(x(c)).toBe(before);
+    hold(c, 'SPACE', 3);
+    run(c, 90);
+    expect(gems(c)).toBe(0);
+    expect(lives(c)).toBe(3);
+    expect(cell(c, 12, 13)).toBe(32);
+    expect(x(c)).toBe(48);
+    hold(c, 'SPACE', 8);
+    expect(y(c)).toBeLessThan(210);
+  });
 });
 
 describe('showcase: space-invaders', () => {
