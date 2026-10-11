@@ -196,6 +196,7 @@ export function generate(cp: CheckedProgram): CodeBuffer {
       if (addrVal === null) {
         throw new CodeGenError('poke() address must be a compile-time constant', e.line, 0);
       }
+      assertFits8(valueExpr, e.line, 'a byte');
       const byteVal = evalConst(valueExpr);
       if (byteVal !== null) emit(0xA9, byteVal & 0xFF);
       else genExpr(valueExpr);
@@ -217,6 +218,7 @@ export function generate(cp: CheckedProgram): CodeBuffer {
       if (arg === undefined || slot === undefined || slot.zpAddr === null) {
         throw new CodeGenError(`cannot pass argument ${i + 1} to '${e.name}'`, e.line, 0);
       }
+      assertFits8(arg, e.line, `parameter '${param?.name}' of '${e.name}'`);
       genExpr(arg);
       emit(0x85, slot.zpAddr); // STA param slot
     }
@@ -234,6 +236,22 @@ export function generate(cp: CheckedProgram): CodeBuffer {
     }
   }
 
+  /** A value stored into an 8-bit target must be known to fit, or be narrowed explicitly. */
+  function assertFits8(value: Expr, line: number, what: string): void {
+    const c = evalConst(value);
+    if (c !== null) {
+      if (c > 0xff) throw new CodeGenError(`value ${c} does not fit in ${what}`, line, 0);
+      return;
+    }
+    if (isU16(value)) {
+      throw new CodeGenError(
+        `a 16-bit value cannot be stored in ${what}; use lo(...) or 'as u8'`,
+        line,
+        0,
+      );
+    }
+  }
+
   /** Loads the low (or high) byte of a variable or constant argument of lo() / hi(). */
   function genByteOf(arg: Expr, high: boolean, line: number): void {
     const c = evalConst(arg);
@@ -243,6 +261,9 @@ export function generate(cp: CheckedProgram): CodeBuffer {
     }
     if (arg.tag === 'ident') {
       const v = lookup(arg.name);
+      if (high && v && v.type.tag !== 'u16') {
+        throw new CodeGenError(`hi() needs a 16-bit value, but '${arg.name}' is ${v.type.tag}`, line, 0);
+      }
       if (v && v.zpAddr !== null) {
         emit(0xA5, v.zpAddr + (high ? 1 : 0));
         return;
@@ -290,7 +311,11 @@ export function generate(cp: CheckedProgram): CodeBuffer {
           throw new CodeGenError(`unary operator '${e.op}' is not supported yet`, e.line, 0);
         }
         genExpr(e.rhs);
-        emit(0x49, 0x01); // EOR #1 (bool flip)
+        // !x is 1 when x is 0, else 0 — for any u8, not just 0/1:
+        emit(0xC9, 0x01); // CMP #1   (carry set when x >= 1)
+        emit(0xA9, 0x00); // LDA #0
+        emit(0x2A);       // ROL A    (A = 1 when x was non-zero)
+        emit(0x49, 0x01); // EOR #1
         break;
       case 'binary': {
         const folded = evalConst(e);
@@ -363,13 +388,13 @@ export function generate(cp: CheckedProgram): CodeBuffer {
     }
     switch (e.op) {
       case '+':
-        emit(0x18); // CLC
         genExpr(e.lhs);
+        emit(0x18); // CLC (after the left side: it may itself have left a carry)
         genOperand(e.rhs, 0x69, 0x65, 0x6D); // ADC #imm, ADC zp, ADC abs
         break;
       case '-':
-        emit(0x38); // SEC
         genExpr(e.lhs);
+        emit(0x38); // SEC
         genOperand(e.rhs, 0xE9, 0xE5, 0xED); // SBC #imm, SBC zp, SBC abs
         break;
       case '&':
@@ -455,6 +480,9 @@ export function generate(cp: CheckedProgram): CodeBuffer {
       genCmpRhs(cond.rhs);
       emitCondJump(cond.op, label, invertForFalse);
     } else {
+      if (isU16(cond)) {
+        throw new CodeGenError('16-bit comparison is not supported yet', cond.line, 0);
+      }
       // Any other value is true when it is non-zero. CMP #0 makes the flags reflect A even
       // after a function call returned it.
       genExpr(cond);
@@ -519,6 +547,7 @@ export function generate(cp: CheckedProgram): CodeBuffer {
         return;
       }
     }
+    assertFits8(rhs, line, lhs.tag === 'ident' ? `'${lhs.name}'` : 'a byte register');
     genExpr(rhs);
     genStore(lhs);
   }
@@ -528,7 +557,16 @@ export function generate(cp: CheckedProgram): CodeBuffer {
       case 'varDecl': {
         const v = lookup(s.name);
         if (!v) throw new CodeGenError(`internal error: '${s.name}' was not declared`, s.line, 0);
-        if (v.isConst || !s.init) break;
+        if (v.isConst) break;
+        if (!s.init) {
+          // Declaration without a value: start at zero, like globals do.
+          if (v.zpAddr !== null) {
+            const size = sizeOf(v.type, cp.structs);
+            emit(0xA9, 0x00);
+            for (let i = 0; i < size; i++) emit(0x85, v.zpAddr + i);
+          }
+          break;
+        }
         genAssign({ tag: 'ident', name: s.name, line: s.line }, s.init, s.line);
         break;
       }
@@ -716,12 +754,22 @@ export function generate(cp: CheckedProgram): CodeBuffer {
     }
     while (cp.loadAddr + bytes.length < addr) emit(0x00); // pad
     for (const field of decl.fields) {
+      if (field.type.tag === 'array' && field.init.length !== field.type.size) {
+        throw new CodeGenError(
+          `data '${field.name}' has ${field.init.length} values but is declared with ${field.type.size}`,
+          decl.line,
+          0,
+        );
+      }
       for (const init of field.init) {
         const v = evalConst(init);
         if (v === null) {
           throw new CodeGenError(`data '${field.name}' values must be compile-time constants`, decl.line, 0);
         }
-        emit(v & 0xFF);
+        if (v > 0xff) {
+          throw new CodeGenError(`value ${v} does not fit in a byte (data '${field.name}')`, decl.line, 0);
+        }
+        emit(v);
       }
     }
   }

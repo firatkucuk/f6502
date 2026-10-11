@@ -107,7 +107,7 @@
       <span class="lang-feature-icon">⚡</span>
       <div class="lang-feature-body">
         <h4>Zero-page annotation <code>@zp</code></h4>
-        <p>Mark variables <code>@zp</code> to place them in zero page ($00–$FF). The 6502 can address these with a single byte instead of two, making every access faster and smaller. You get up to 256 bytes of zero-page space.</p>
+        <p>Mark variables <code>@zp</code> to place them in zero page ($00–$FF). The 6502 can address these with a single byte instead of two, making every access faster and smaller. You get 246 bytes of zero-page space ($02–$F7).</p>
       </div>
     </div>
 
@@ -212,7 +212,7 @@
 
     <div class="infobox accent" style="margin-top:2rem">
       <strong>Pro tip — variables live in zero page.</strong>
-      Every <code>let</code> is allocated in zero page automatically (254 bytes in total),
+      Every <code>let</code> is allocated in zero page automatically (246 bytes in total),
       so reads and writes are 2-byte instructions instead of 3. <code>const</code> values
       take no memory at all: they fold into the code.
     </div>
@@ -280,7 +280,7 @@
           </tr>
           <tr>
             <td><code>@zp</code></td>
-            <td style="color:var(--text-muted)">Place variable in zero page ($00–$FF). Generates shorter, faster opcodes. Max 256 bytes total across all <code>@zp</code> vars.</td>
+            <td style="color:var(--text-muted)">Place variable in zero page ($00–$FF). Generates shorter, faster opcodes. Max 246 bytes in total ($02–$F7) across all variables.</td>
           </tr>
           <tr>
             <td><code>@addr(0x0D40)</code></td>

@@ -70,9 +70,9 @@ describe('variables', () => {
   });
 
   it('a global let without initialiser starts at zero', () => {
-    // The 7 is only there to leave a non-zero value in A: an unresolved `x` must not reuse it.
+    // `pad` pushes x up to $48, where fresh RAM holds $FF, so only the zeroing makes it 0.
     const c = boot(
-      'let x: u8;\nprogram @ 0x0810 { VIC2.borderColor = 7; VIC2.borderColor = x; loop {} }',
+      'let pad: [u8; 70];\nlet x: u8;\nprogram @ 0x0810 { VIC2.borderColor = 7; VIC2.borderColor = x; loop {} }',
     );
     expect(border(c)).toBe(0);
   });

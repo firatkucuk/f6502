@@ -42,13 +42,13 @@ export class ZpAllocator {
   private next  = ZP_START;
   private _used = 0;
 
-  alloc(bytes: number): number {
+  alloc(bytes: number, line = 0): number {
     const addr = this.next;
     if (addr + bytes >= ZP_ABI_LO) {
       throw new TypeError(
         `zero-page budget exhausted: need ${bytes} byte(s) at $${addr.toString(16).toUpperCase()}, ` +
         `but $F8 is the ABI boundary`,
-        0, 0,
+        line, 0,
       );
     }
     this.next  += bytes;

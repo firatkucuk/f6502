@@ -123,19 +123,63 @@ export function check(userProg: Program): CheckedProgram {
     if (d.tag === 'hardware') hardware.set(d.name, d);
   }
 
+  // Names declared in the blocks currently being checked (innermost last). A name may be
+  // reused in a sibling block (it shares one slot); it may not repeat inside its own block or
+  // shadow one from an enclosing block or a global.
+  const blockNames: Set<string>[] = [];
+
   /** Registers a variable (global when `scope` is null, otherwise local to that scope). */
   function declare(d: VarDecl, scope: string | null): void {
     const key = scope === null ? d.name : scopedName(scope, d.name);
-    if (vars.has(key)) throw new TypeError(`'${d.name}' already defined`, d.line, 0);
     const lookup = (n: string) => resolveVar(scope, n);
     const ann = d.annotation;
+    const isInt = d.type.tag === 'u8' || d.type.tag === 'bool';
+    const fits = (v: number): void => {
+      if (isInt && v > 0xff) {
+        throw new TypeError(`value ${v} does not fit in ${d.type.tag}`, d.line, 0);
+      }
+    };
+
+    if (scope !== null) {
+      if (vars.has(d.name) || blockNames.some((names) => names.has(d.name))) {
+        throw new TypeError(`'${d.name}' already defined`, d.line, 0);
+      }
+      const sibling = vars.get(key);
+      if (sibling !== undefined) {
+        // Declared before in another block of this function: share the slot.
+        if (sibling.type.tag !== d.type.tag) {
+          throw new TypeError(
+            `'${d.name}' was declared with a different type (${sibling.type.tag}) elsewhere in this function`,
+            d.line,
+            0,
+          );
+        }
+        blockNames[blockNames.length - 1]?.add(d.name);
+        if (d.init !== null) {
+          const v = foldConst(d.init, lookup);
+          if (v !== null) fits(v);
+        }
+        return;
+      }
+    } else if (vars.has(key)) {
+      throw new TypeError(`'${d.name}' already defined`, d.line, 0);
+    }
+
+    if (d.isConst && ann.kind !== 'none') {
+      throw new TypeError(
+        `a const cannot have a ${ann.kind === 'zp' ? '@zp' : '@addr'} annotation (use let)`,
+        d.line,
+        0,
+      );
+    }
+
     let zpAddr: number | null = null;
     let absAddr: number | null = null;
     let isConst = false;
     let constValue: number | null = null;
     let initValue: number | null = null;
 
-    if (d.isConst && ann.kind === 'none') {
+    if (d.isConst) {
       if (d.init === null) {
         throw new TypeError(`constant '${d.name}' needs an initialiser`, d.line, 0);
       }
@@ -147,15 +191,18 @@ export function check(userProg: Program): CheckedProgram {
           0,
         );
       }
+      fits(v);
       isConst = true;
-      constValue = d.type.tag === 'u8' || d.type.tag === 'bool' ? v & 0xff : v & 0xffff;
+      constValue = isInt ? v & 0xff : v & 0xffff;
     } else {
       if (ann.kind === 'addr') absAddr = ann.address;
-      else zpAddr = zp.alloc(sizeOf(d.type, structs));
+      else zpAddr = zp.alloc(sizeOf(d.type, structs), d.line);
       if (d.init !== null) {
         const v = foldConst(d.init, lookup);
-        if (v !== null) initValue = v;
-        else if (scope === null) {
+        if (v !== null) {
+          fits(v);
+          initValue = v;
+        } else if (scope === null) {
           throw new TypeError(
             `initialiser of '${d.name}' must be a compile-time constant`,
             d.line,
@@ -164,6 +211,7 @@ export function check(userProg: Program): CheckedProgram {
         }
       }
     }
+    if (scope !== null) blockNames[blockNames.length - 1]?.add(d.name);
     vars.set(key, { type: d.type, zpAddr, absAddr, isConst, constValue, initValue, isGlobal: scope === null });
   }
 
@@ -172,7 +220,12 @@ export function check(userProg: Program): CheckedProgram {
     if (d.tag === 'varDecl') declare(d, null);
 
     if (d.tag === 'fn') {
-      if (fns.has(d.name)) throw new TypeError(`function '${d.name}' already defined`, d.line, 0);
+      if (fns.has(d.name) || BUILTIN_FNS.has(d.name)) {
+        throw new TypeError(`function '${d.name}' already defined`, d.line, 0);
+      }
+      if (d.ret.tag === 'u16') {
+        throw new TypeError(`u16 return values are not supported yet (function '${d.name}')`, d.line, 0);
+      }
       fns.set(d.name, { decl: d, isInline: d.isInline });
     }
 
@@ -188,9 +241,13 @@ export function check(userProg: Program): CheckedProgram {
 
   // Pass 3: parameters, locals, name resolution
   const calls = new Map<string, Array<{ to: string; line: number }>>();
+  // Calls made while evaluating another call's arguments, for the slot-aliasing check below.
+  const argCalls: Array<{ callee: string; inner: string; line: number }> = [];
 
   for (const d of allDecls) {
     if (d.tag === 'fn') {
+      blockNames.length = 0;
+      blockNames.push(new Set());
       for (const p of d.params) {
         if (p.type.tag !== 'u8' && p.type.tag !== 'bool') {
           throw new TypeError(
@@ -205,10 +262,12 @@ export function check(userProg: Program): CheckedProgram {
         );
       }
       calls.set(d.name, []);
-      checkStmts(d.body, d.name, d.name);
+      checkStmts(d.body, d.name, 0);
     } else if (d.tag === 'program') {
+      blockNames.length = 0;
+      blockNames.push(new Set());
       calls.set(PROGRAM_SCOPE, []);
-      checkStmts(d.body, PROGRAM_SCOPE, null);
+      checkStmts(d.body, PROGRAM_SCOPE, 0);
     }
   }
 
@@ -230,18 +289,45 @@ export function check(userProg: Program): CheckedProgram {
   };
   for (const name of calls.keys()) if (!state.has(name)) visit(name);
 
+  // Arguments are stored into the callee's slots one by one. If evaluating a later argument
+  // runs a function that calls the same callee, it would overwrite the slots already filled.
+  const reaches = (from: string, target: string, seen = new Set<string>()): boolean => {
+    if (from === target) return true;
+    if (seen.has(from)) return false;
+    seen.add(from);
+    return (calls.get(from) ?? []).some((edge) => reaches(edge.to, target, seen));
+  };
+  for (const c of argCalls) {
+    if (reaches(c.inner, c.callee)) {
+      throw new TypeError(
+        `argument of '${c.callee}' calls '${c.inner}', which calls '${c.callee}' again; ` +
+          'the parameter slots are shared, so assign the result to a variable first',
+        c.line,
+        0,
+      );
+    }
+  }
+
   return { program: userProg, loadAddr, vars, fns, structs, hardware, zpUsed: zp.used() };
 
   // ─── statement / expression walk ─────────────────────────────────────
 
-  function checkStmts(stmts: readonly Stmt[], scope: string, fnName: string | null): void {
-    for (const s of stmts) checkStmt(s, scope, fnName);
+  function checkStmts(stmts: readonly Stmt[], scope: string, loops: number): void {
+    for (const s of stmts) checkStmt(s, scope, loops);
   }
 
-  function checkStmt(s: Stmt, scope: string, fnName: string | null): void {
-    const expr = (e: Expr, access: 'read' | 'write' = 'read') => checkExpr(e, access, scope);
+  /** Checks a nested block: names declared inside it are released when it ends. */
+  function checkBlock(stmts: readonly Stmt[], scope: string, loops: number): void {
+    blockNames.push(new Set());
+    checkStmts(stmts, scope, loops);
+    blockNames.pop();
+  }
+
+  function checkStmt(s: Stmt, scope: string, loops: number): void {
+    const expr = (e: Expr, access: 'read' | 'write' = 'read') => checkExpr(e, access, scope, null);
     switch (s.tag) {
       case 'assign':
+        if (s.op !== '=') expr(s.lhs, 'read'); // `x += 1` reads x first
         expr(s.lhs, 'write');
         expr(s.rhs);
         break;
@@ -256,36 +342,52 @@ export function check(userProg: Program): CheckedProgram {
         if (s.value) expr(s.value);
         break;
       case 'incDec':
+        expr(s.lhs, 'read');
         expr(s.lhs, 'write');
         break;
       case 'if':
         expr(s.cond);
-        checkStmts(s.then, scope, fnName);
+        checkBlock(s.then, scope, loops);
         for (const e of s.elif) {
           expr(e.cond);
-          checkStmts(e.body, scope, fnName);
+          checkBlock(e.body, scope, loops);
         }
-        if (s.els) checkStmts(s.els, scope, fnName);
+        if (s.els) checkBlock(s.els, scope, loops);
         break;
       case 'while':
         expr(s.cond);
-        checkStmts(s.body, scope, fnName);
+        checkBlock(s.body, scope, loops + 1);
         break;
       case 'loop':
-        checkStmts(s.body, scope, fnName);
+        checkBlock(s.body, scope, loops + 1);
         break;
       case 'for':
-        checkStmt(s.init, scope, fnName);
+        // The header's variable lives in the loop's own block.
+        blockNames.push(new Set());
+        checkStmt(s.init, scope, loops);
         expr(s.cond);
-        checkStmt(s.post, scope, fnName);
-        checkStmts(s.body, scope, fnName);
+        checkStmt(s.post, scope, loops + 1);
+        checkStmts(s.body, scope, loops + 1);
+        blockNames.pop();
+        break;
+      case 'break':
+      case 'continue':
+        if (loops === 0) {
+          throw new TypeError(`'${s.tag}' outside of a loop`, s.line, 0);
+        }
         break;
       default:
-        break; // break / continue / asm: nothing to resolve
+        break; // asm: reported by the code generator
     }
   }
 
-  function checkExpr(e: Expr, access: 'read' | 'write', scope: string): void {
+  /** `parent` is the call whose argument list contains `e`, when there is one. */
+  function checkExpr(
+    e: Expr,
+    access: 'read' | 'write',
+    scope: string,
+    parent: string | null,
+  ): void {
     switch (e.tag) {
       case 'ident': {
         const v = resolveVar(scope, e.name);
@@ -299,7 +401,7 @@ export function check(userProg: Program): CheckedProgram {
       }
       case 'field': {
         if (e.obj.tag !== 'ident') {
-          checkExpr(e.obj, 'read', scope);
+          checkExpr(e.obj, 'read', scope, parent);
           break;
         }
         const hw = hardware.get(e.obj.name);
@@ -337,25 +439,28 @@ export function check(userProg: Program): CheckedProgram {
             0,
           );
         }
-        if (fn !== undefined) calls.get(scope)?.push({ to: e.name, line: e.line });
-        for (const a of e.args) checkExpr(a, 'read', scope);
+        if (fn !== undefined) {
+          calls.get(scope)?.push({ to: e.name, line: e.line });
+          if (parent !== null) argCalls.push({ callee: parent, inner: e.name, line: e.line });
+        }
+        for (const a of e.args) checkExpr(a, 'read', scope, fn !== undefined ? e.name : parent);
         break;
       }
       case 'unary':
-        checkExpr(e.rhs, 'read', scope);
+        checkExpr(e.rhs, 'read', scope, parent);
         break;
       case 'binary':
-        checkExpr(e.lhs, 'read', scope);
-        checkExpr(e.rhs, 'read', scope);
+        checkExpr(e.lhs, 'read', scope, parent);
+        checkExpr(e.rhs, 'read', scope, parent);
         break;
       case 'cast':
       case 'lo':
       case 'hi':
-        checkExpr(e.expr, 'read', scope);
+        checkExpr(e.expr, 'read', scope, parent);
         break;
       case 'index':
-        checkExpr(e.obj, 'read', scope);
-        checkExpr(e.idx, 'read', scope);
+        checkExpr(e.obj, 'read', scope, parent);
+        checkExpr(e.idx, 'read', scope, parent);
         break;
       default:
         break; // literals
