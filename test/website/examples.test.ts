@@ -57,3 +57,43 @@ describe('playground examples', () => {
     expect(later).toBeGreaterThan(early);
   });
 });
+
+describe('slideshow example (also the home page demo)', () => {
+  const src = () => EXAMPLES.find((e) => e.id === 'slideshow')!.source;
+  const rowOf = (c: C64, r: number): number[] =>
+    Array.from({ length: 40 }, (_, i) => c.peek(0x0400 + r * 40 + i));
+  const screen = (c: C64): string =>
+    Array.from({ length: 25 }, (_, r) => rowOf(c, r).join(',')).join(';');
+  // Screen codes: A-Z = 1-26; digits, space and '.' keep their ASCII value.
+  const code = (ch: string): number =>
+    ch >= 'A' && ch <= 'Z' ? ch.charCodeAt(0) - 64 : ch.charCodeAt(0);
+  const text = (s: string): number[] => Array.from(s, code);
+
+  it('only uses characters the stub font has (letters, digits, space, period)', () => {
+    const texts = [...src().matchAll(/"([^"]*)"/g)].map((m) => m[1]!);
+    expect(texts.length).toBeGreaterThanOrEqual(8);
+    for (const t of texts) expect(t, t).toMatch(/^[A-Z0-9 .]+$/);
+    for (const t of texts) expect(t.length, t).toBeLessThanOrEqual(40);
+  });
+
+  it('shows the title slide first, on a blue border', () => {
+    const c = boot(src(), 30);
+    expect(rowOf(c, 8).slice(17, 22)).toEqual(text('F6502'));
+    expect(c.peek(0xd020) & 0x0f).toBe(6);
+  });
+
+  it('moves on to the next slide after about three seconds', () => {
+    const first = boot(src(), 30);
+    const second = boot(src(), 190);
+    expect(screen(second)).not.toEqual(screen(first));
+    expect(rowOf(second, 8).slice(17, 22)).not.toEqual(text('F6502'));
+    expect(second.peek(0xd020) & 0x0f).not.toBe(first.peek(0xd020) & 0x0f);
+  });
+
+  it('wraps back to the title after the last slide', () => {
+    const slides = 5;
+    const title = screen(boot(src(), 30));
+    // Each slide holds for 150 frames; a few frames in, the title is on screen again.
+    expect(screen(boot(src(), slides * 150 + 40))).toEqual(title);
+  });
+});

@@ -107,7 +107,9 @@
       no native code, no backend, no runtime dependencies.
     </p>
     <div class="hero-actions">
-      <a class="btn btn-primary" href="#demo">▶ Try the Demo</a>
+      <a class="btn btn-primary" href="#see-it-run">▶ See it run</a>
+      <a class="btn btn-outline" href="playground.html">Open the Playground</a>
+      <a class="btn btn-outline" href="#demo">Run real ROMs</a>
       <a class="btn btn-outline" href="architecture.html">Under the hood</a>
       <a class="btn btn-outline" href="https://github.com/firatkucuk/f6502" target="_blank" rel="noopener">View source</a>
     </div>
@@ -138,6 +140,47 @@
       </div>
     </div>
   </div>
+
+  <!-- ── See it run ───────────────────────────────────────────── -->
+  <section class="section" id="see-it-run">
+    <p class="section-label">See it run</p>
+    <h2 class="section-title">A slideshow in C64Script, running right now</h2>
+    <p class="section-lead">
+      No ROM files, no install. This page compiled the program on the right in your browser
+      and is running it on the emulator on the left.
+    </p>
+
+    <div class="slideshow-grid">
+      <div>
+        <div class="crt-wrap">
+          <div class="crt-bezel">
+            <div class="crt-screen-wrap" style="position:relative">
+              <canvas id="slideshow-canvas" class="crt-canvas" width="384" height="272"
+                aria-label="A Commodore 64 screen running a slideshow written in C64Script"></canvas>
+            </div>
+            <div class="crt-brand">COMMODORE 64 — f6502 EMULATOR</div>
+          </div>
+        </div>
+        <p class="slideshow-status" id="slideshow-status" role="status">Starting the emulator…</p>
+      </div>
+
+      <div class="terminal">
+        <div class="terminal-bar">
+          <span class="terminal-dot red"></span>
+          <span class="terminal-dot yellow"></span>
+          <span class="terminal-dot green"></span>
+          <span class="terminal-title">slideshow.c64s</span>
+        </div>
+        <div class="terminal-body slideshow-source">
+          <div class="slideshow-actions">
+            <a class="try-now" id="slideshow-try" href="playground.html" target="_blank" rel="noopener">▶ Try now</a>
+            <span>Edit and run this program in the playground.</span>
+          </div>
+          <pre><code id="slideshow-source"></code></pre>
+        </div>
+      </div>
+    </div>
+  </section>
 
   <!-- ── Live Demo ─────────────────────────────────────────────── -->
   <section class="demo-section" id="demo">
@@ -381,6 +424,10 @@
 <script src="js/app.js"></script>
 <script src="dist/f6502.min.js"></script>
 <script src="js/demo.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"
+        integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg=="
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script type="module" src="js/try-now.js"></script>
+<script type="module" src="js/home-slideshow.js"></script>
 </body>
 </html>
