@@ -123,7 +123,7 @@
       <span class="lang-feature-icon">🎨</span>
       <div class="lang-feature-body">
         <h4>Color constants</h4>
-        <p>All 16 C64 colors are built-in constants: <code>BLACK</code>, <code>WHITE</code>, <code>RED</code>, <code>CYAN</code>, <code>PURPLE</code>, <code>GREEN</code>, <code>BLUE</code>, <code>YELLOW</code>, <code>ORANGE</code>, <code>BROWN</code>, <code>LIGHT_RED</code>, <code>DARK_GREY</code>, <code>MEDIUM_GREY</code>, <code>LIGHT_GREEN</code>, <code>LIGHT_BLUE</code>, <code>LIGHT_GREY</code>. They fold to immediate values at compile time — no runtime cost.</p>
+        <p>All 16 C64 colors are built-in constants: <code>COLOR_BLACK</code>, <code>COLOR_WHITE</code>, <code>COLOR_RED</code>, <code>COLOR_CYAN</code>, <code>COLOR_PURPLE</code>, <code>COLOR_GREEN</code>, <code>COLOR_BLUE</code>, <code>COLOR_YELLOW</code>, <code>COLOR_ORANGE</code>, <code>COLOR_BROWN</code>, <code>COLOR_LIGHT_RED</code>, <code>COLOR_DARK_GREY</code>, <code>COLOR_MEDIUM_GREY</code>, <code>COLOR_LIGHT_GREEN</code>, <code>COLOR_LIGHT_BLUE</code>, <code>COLOR_LIGHT_GREY</code>. They fold to immediate values at compile time — no runtime cost.</p>
       </div>
     </div>
 
@@ -231,8 +231,8 @@
       <div class="terminal-body">
         <pre data-try><span class="cm">// Colour constants compile to immediates</span>
 <span class="kw">program</span> <span class="an">@</span> <span class="nu">0x0810</span> {
-  VIC2.borderColor = BLUE;       <span class="cm">// → LDA #6 ; STA $D020</span>
-  VIC2.bgColor0    = LIGHT_BLUE; <span class="cm">// → LDA #14; STA $D021</span>
+  VIC2.borderColor = COLOR_BLUE;       <span class="cm">// → LDA #6 ; STA $D020</span>
+  VIC2.bgColor0    = COLOR_LIGHT_BLUE; <span class="cm">// → LDA #14; STA $D021</span>
 
   <span class="kw">loop</span> {}  <span class="cm">// run forever</span>
 }</pre>
@@ -445,7 +445,7 @@
         <pre data-try><span class="cm">// Row 12, column 15: screen code 8 is the letter H</span>
 <span class="kw">program</span> <span class="an">@</span> <span class="nu">0x0810</span> {
   <span class="fn">poke</span>(<span class="fn">screen</span>(<span class="nu">12</span>, <span class="nu">15</span>), <span class="nu">8</span>);
-  <span class="fn">poke</span>(<span class="fn">color</span>(<span class="nu">12</span>, <span class="nu">15</span>), WHITE);
+  <span class="fn">poke</span>(<span class="fn">color</span>(<span class="nu">12</span>, <span class="nu">15</span>), COLOR_WHITE);
   <span class="kw">loop</span> {}
 }</pre>
       </div>
@@ -453,8 +453,8 @@
 
     <h3 style="margin-top:2rem">Color constants</h3>
     <p style="color:var(--text-muted);font-size:0.9rem;margin-bottom:1rem">
-      All 16 C64 colors are pre-defined. They are plain <code>u8</code>
-      constants that fold away at compile time — using <code>CYAN</code>
+      All 16 C64 colors are pre-defined, with a <code>COLOR_</code> prefix so they never clash with your own names (a bare <code>RED</code> is a compile error that suggests <code>COLOR_RED</code>). They are plain <code>u8</code>
+      constants that fold away at compile time — using <code>COLOR_CYAN</code>
       generates exactly the same code as writing <code>3</code>.
     </p>
 
@@ -464,14 +464,14 @@
           <tr><th>Constant</th><th>Value</th><th>Constant</th><th>Value</th></tr>
         </thead>
         <tbody>
-          <tr><td><code>BLACK</code></td><td style="color:var(--text-muted)">0</td><td><code>ORANGE</code></td><td style="color:var(--text-muted)">8</td></tr>
-          <tr><td><code>WHITE</code></td><td style="color:var(--text-muted)">1</td><td><code>BROWN</code></td><td style="color:var(--text-muted)">9</td></tr>
-          <tr><td><code>RED</code></td><td style="color:var(--text-muted)">2</td><td><code>LIGHT_RED</code></td><td style="color:var(--text-muted)">10</td></tr>
-          <tr><td><code>CYAN</code></td><td style="color:var(--text-muted)">3</td><td><code>DARK_GREY</code></td><td style="color:var(--text-muted)">11</td></tr>
-          <tr><td><code>PURPLE</code></td><td style="color:var(--text-muted)">4</td><td><code>MEDIUM_GREY</code></td><td style="color:var(--text-muted)">12</td></tr>
-          <tr><td><code>GREEN</code></td><td style="color:var(--text-muted)">5</td><td><code>LIGHT_GREEN</code></td><td style="color:var(--text-muted)">13</td></tr>
-          <tr><td><code>BLUE</code></td><td style="color:var(--text-muted)">6</td><td><code>LIGHT_BLUE</code></td><td style="color:var(--text-muted)">14</td></tr>
-          <tr><td><code>YELLOW</code></td><td style="color:var(--text-muted)">7</td><td><code>LIGHT_GREY</code></td><td style="color:var(--text-muted)">15</td></tr>
+          <tr><td><code>COLOR_BLACK</code></td><td style="color:var(--text-muted)">0</td><td><code>COLOR_ORANGE</code></td><td style="color:var(--text-muted)">8</td></tr>
+          <tr><td><code>COLOR_WHITE</code></td><td style="color:var(--text-muted)">1</td><td><code>COLOR_BROWN</code></td><td style="color:var(--text-muted)">9</td></tr>
+          <tr><td><code>COLOR_RED</code></td><td style="color:var(--text-muted)">2</td><td><code>COLOR_LIGHT_RED</code></td><td style="color:var(--text-muted)">10</td></tr>
+          <tr><td><code>COLOR_CYAN</code></td><td style="color:var(--text-muted)">3</td><td><code>COLOR_DARK_GREY</code></td><td style="color:var(--text-muted)">11</td></tr>
+          <tr><td><code>COLOR_PURPLE</code></td><td style="color:var(--text-muted)">4</td><td><code>COLOR_MEDIUM_GREY</code></td><td style="color:var(--text-muted)">12</td></tr>
+          <tr><td><code>COLOR_GREEN</code></td><td style="color:var(--text-muted)">5</td><td><code>COLOR_LIGHT_GREEN</code></td><td style="color:var(--text-muted)">13</td></tr>
+          <tr><td><code>COLOR_BLUE</code></td><td style="color:var(--text-muted)">6</td><td><code>COLOR_LIGHT_BLUE</code></td><td style="color:var(--text-muted)">14</td></tr>
+          <tr><td><code>COLOR_YELLOW</code></td><td style="color:var(--text-muted)">7</td><td><code>COLOR_LIGHT_GREY</code></td><td style="color:var(--text-muted)">15</td></tr>
         </tbody>
       </table>
     </div>

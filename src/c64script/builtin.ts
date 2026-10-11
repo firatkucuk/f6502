@@ -1,6 +1,6 @@
 import type { Decl, VarDecl } from './ast';
 
-const COLOR_NAMES = [
+export const COLOR_NAMES = [
   'BLACK', 'WHITE', 'RED', 'CYAN', 'PURPLE', 'GREEN', 'BLUE', 'YELLOW',
   'ORANGE', 'BROWN', 'LIGHT_RED', 'DARK_GREY', 'MEDIUM_GREY', 'LIGHT_GREEN', 'LIGHT_BLUE', 'LIGHT_GREY',
 ] as const;
@@ -16,7 +16,7 @@ function colorConst(name: string, value: number): VarDecl {
 }
 
 export function builtinDecls(): Decl[] {
-  const colors: Decl[] = COLOR_NAMES.map((n, i) => colorConst(n, i));
+  const colors: Decl[] = COLOR_NAMES.map((n, i) => colorConst(`COLOR_${n}`, i));
 
   const vic2: Decl = {
     tag: 'hardware', name: 'VIC2', base: 0xD000, line: 0,

@@ -290,8 +290,8 @@ program @0x0810 {
 
   clrscr();                       // fill screen with spaces + colour RAM to black
 
-  VIC2.bgColor0   = BLACK;        // black background
-  VIC2.borderColor = BLACK;       // black border
+  VIC2.bgColor0   = COLOR_BLACK;        // black background
+  VIC2.borderColor = COLOR_BLACK;       // black border
   VIC2.spriteEnable = 0;          // sprites off during splash
 
   // ── "F6502" centred on row 10 (40-col screen, 5 chars → col 17) ──────────
@@ -300,7 +300,7 @@ program @0x0810 {
   //    F=0x06  6=0x36  5=0x35  0=0x30  2=0x32
   poke(0x05A1, 0x06);  poke(0x05A2, 0x36);  poke(0x05A3, 0x35);
   poke(0x05A4, 0x30);  poke(0x05A5, 0x32);
-  // colour RAM at $D800+offset, colour = LIGHT_BLUE (14)
+  // colour RAM at $D800+offset, colour = COLOR_LIGHT_BLUE (14)
   poke(0xD9A1, 14);    poke(0xD9A2, 14);    poke(0xD9A3, 14);
   poke(0xD9A4, 14);    poke(0xD9A5, 14);
 
@@ -324,7 +324,7 @@ program @0x0810 {
   poke(0x05FA, 0x0E);  // N
   poke(0x05FB, 0x03);  // C
   poke(0x05FC, 0x05);  // E
-  // colour = LIGHT_BLUE (14) for all 18 positions
+  // colour = COLOR_LIGHT_BLUE (14) for all 18 positions
   poke(0xD9EB, 14);    poke(0xD9EC, 14);    poke(0xD9ED, 14);
   poke(0xD9EE, 14);    poke(0xD9EF, 14);    poke(0xD9F0, 14);
   poke(0xD9F1, 14);    poke(0xD9F2, 14);    poke(0xD9F3, 14);
@@ -354,7 +354,7 @@ program @0x0810 {
   poke(0x064B, 0x03);  // C
   poke(0x064C, 0x15);  // U
   poke(0x064D, 0x0B);  // K
-  // colour = YELLOW (7)
+  // colour = COLOR_YELLOW (7)
   poke(0xDA3A, 7);     poke(0xDA3B, 7);     poke(0xDA3C, 7);
   poke(0xDA3D, 7);     poke(0xDA3E, 7);     poke(0xDA3F, 7);
   poke(0xDA40, 7);     poke(0xDA41, 7);     poke(0xDA42, 7);
@@ -389,12 +389,12 @@ program @0x0810 {
   //  NYAN CAT ANIMATION
   // ════════════════════════════════════════════════════════════════════════════
 
-  VIC2.bgColor0    = BLUE;         // sky-blue background
-  VIC2.borderColor = RED;          // rainbow starts red
+  VIC2.bgColor0    = COLOR_BLUE;         // sky-blue background
+  VIC2.borderColor = COLOR_RED;          // rainbow starts red
   VIC2.spriteEnable = 1;           // enable sprite 0
   VIC2.ctrl2       = 0x08;         // 38-column, clear multicolour
 
-  VIC2.sprite0color = LIGHT_GREY;  // cat body colour (15 = light grey)
+  VIC2.sprite0color = COLOR_LIGHT_GREY;  // cat body colour (15 = light grey)
   VIC2.sprite0y     = 100;         // vertical centre
 
   catX    = 220;
@@ -516,7 +516,7 @@ poke(0x05A2, 0x36);  // '6' = 0x30 + 6
 poke(0x05A3, 0x35);  // '5'
 poke(0x05A4, 0x30);  // '0'
 poke(0x05A5, 0x32);  // '2'
-// colour RAM — LIGHT_BLUE = 14
+// colour RAM — COLOR_LIGHT_BLUE = 14
 poke(0xD9A1, 14);  poke(0xD9A2, 14);  // … × 5</code></pre>
           </div>
         </div>
@@ -637,7 +637,7 @@ Prism.languages.c64script = {
   type:     { pattern: /\b(?:u8|u16|bool|void)\b/, alias: 'class-name' },
   hardware: { pattern: /\b(?:VIC2|SID|CIA1|CIA2)\b/, alias: 'property' },
   constant: {
-    pattern: /\b(?:BLACK|WHITE|RED|CYAN|PURPLE|GREEN|BLUE|YELLOW|ORANGE|BROWN|LIGHT_RED|DARK_GREY|GREY|LIGHT_GREEN|LIGHT_BLUE|LIGHT_GREY)\b/,
+    pattern: /\b(?:COLOR_BLACK|COLOR_WHITE|COLOR_RED|COLOR_CYAN|COLOR_PURPLE|COLOR_GREEN|COLOR_BLUE|COLOR_YELLOW|COLOR_ORANGE|COLOR_BROWN|COLOR_LIGHT_RED|COLOR_DARK_GREY|GREY|COLOR_LIGHT_GREEN|COLOR_LIGHT_BLUE|COLOR_LIGHT_GREY)\b/,
     alias: 'boolean'
   },
   builtin: { pattern: /\b(?:poke|clrscr|lo|hi)\b/, alias: 'function' },
