@@ -59,3 +59,33 @@ describe('usage docs', () => {
     expect(usage).toContain('c64.peek(addr: number): number');
   });
 });
+
+// Run, Reboot, copy and the example picker live in the editor window's title bar, like every
+// other code window on the site. No separate toolbar row, no "Example" label, no shortcut text.
+describe('playground toolbar', () => {
+  const page = readFileSync('website/playground.html', 'utf8');
+  const bar = page.slice(page.indexOf('class="terminal-bar"'), page.indexOf('class="pg-editor"'));
+
+  it('has Run, Reboot, copy and the picker inside the title bar', () => {
+    expect(bar).toMatch(/id="example-select"/);
+    expect(bar).toMatch(/id="run-btn"/);
+    expect(bar).toMatch(/id="reboot-btn"/);
+    expect(bar).toMatch(/id="copy-btn"/);
+    expect(bar).toMatch(/terminal-actions/);
+  });
+
+  it('has no separate toolbar row, label or visible shortcut hint', () => {
+    expect(page).not.toMatch(/class="pg-toolbar"/);
+    expect(page).not.toMatch(/class="pg-hint"/);
+    expect(page).not.toMatch(/pg-select-label/);
+    // the shortcut survives only as a tooltip
+    expect(page).toMatch(/title="Run \(Ctrl\/⌘ \+ Enter\)"/);
+  });
+
+  it('labels the icon buttons for assistive technology', () => {
+    for (const id of ['run-btn', 'reboot-btn', 'copy-btn']) {
+      expect(page).toMatch(new RegExp(`id="${id}"[^>]*aria-label="[^"]+"`));
+    }
+    expect(page).toMatch(/id="example-select"[^>]*aria-label="[^"]+"/);
+  });
+});

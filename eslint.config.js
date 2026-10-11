@@ -55,6 +55,7 @@ export default tseslint.config(
         history: 'readonly',
         navigator: 'readonly',
         console: 'readonly',
+        setTimeout: 'readonly',
         File: 'readonly',
         URL: 'readonly',
         TextEncoder: 'readonly',
