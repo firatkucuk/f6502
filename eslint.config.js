@@ -44,7 +44,7 @@ export default tseslint.config(
   },
   {
     files: [
-      'website/js/{c64script-grammar,code-hash,editor-render,home-slideshow,playground,playground-examples,showcase,showcase-list,try-now}.js',
+      'website/js/{c64script-grammar,code-hash,editor-render,emu-controls,home-slideshow,playground,playground-examples,showcase,showcase-list,try-now}.js',
     ],
     languageOptions: {
       sourceType: 'module',
