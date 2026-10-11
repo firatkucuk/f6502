@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { KEY_POSITION, Keyboard } from '../../src/machine/keyboard';
 import { PALETTE } from '../../src/machine/palette';
+import { KEY_POSITION as EXPORTED_KEYS } from '../../src/machine';
 
 describe('Keyboard matrix', () => {
   it('maps A to column PA1 / row PB2 and RUN_STOP to PA7 / PB7', () => {
@@ -51,5 +52,12 @@ describe('palette', () => {
     expect(PALETTE[0]).toBe(0xff000000);
     expect(PALETTE[1]).toBe(0xffffffff);
     for (const c of PALETTE) expect(c >>> 24).toBe(0xff);
+  });
+});
+
+describe('public keyboard map', () => {
+  it('exports the emulator key names for deterministic input validation', () => {
+    expect(EXPORTED_KEYS.SPACE).toEqual({ col: 7, row: 4 });
+    expect(EXPORTED_KEYS.A).toEqual({ col: 1, row: 2 });
   });
 });

@@ -7,13 +7,14 @@
   },
   "scripts": {
     "build": "tsup",
-    "test": "vitest run test/core test/machine test/browser test/c64script test/website",
+    "test": "vitest run test/core test/machine test/browser test/c64script test/website test/scripts",
     "test:conformance": "vitest run test/conformance --testTimeout=600000",
     "lint": "eslint . && prettier --check .",
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.browser.json",
     "fetch-test-data": "node scripts/fetch-test-data.mjs",
     "bench": "node scripts/bench.mjs",
-    "example": "node scripts/serve.mjs"
+    "example": "node scripts/serve.mjs",
+    "pretest": "npm run build"
   },
   "license": "Apache-2.0",
   "type": "module",
