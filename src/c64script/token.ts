@@ -21,7 +21,7 @@ export type TokenKind =
   // Asm interpolation
   | 'dollar_lbrace'
   // Literals / identifier
-  | 'ident' | 'int_lit'
+  | 'ident' | 'int_lit' | 'str_lit'
   | 'eof';
 
 export interface Token {
@@ -29,6 +29,8 @@ export interface Token {
   readonly text: string;
   readonly line: number;
   readonly col: number;
+  /** Screen codes of a string literal's characters (str_lit only). */
+  readonly codes?: readonly number[];
 }
 
 const KEYWORDS: ReadonlyMap<string, TokenKind> = new Map([

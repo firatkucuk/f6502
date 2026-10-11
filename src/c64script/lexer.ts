@@ -1,5 +1,6 @@
 import { LexError } from './errors';
 import { type Token, type TokenKind, identOrKeyword } from './token';
+import { screenCodeOf } from './charset';
 
 export function tokenize(src: string): Token[] {
   const tokens: Token[] = [];
@@ -15,6 +16,24 @@ export function tokenize(src: string): Token[] {
     tokens.push({ kind, text, line: l, col: c });
   }
 
+  /** Reads one (possibly escaped) character of a quoted literal; `quote` is its delimiter. */
+  function quotedChar(quote: string, what: string, l: number, c: number): string {
+    if (i >= src.length || peek() === '\n') {
+      throw new LexError(`unterminated ${what}`, l, c);
+    }
+    const ch = advance();
+    if (ch !== '\\') return ch;
+    const e = i < src.length ? advance() : '';
+    if (e === "'" || e === '"') return e;
+    throw new LexError(`unknown escape '\\${e}' (only \\' and \\" are supported)`, line, col - 1);
+  }
+
+  function screenCode(ch: string, l: number, c: number): number {
+    const r = screenCodeOf(ch);
+    if ('error' in r) throw new LexError(r.error, l, c);
+    return r.code;
+  }
+
   while (i < src.length) {
     const l = line, c = col;
     const ch = peek();
@@ -25,6 +44,45 @@ export function tokenize(src: string): Token[] {
     // line comment
     if (ch === '/' && peek(1) === '/') {
       while (i < src.length && peek() !== '\n') advance();
+      continue;
+    }
+
+    // character literal: 'H' is the screen code of H
+    if (ch === "'") {
+      advance();
+      if (peek() === "'") throw new LexError('empty character literal', l, c);
+      const cl = line, cc = col;
+      const value = quotedChar("'", 'character literal', l, c);
+      if (peek() !== "'") {
+        // 'AB' has a closing quote later on the line; 'A) never closes.
+        let j = i;
+        while (j < src.length && src[j] !== '\n' && src[j] !== "'") j++;
+        const closes = src[j] === "'";
+        throw new LexError(
+          closes ? 'a character literal holds exactly one character' : 'unterminated character literal',
+          l,
+          c,
+        );
+      }
+      advance();
+      tok('int_lit', String(screenCode(value, cl, cc)), l, c);
+      continue;
+    }
+
+    // string literal: "HELLO" is a run of screen codes (only valid as puts()'s text)
+    if (ch === '"') {
+      advance();
+      let text = '';
+      const codes: number[] = [];
+      while (peek() !== '"') {
+        const cl = line, cc = col;
+        const value = quotedChar('"', 'string literal', l, c);
+        text += value;
+        codes.push(screenCode(value, cl, cc));
+      }
+      advance();
+      if (codes.length === 0) throw new LexError('empty string', l, c);
+      tokens.push({ kind: 'str_lit', text, line: l, col: c, codes });
       continue;
     }
 
