@@ -39,3 +39,15 @@ describe('showcase page mute button', () => {
     expect(css).toMatch(/\.emu-bar button\[hidden\]\s*\{\s*display:\s*none/);
   });
 });
+
+describe('showcase page control bar', () => {
+  const page = readFileSync('website/showcase.html', 'utf8');
+  const css = readFileSync('website/css/style.css', 'utf8');
+
+  it('puts the logo first and pushes the buttons to the right', () => {
+    const bar = page.slice(page.indexOf('class="emu-bar"'), page.indexOf('</main>'));
+    expect(bar.indexOf('class="emu-bar-logo"')).toBeGreaterThan(-1);
+    expect(bar.indexOf('class="emu-bar-logo"')).toBeLessThan(bar.indexOf('<button'));
+    expect(css).toMatch(/\.emu-bar-logo\s*\{[^}]*margin-right:\s*auto/);
+  });
+});
