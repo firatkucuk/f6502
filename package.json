@@ -6,6 +6,7 @@
     "doc": "docs"
   },
   "scripts": {
+    "c64script": "node scripts/c64script.mjs",
     "build": "tsup",
     "test": "vitest run test/core test/machine test/browser test/c64script test/website test/scripts",
     "test:conformance": "vitest run test/conformance --testTimeout=600000",
