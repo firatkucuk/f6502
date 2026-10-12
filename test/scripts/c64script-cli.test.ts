@@ -50,7 +50,11 @@ describe('C64Script CLI', () => {
     expect(result.status).toBe(1);
     const payload = JSON.parse(result.stdout);
     expect(payload.ok).toBe(false);
-    expect(payload.error).toMatchObject({ name: expect.any(String), line: 2, col: expect.any(Number) });
+    expect(payload.error).toMatchObject({
+      name: expect.any(String),
+      line: 2,
+      col: expect.any(Number),
+    });
     expect(payload.error.message).toContain('expression');
   });
 
@@ -94,7 +98,10 @@ describe('C64Script CLI', () => {
 
   it('prints actionable build guidance when the compiled package is missing', async () => {
     const { dir, sourcePath } = fixture();
-    const result = await main(['check', sourcePath], { cwd: dir, apiPath: join(dir, 'missing.js') });
+    const result = await main(['check', sourcePath], {
+      cwd: dir,
+      apiPath: join(dir, 'missing.js'),
+    });
 
     expect(result.exitCode).toBe(1);
     expect(result.result.error.message).toMatch(/npm run build/);
@@ -105,16 +112,25 @@ describe('C64Script CLI', () => {
     const templateDir = join(dir, 'templates');
     mkdirSync(templateDir);
     writeFileSync(join(templateDir, 'sprite-game.c64s'), source);
-    writeFileSync(join(templateDir, 'sprite-game.scenario.json'), '{"version":1,"maxFrames":1,"steps":[]}');
+    writeFileSync(
+      join(templateDir, 'sprite-game.scenario.json'),
+      '{"version":1,"maxFrames":1,"steps":[]}',
+    );
     const outputDir = join(dir, 'new-game');
 
-    const created = await main(['new', outputDir, '--template', 'sprite'], { cwd: dir, templateDir });
+    const created = await main(['new', outputDir, '--template', 'sprite'], {
+      cwd: dir,
+      templateDir,
+    });
     expect(created.exitCode).toBe(0);
     expect(readFileSync(join(outputDir, 'game.c64s'), 'utf8')).toBe(source);
 
     const scenarioPath = join(outputDir, 'game.scenario.json');
     writeFileSync(scenarioPath, 'keep this file');
-    const refused = await main(['new', outputDir, '--template', 'sprite'], { cwd: dir, templateDir });
+    const refused = await main(['new', outputDir, '--template', 'sprite'], {
+      cwd: dir,
+      templateDir,
+    });
     expect(refused.exitCode).toBe(1);
     expect(existsSync(join(outputDir, 'game.c64s'))).toBe(true);
     expect(readFileSync(scenarioPath, 'utf8')).toBe('keep this file');

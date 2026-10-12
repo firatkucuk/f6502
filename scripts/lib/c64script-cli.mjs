@@ -21,7 +21,8 @@ function parseArgs(argv) {
     } else if (['--out', '--frames', '--scenario', '--template'].includes(arg)) {
       if (Object.hasOwn(options, arg)) throw new Error(`option ${arg} was provided more than once`);
       const value = args[index + 1];
-      if (value === undefined || value.startsWith('--')) throw new Error(`option ${arg} requires a value`);
+      if (value === undefined || value.startsWith('--'))
+        throw new Error(`option ${arg} requires a value`);
       options[arg] = value;
       index++;
     } else if (arg.startsWith('--')) {
@@ -36,7 +37,8 @@ function parseArgs(argv) {
     throw new Error(`command '${command}' requires exactly one path argument`);
   }
   const requiredOption = { build: '--out', test: '--scenario', new: '--template' }[command];
-  if (requiredOption && !options[requiredOption]) throw new Error(`command '${command}' requires ${requiredOption}`);
+  if (requiredOption && !options[requiredOption])
+    throw new Error(`command '${command}' requires ${requiredOption}`);
   for (const option of Object.keys(options)) {
     const allowed = {
       new: ['json', '--template'],
@@ -45,7 +47,8 @@ function parseArgs(argv) {
       run: ['json', '--frames'],
       test: ['json', '--scenario'],
     }[command];
-    if (!allowed.includes(option)) throw new Error(`option ${option} is not valid for '${command}'`);
+    if (!allowed.includes(option))
+      throw new Error(`option ${option} is not valid for '${command}'`);
   }
 
   let frames = 60;
@@ -61,7 +64,9 @@ function parseArgs(argv) {
 
 async function loadApi(apiPath) {
   if (!existsSync(apiPath)) {
-    throw new Error(`C64Script build output is missing. Run 'npm run build' from the repository root, then retry.`);
+    throw new Error(
+      `C64Script build output is missing. Run 'npm run build' from the repository root, then retry.`,
+    );
   }
   return import(pathToFileURL(apiPath).href);
 }
@@ -80,7 +85,10 @@ function success(command, result) {
 }
 
 function failure(error, command) {
-  return { exitCode: 1, result: { ok: false, command: command ?? null, error: errorPayload(error) } };
+  return {
+    exitCode: 1,
+    result: { ok: false, command: command ?? null, error: errorPayload(error) },
+  };
 }
 
 async function execute(parsed, io) {
@@ -89,7 +97,8 @@ async function execute(parsed, io) {
   const sourcePath = resolve(cwd, parsed.path);
 
   if (command === 'new') {
-    if (options['--template'] !== 'sprite') throw new Error(`unknown template '${options['--template']}'`);
+    if (options['--template'] !== 'sprite')
+      throw new Error(`unknown template '${options['--template']}'`);
     const templateDir = resolve(io.templateDir ?? join(ROOT, 'templates/c64script'));
     const targetDir = sourcePath;
     const sourceTarget = join(targetDir, 'game.c64s');

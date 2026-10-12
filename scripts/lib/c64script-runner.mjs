@@ -65,7 +65,9 @@ export function createGameRunner({
     const prg = compile(source);
     const loadAddress = prg[0] | (prg[1] << 8);
     if (loadAddress !== 0x0810) {
-      throw new Error(`program load address must be $0810, got $${loadAddress.toString(16).padStart(4, '0')}`);
+      throw new Error(
+        `program load address must be $0810, got $${loadAddress.toString(16).padStart(4, '0')}`,
+      );
     }
 
     machine = new C64(roms ?? readRoms());

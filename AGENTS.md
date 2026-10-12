@@ -1,6 +1,6 @@
 # f6502 — Agent Guide
 
-This file tells AI agents everything they need to know to work on this repo, and specifically how to create a new showcase demo from scratch.
+This file guides AI agents working in this repo, including creating C64Script games and showcase demos.
 
 ---
 
@@ -30,7 +30,8 @@ npm test               # unit + integration tests (core, machine, browser)
 npm run test:conformance  # heavy conformance suite (slow)
 npm run typecheck      # tsc --noEmit (no emit, just type-check)
 npm run lint           # eslint + prettier
-node scripts/serve.mjs # local dev server → http://localhost:3000
+npm run example       # local dev server → http://127.0.0.1:8080/
+node scripts/serve.mjs # same local dev server
 node scripts/make-stub-roms.mjs     # regenerate stub ROMs
 ```
 
@@ -75,6 +76,19 @@ code  160    → solid block ($A0, used for rainbow trail)
 ```
 
 ---
+
+## Creating and testing a C64Script game
+
+Use the deterministic CLI to scaffold, compile, run, and behavior-test a game:
+
+```bash
+npm run c64script -- new games/my-game --template sprite
+npm run c64script -- check games/my-game/game.c64s
+npm run c64script -- run games/my-game/game.c64s --frames 120
+npm run c64script -- test games/my-game/game.c64s --scenario games/my-game/game.scenario.json
+```
+
+Run `npm run build` before using the CLI from a clean checkout. It also supports `build <source> --out <file>` to create a PRG and `--json` for structured output. The scenario file defines bounded keyboard input and text/memory assertions. Read [docs/c64script-games.md](docs/c64script-games.md) for the scenario schema, authoring guidance, and visual preview steps. The starter game is in `templates/c64script/`.
 
 ## Creating a new showcase demo
 
