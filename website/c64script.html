@@ -518,11 +518,12 @@
       <code>|=</code> and <code>^=</code>; <code>x++</code> and <code>x--</code> are statements.
     </p>
     <div class="infobox" style="margin-top:1.25rem">
-      <strong>One rule to know.</strong> A value is computed in the accumulator, so the
-      <em>left</em> operand of <code>+ - &amp; | ^</code> and of a comparison can be any expression,
-      but the <em>right</em> operand must be a literal, a variable, a constant or a hardware
-      register. <code>(a + b) &amp; 6</code> works; <code>a + (b + 1)</code> is an error that
-      tells you to assign <code>b + 1</code> to a variable first.
+      <strong>For byte operations.</strong> Both operands of <code>+ - &amp; | ^</code> and byte
+      comparisons can be any supported 8-bit expression. A computed right operand uses compiler
+      scratch and takes extra instructions; literals, variables and hardware registers use direct
+      6502 operands. So <code>a + (b + 1)</code> and <code>VIC2.spriteXmsb | xHighMask[slot]</code> work.
+      A 16-bit operation still needs a simple right operand: a literal, variable, constant or
+      hardware register.
     </div>
     <div class="terminal reveal" style="margin-top:1.5rem">
       <div class="terminal-bar">
@@ -536,9 +537,9 @@
 <span class="kw">let</span> b: <span class="ty">u8</span> = <span class="nu">3</span>;
 
 <span class="kw">program</span> @ <span class="nu">0x0810</span> {
-  <span class="kw">let</span> mask: <span class="ty">u8</span> = (a + b) &amp; <span class="nu">0b0111</span>;    <span class="cm">// left side may be any expression</span>
-  <span class="kw">let</span> step: <span class="ty">u8</span> = b + <span class="nu">1</span>;               <span class="cm">// right side: a variable or a literal</span>
-  VIC2.borderColor = (mask ^ step) | <span class="nu">0x08</span>;
+  <span class="kw">let</span> mask: <span class="ty">u8</span> = (a + b) &amp; <span class="nu">0b0111</span>;
+  <span class="kw">let</span> step: <span class="ty">u8</span> = b + <span class="nu">1</span>;
+  VIC2.borderColor = mask | (step + 1);   <span class="cm">// a computed right operand</span>
   VIC2.bgColor0 = !mask;              <span class="cm">// logical NOT: 1 only when mask is 0</span>
   <span class="kw">loop</span> {}
 }</pre>

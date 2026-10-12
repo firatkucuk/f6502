@@ -83,15 +83,9 @@ describe('documented behaviour is real', () => {
     expect(c.peek(0xd021) & 15).toBe(5);
   });
 
-  it('a left operand may be any expression, a right operand may not', () => {
-    const c = boot(P('let a: u8 = 1; VIC2.borderColor = (a + 2) & 6;'));
+  it('byte operators accept a computed right operand', () => {
+    const c = boot(P('let a: u8 = 1; let b: u8 = 4; VIC2.borderColor = (a + 2) & (b + 2);'));
     expect(c.peek(0xd020) & 15).toBe(2);
-    expectError(
-      P('let a: u8 = 1;\n  let b: u8 = 2;\n  VIC2.borderColor = a + (b + 1);'),
-      'codegen',
-      /right-hand operand/,
-      5,
-    );
   });
 });
 

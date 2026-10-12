@@ -248,16 +248,66 @@ describe('unsupported constructs are errors, not no-ops', () => {
       3,
     );
   });
+});
 
-  it('a right operand that is not a literal, variable or register', () => {
-    expectError(
-      'let @zp a: u8 = 2;\nlet @zp b: u8 = 1;\nprogram @ 0x0810 {\n  a = a + (b + 1);\n  loop {}\n}',
-      'codegen',
-      /right-hand operand/,
-      4,
-    );
+describe('computed right operands', () => {
+  it('evaluates nested expressions as right operands of byte operators', () => {
+    const c = boot(`
+      let @zp a: u8 = 0;
+      let @zp b: u8 = 0;
+      let @zp x: u8 = 0;
+      program @ 0x0810 {
+        a = 200; b = 100; x = 250 + (a + b); poke(0x0900, x);
+        a = 3; b = 9; x = 20 - (a - b); poke(0x0901, x);
+        a = 15; b = 32; x = 0xF0 & (a | b); poke(0x0902, x);
+        a = 2; b = 1; x = 0x40 | (a + b); poke(0x0903, x);
+        a = 4; b = 1; x = 0xAA ^ (a + b); poke(0x0904, x);
+        loop {}
+      }`);
+    expect(Array.from({ length: 5 }, (_, i) => c.peek(0x0900 + i))).toEqual([
+      38, 26, 32, 0x43, 0xaf,
+    ]);
   });
 
+  it('uses an indexed table read as the right operand of a hardware-register operation', () => {
+    const c = boot(`
+      data @addr(0x0C00) { xHighMask: [u8; 2] = [1, 2]; }
+      let @zp slot: u8 = 1;
+      program @ 0x0810 {
+        VIC2.spriteXmsb = 0x40;
+        VIC2.spriteXmsb = VIC2.spriteXmsb | xHighMask[slot];
+        loop {}
+      }`);
+    expect(c.peek(0xd010)).toBe(0x42);
+  });
+
+  it('uses a computed right operand in byte comparisons', () => {
+    const c = boot(`
+      let @zp a: u8 = 12;
+      let @zp b: u8 = 4;
+      program @ 0x0810 {
+        if (a > b + 3) { poke(0x0900, 1); } else { poke(0x0900, 2); }
+        if (a == b + 8) { poke(0x0901, 1); } else { poke(0x0901, 2); }
+        loop {}
+      }`);
+    expect([c.peek(0x0900), c.peek(0x0901)]).toEqual([1, 1]);
+  });
+
+  it('preserves the left value while a computed right operand calls a function', () => {
+    const c = boot(`
+      let @zp value: u8 = 5;
+      let @zp result: u8 = 0;
+      fn changeValue(): u8 { value = 9; return 3; }
+      program @ 0x0810 {
+        result = value + changeValue();
+        VIC2.borderColor = result;
+        loop {}
+      }`);
+    expect(border(c)).toBe(8);
+  });
+});
+
+describe('unsupported constructs are errors, not no-ops', () => {
   it('&& and || in a condition', () => {
     expectError(
       'let @zp a: u8 = 2;\nprogram @ 0x0810 {\n  if (a == 1 && a == 2) { a = 0; }\n  loop {}\n}',
