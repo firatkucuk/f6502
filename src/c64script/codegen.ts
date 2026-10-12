@@ -473,40 +473,56 @@ export function generate(cp: CheckedProgram): CodeBuffer {
     }
   }
 
-  const RHS_HINT =
-    'right-hand operand must be a literal, a variable or a hardware register ' +
-    '(assign the sub-expression to a variable first)';
+  function prepareOperandCarry(immOp: number): void {
+    if (immOp === 0x69)
+      emit(0x18); // CLC before ADC
+    else if (immOp === 0xe9) emit(0x38); // SEC before SBC
+  }
 
-  /** Emits `<op> operand` for the right side of a binary operation, choosing imm/zp/abs mode. */
+  /** Emits `<op> operand`, evaluating a complex byte operand through the accumulator scratch. */
   function genOperand(rhs: Expr, immOp: number, zpOp: number, absOp: number): void {
     const c = evalConst(rhs);
     if (c !== null) {
+      prepareOperandCarry(immOp);
       emit(immOp, c & 0xff);
       return;
     }
     if (rhs.tag === 'ident') {
       const v = lookup(rhs.name);
       if (v && v.zpAddr !== null) {
+        prepareOperandCarry(immOp);
         emit(zpOp, v.zpAddr);
         return;
       }
       if (v && v.absAddr !== null) {
+        prepareOperandCarry(immOp);
         emit(absOp, v.absAddr & 0xff, (v.absAddr >> 8) & 0xff);
         return;
       }
     }
     if (rhs.tag === 'field' && rhs.obj.tag === 'ident') {
       const addr = hwAddr(rhs.obj.name, rhs.field, rhs.line);
+      prepareOperandCarry(immOp);
       emit(absOp, addr & 0xff, (addr >> 8) & 0xff);
       return;
     }
-    throw new CodeGenError(RHS_HINT, rhs.line, 0);
+    // Preserve the accumulator's left value while the right expression is evaluated. $F8 is
+    // compiler-owned scratch, so the computed byte can be used by the ALU after restoring A.
+    emit(0x48); // PHA
+    genExpr(rhs);
+    emit(0x85, ACC, 0x68); // STA ACC; PLA
+    prepareOperandCarry(immOp);
+    emit(zpOp, ACC);
   }
 
   /** A right-hand operand of 16-bit math: loads byte 0 (low) or 1 (high) with the given opcodes. */
   interface Operand16 {
     load(byte: 0 | 1, imm: number, zp: number, abs: number): void;
   }
+
+  const U16_RHS_HINT =
+    'right-hand operand must be a literal, a variable or a hardware register ' +
+    '(assign the sub-expression to a variable first)';
 
   function operand16(rhs: Expr): Operand16 {
     const c = evalConst(rhs);
@@ -538,7 +554,7 @@ export function generate(cp: CheckedProgram): CodeBuffer {
         },
       };
     }
-    throw new CodeGenError(RHS_HINT, rhs.line, 0);
+    throw new CodeGenError(U16_RHS_HINT, rhs.line, 0);
   }
 
   /** The array an index expression refers to, with its address and whether it is zero page. */
@@ -700,12 +716,10 @@ export function generate(cp: CheckedProgram): CodeBuffer {
     switch (e.op) {
       case '+':
         genExpr(e.lhs);
-        emit(0x18); // CLC (after the left side: it may itself have left a carry)
         genOperand(e.rhs, 0x69, 0x65, 0x6d); // ADC #imm, ADC zp, ADC abs
         break;
       case '-':
         genExpr(e.lhs);
-        emit(0x38); // SEC
         genOperand(e.rhs, 0xe9, 0xe5, 0xed); // SBC #imm, SBC zp, SBC abs
         break;
       case '&':
