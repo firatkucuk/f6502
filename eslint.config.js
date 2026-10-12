@@ -40,6 +40,7 @@ export default tseslint.config(
     },
   },
   { files: ['**/*.js', '**/*.mjs'], ...tseslint.configs.disableTypeChecked },
+  { files: ['test/scripts/**/*.ts'], ...tseslint.configs.disableTypeChecked },
   {
     files: ['src/core/**/*.ts'],
     rules: {

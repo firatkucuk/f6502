@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "maxFrames": 100,
+  "steps": [
+    { "waitForText": { "contains": "REACH THE BEACON", "maxFrames": 5 } },
+    { "keyDown": "SPACE" },
+    { "frames": 2 },
+    { "keyUp": "SPACE" },
+    { "assertMemory": { "address": 3840, "equals": 1 } },
+    { "keyDown": "D" },
+    { "frames": 40 },
+    { "keyUp": "D" },
+    { "assertMemory": { "address": 3840, "equals": 2 } },
+    { "assertMemory": { "address": 3841, "equals": 32 } },
+    { "assertMemory": { "address": 3842, "equals": 1 } },
+    { "assertText": { "contains": "YOU WIN!" } },
+    { "keyDown": "SPACE" },
+    { "frames": 2 },
+    { "keyUp": "SPACE" },
+    { "assertMemory": { "address": 3840, "equals": 0 } },
+    { "assertMemory": { "address": 3841, "equals": 2 } },
+    { "assertText": { "contains": "REACH THE BEACON" } }
+  ]
+}

@@ -1,0 +1,109 @@
+// Reach the beacon: press SPACE to start, then hold D to run right and collect it.
+// State bytes live above the compiled program: mode $0F00, player column $0F01, score $0F02.
+const PLAYER_ROW: u8 = 20;
+const BEACON_COLUMN: u8 = 32;
+const BLOCK: u8 = 0xA0;
+const BLANK: u8 = 0x20;
+
+let @addr(0x0F00) mode: u8;       // 0 title, 1 playing, 2 won
+let @addr(0x0F01) playerColumn: u8;
+let @addr(0x0F02) score: u8;
+let @zp fireLatch: u8;
+
+fn frame(): void {
+  while (VIC2.rasterLine != 200) {}
+  while (VIC2.rasterLine == 200) {}
+}
+
+fn leftKey(): u8 {
+  CIA1.portA = 0xFD;
+  if ((CIA1.portB & 0x04) == 0) { return 1; }
+  return 0;
+}
+
+fn rightKey(): u8 {
+  CIA1.portA = 0xFB;
+  if ((CIA1.portB & 0x04) == 0) { return 1; }
+  return 0;
+}
+
+fn fireKey(): u8 {
+  CIA1.portA = 0x7F;
+  if ((CIA1.portB & 0x10) == 0) { return 1; }
+  return 0;
+}
+
+fn firePressed(): u8 {
+  if (fireKey() == 1) {
+    if (fireLatch == 0) {
+      fireLatch = 1;
+      return 1;
+    }
+  } else {
+    fireLatch = 0;
+  }
+  return 0;
+}
+
+fn plot(col: u8, glyph: u8, hue: u8): void {
+  poke(screen(PLAYER_ROW, col), glyph);
+  poke(color(PLAYER_ROW, col), hue);
+}
+
+fn showTitle(): void {
+  clrscr();
+  puts(5, 14, "REACH THE BEACON", COLOR_WHITE);
+  puts(9, 7, "PRESS SPACE TO START", COLOR_LIGHT_GREY);
+  puts(13, 9, "HOLD D TO RUN RIGHT", COLOR_CYAN);
+  puts(PLAYER_ROW - 1, BEACON_COLUMN - 4, "BEACON", COLOR_YELLOW);
+}
+
+program @ 0x0810 {
+  VIC2.borderColor = COLOR_BLUE;
+  VIC2.bgColor0 = COLOR_BLACK;
+  CIA1.ddrA = 0xFF;
+  CIA1.ddrB = 0x00;
+  mode = 0;
+  playerColumn = 2;
+  score = 0;
+  showTitle();
+
+  loop {
+    if (mode == 0) {
+      if (firePressed() == 1) {
+        mode = 1;
+        playerColumn = 2;
+        score = 0;
+        clrscr();
+        puts(2, 2, "RUN TO THE BEACON", COLOR_WHITE);
+        puts(PLAYER_ROW - 1, BEACON_COLUMN - 4, "BEACON", COLOR_YELLOW);
+        plot(playerColumn, BLOCK, COLOR_GREEN);
+      }
+    } else if (mode == 1) {
+      frame();
+      firePressed();  // track release so start/restart requires a fresh press
+      plot(playerColumn, BLANK, COLOR_BLACK);
+      if (leftKey() == 1) {
+        if (playerColumn > 2) { playerColumn = playerColumn - 1; }
+      }
+      if (rightKey() == 1) {
+        if (playerColumn < BEACON_COLUMN) { playerColumn = playerColumn + 1; }
+      }
+      plot(playerColumn, BLOCK, COLOR_GREEN);
+      if (playerColumn == BEACON_COLUMN) {
+        score = 1;
+        mode = 2;
+        puts(12, 14, "YOU WIN!", COLOR_LIGHT_GREEN);
+        puts(14, 8, "PRESS SPACE TO RESTART", COLOR_WHITE);
+      }
+    } else {
+      frame();
+      if (firePressed() == 1) {
+        mode = 0;
+        playerColumn = 2;
+        score = 0;
+        showTitle();
+      }
+    }
+  }
+}

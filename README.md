@@ -14,7 +14,7 @@ the motor runs; there is no tape recording.
 The VIC-II is checked against VICE reference screenshots (14 of 137 match pixel for pixel, the rest
 are tracked in #43) and the SID against the VICE SID test programs (17 self-checking programs pass;
 the rest are tracked in #52). Combined waveforms and the 6581 filter curve are documented
-approximations. The demo site is planned (see `docs/superpowers/specs/`).
+approximations. The showcase site is served from `website/` and deployed to GitHub Pages.
 
 ## Browser usage
 
@@ -65,18 +65,33 @@ console.log(mem[0x0300]!.toString(16)); // 42
 
 Every `bus.read` / `bus.write` call is exactly one CPU cycle.
 
+## Creating C64Script games
+
+Scaffold and verify a playable game with the repo's CLI:
+
+```sh
+npm run c64script -- new games/my-game --template sprite
+npm run c64script -- check games/my-game/game.c64s
+npm run c64script -- run games/my-game/game.c64s --frames 120
+npm run c64script -- test games/my-game/game.c64s --scenario games/my-game/game.scenario.json
+```
+
+Run `npm run build` first in a clean checkout. See [the C64Script game guide](docs/c64script-games.md)
+for scenario authoring, JSON output, and browser preview.
+
 ## Scripts
 
-| Script                     | What it does                                                                      |
-| -------------------------- | --------------------------------------------------------------------------------- |
-| `npm test`                 | unit tests                                                                        |
-| `npm run fetch-test-data`  | download pinned third-party test data into `.testdata/`                           |
-| `npm run test:conformance` | Klaus Dormann functional test + SingleStepTests (`SST_FULL=1` for the full set)   |
-| `npm run build`            | ESM (`dist/index.js`) + IIFE (`dist/f6502.min.js`, global `F6502`) + `.d.ts`      |
-| `npm run lint`             | ESLint (incl. the `core/` boundary rule) + Prettier check                         |
-| `npm run typecheck`        | `tsc --noEmit`                                                                    |
-| `npm run bench`            | throughput of the core on the Klaus functional test (needs `build` and test data) |
-| `npm run example`          | serve the repo so `examples/basic.html` can load the fetched ROMs                 |
+| Script                           | What it does                                                                      |
+| -------------------------------- | --------------------------------------------------------------------------------- |
+| `npm test`                       | unit tests                                                                        |
+| `npm run fetch-test-data`        | download pinned third-party test data into `.testdata/`                           |
+| `npm run test:conformance`       | Klaus Dormann functional test + SingleStepTests (`SST_FULL=1` for the full set)   |
+| `npm run build`                  | ESM (`dist/index.js`) + IIFE (`dist/f6502.min.js`, global `F6502`) + `.d.ts`      |
+| `npm run lint`                   | ESLint (incl. the `core/` boundary rule) + Prettier check                         |
+| `npm run typecheck`              | `tsc --noEmit`                                                                    |
+| `npm run bench`                  | throughput of the core on the Klaus functional test (needs `build` and test data) |
+| `npm run example`                | serve the repo so `examples/basic.html` can load the fetched ROMs                 |
+| `npm run c64script -- <command>` | scaffold, compile, run, and behavior-test C64Script games                         |
 
 ## Licence
 
