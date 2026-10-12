@@ -197,8 +197,7 @@ fn readControls(): void {
 
 fn movePlayer(): void {
   if (rising == 1) {
-    let step: u8 = jumpSpeed[jumpIndex];
-    y = y - step;
+    y = y - jumpSpeed[jumpIndex];
     jumpIndex += 1;
     if (jumpIndex == 15) {
       rising = 0;
