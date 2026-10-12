@@ -119,4 +119,16 @@ describe('C64Script CLI', () => {
     expect(existsSync(join(outputDir, 'game.c64s'))).toBe(true);
     expect(readFileSync(scenarioPath, 'utf8')).toBe('keep this file');
   });
+
+  it('ships a compiling sprite game template with a passing behavior scenario', () => {
+    const sourcePath = resolve(ROOT, 'templates/c64script/sprite-game.c64s');
+    const scenarioPath = resolve(ROOT, 'templates/c64script/sprite-game.scenario.json');
+    const checked = runCli(['check', sourcePath, '--json'], ROOT);
+    expect(checked.status).toBe(0);
+    expect(JSON.parse(checked.stdout).result.loadAddress).toBe(0x0810);
+
+    const tested = runCli(['test', sourcePath, '--scenario', scenarioPath, '--json'], ROOT);
+    expect(tested.status).toBe(0);
+    expect(JSON.parse(tested.stdout).result.passed).toBe(true);
+  });
 });
