@@ -34,6 +34,13 @@ export const SHOWCASES = [
     hint: 'Press SPACE to start. A, D or the arrow keys move the cannon.',
   },
   {
+    id: 'asteroid-run',
+    title: 'Asteroid Run',
+    blurb:
+      'Steer through the field, break apart asteroids and keep your ship from drifting away. You have three lives, and the rocks get faster as the run continues.',
+    hint: 'Press SPACE to start. LEFT/RIGHT turn, UP thrusts, SPACE fires.',
+  },
+  {
     id: 'crystal-climb',
     title: 'Crystal Climb',
     blurb:
