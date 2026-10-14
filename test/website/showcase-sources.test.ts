@@ -1018,6 +1018,55 @@ describe('showcase: bot-hop', () => {
   });
 });
 
+describe('showcase: snake', () => {
+  const cell = (c: C64, row: number, col: number) => c.peek(0x0400 + row * 40 + col);
+
+  it('compiles and shows the title screen', () => {
+    expect(compile(source('snake')).length).toBeGreaterThan(2);
+    const c = boot(source('snake'), 400);
+    expect(cell(c, 8, 16)).toBe(0x13); // S of SNAKE
+    expect(cell(c, 18, 14)).toBe(0x10); // P of PRESS SPACE
+  });
+
+  it('starts on SPACE and moves the head to the right', () => {
+    const c = boot(source('snake'), 400);
+    c.keyDown('SPACE');
+    for (let f = 0; f < 5; f++) c.runFrame();
+    c.keyUp('SPACE');
+    for (let f = 0; f < 60; f++) c.runFrame();
+    expect(c.peek(0x3080 + 2)).toBe(20); // starting head column
+    expect(c.peek(0x3080 + 3)).toBe(21); // moved one cell right
+  });
+});
+
+describe('showcase: blast-maze', () => {
+  const cell = (c: C64, row: number, col: number) => c.peek(0x0400 + row * 40 + col);
+
+  it('compiles and shows the title screen', () => {
+    expect(compile(source('blast-maze')).length).toBeGreaterThan(2);
+    const c = boot(source('blast-maze'), 400);
+    expect(cell(c, 6, 14)).toBe(2); // B of BLAST MAZE
+    expect(cell(c, 19, 14)).toBe(16); // P of PRESS SPACE
+  });
+
+  it('starts stage 1 and plants a bomb on SPACE', () => {
+    const c = boot(source('blast-maze'), 400);
+    c.keyDown('SPACE');
+    for (let f = 0; f < 5; f++) c.runFrame();
+    c.keyUp('SPACE');
+    for (let f = 0; f < 500; f++) c.runFrame();
+    expect(cell(c, 8, 32)).toBe(0x33); // lives
+    expect(cell(c, 12, 32)).toBe(0x31); // stage 1
+    expect(c.peek(0x3606)).toBe(0); // no bomb yet
+    c.keyDown('SPACE');
+    for (let f = 0; f < 3; f++) c.runFrame();
+    c.keyUp('SPACE');
+    const timer = c.peek(0x3606);
+    expect(timer).toBeGreaterThan(0);
+    expect(timer).toBeLessThanOrEqual(90);
+  });
+});
+
 describe('showcase: music-box', () => {
   // The program writes the SID registers. They are write-only on the bus, so the tests read the
   // register file the chip keeps (after letting it catch up with the writes).

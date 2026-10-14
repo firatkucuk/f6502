@@ -1,0 +1,672 @@
+// BLAST MAZE: a grid maze where you plant bombs to blast bricks and bugs.
+// W A S D or arrows move, SPACE plants a bomb. Pick up R (more blast range) and B (more bombs).
+// Clear all bugs to finish a stage. Six stages, three lives. Character-mode maze, hardware sprites,
+// no shifts or multiplication: every position comes from lookup tables.
+const SHAPE: u16 = 0x3000;
+const ENSHAPE: u16 = 0x3040;
+
+data @addr(SHAPE) {
+  botShape: [u8; 64] = [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0x00, 0x01, 0xFF, 0x80, 0x03, 0xFF, 0xC0, 0x03, 0x3C, 0xC0, 0x03, 0x3C, 0xC0, 0x03, 0xFF, 0xC0, 0x01, 0xFF, 0x80, 0x00, 0xFF, 0x00, 0x03, 0x7E, 0xC0, 0x07, 0xBD, 0xE0, 0x07, 0xBD, 0xE0, 0x03, 0x7E, 0xC0, 0x00, 0xFF, 0x00, 0x00, 0xE7, 0x00, 0x01, 0xE7, 0x80, 0x01, 0xE7, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
+  bugShape: [u8; 64] = [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x7E, 0x00, 0x01, 0xFF, 0x80, 0x03, 0xFF, 0xC0, 0x07, 0xFF, 0xE0, 0x07, 0x3C, 0xE0, 0x07, 0x3C, 0xE0, 0x07, 0xFF, 0xE0, 0x07, 0xFF, 0xE0, 0x07, 0xFF, 0xE0, 0x05, 0xFF, 0xA0, 0x04, 0xFF, 0x20, 0x00, 0xDB, 0x00, 0x00, 0xDB, 0x00, 0x01, 0x99, 0x80, 0x03, 0x18, 0xC0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
+  scrR: [u8; 11] = [2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22];
+  scrC: [u8; 15] = [1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 29];
+  rowIdx: [u8; 11] = [0, 16, 32, 48, 64, 80, 96, 112, 128, 144, 160];
+  colX: [u8; 15] = [28, 44, 60, 76, 92, 108, 124, 140, 156, 172, 188, 204, 220, 236, 252];
+  rowY: [u8; 11] = [64, 80, 96, 112, 128, 144, 160, 176, 192, 208, 224];
+  mInit: [u8; 6] = [7, 15, 15, 31, 31, 31];
+  eDel: [u8; 6] = [20, 17, 15, 14, 12, 10];
+  spR: [u8; 4] = [9, 1, 9, 5];
+  spC: [u8; 4] = [13, 13, 1, 7];
+}
+let @addr(0x3400) grid: [u8; 176];
+let @addr(0x3500) pick: [u8; 176];
+let @addr(0x3600) bR: [u8; 3];
+let @addr(0x3603) bC: [u8; 3];
+let @addr(0x3606) bT: [u8; 3];
+let @addr(0x3620) fR: [u8; 64];
+let @addr(0x3660) fC: [u8; 64];
+let @addr(0x36A0) fT: [u8; 64];
+let @addr(0x3700) er: [u8; 4];
+let @addr(0x3704) ec: [u8; 4];
+let @addr(0x3708) ed: [u8; 4];
+
+let @zp pr: u8 = 1;
+let @zp pc: u8 = 1;
+let @zp pwait: u8 = 0;
+let @zp spHeld: u8 = 1;
+let @zp maxB: u8 = 1;
+let @zp rng: u8 = 2;
+let @zp nBomb: u8 = 0;
+let @zp stage: u8 = 0;
+let @zp lives: u8 = 3;
+let @zp mask: u8 = 1;
+let @zp ewait: u8 = 20;
+let @zp edelay: u8 = 20;
+let @zp alive: u8 = 1;
+let @zp hundreds: u8 = 0;
+let @zp tens: u8 = 0;
+let @zp ones: u8 = 0;
+let @zp tick: u8 = 0;
+let @zp rnd: u8 = 77;
+let @zp rnd2: u8 = 151;
+
+fn frame(): void {
+  while (VIC2.rasterLine != 250) {}
+  while (VIC2.rasterLine == 250) {}
+  tick = tick + 1;
+}
+
+fn space(): u8 {
+  CIA1.portA = 0x7F;
+  if ((CIA1.portB & 0x10) == 0) { return 1; }
+  return 0;
+}
+
+fn upKey(): u8 {
+  CIA1.portA = 0xFD;
+  if ((CIA1.portB & 0x02) == 0) { return 1; }
+  CIA1.portA = 0xFE;
+  if ((CIA1.portB & 0x80) == 0) {
+    CIA1.portA = 0xFD;
+    if ((CIA1.portB & 0x80) == 0) { return 1; }
+  }
+  return 0;
+}
+
+fn downKey(): u8 {
+  CIA1.portA = 0xFD;
+  if ((CIA1.portB & 0x20) == 0) { return 1; }
+  CIA1.portA = 0xFE;
+  if ((CIA1.portB & 0x80) == 0) {
+    CIA1.portA = 0xFD;
+    if ((CIA1.portB & 0x80) != 0) { return 1; }
+  }
+  return 0;
+}
+
+fn leftKey(): u8 {
+  CIA1.portA = 0xFD;
+  if ((CIA1.portB & 0x04) == 0) { return 1; }
+  CIA1.portA = 0xFE;
+  if ((CIA1.portB & 0x04) == 0) {
+    CIA1.portA = 0xFD;
+    if ((CIA1.portB & 0x80) == 0) { return 1; }
+  }
+  return 0;
+}
+
+fn rightKey(): u8 {
+  CIA1.portA = 0xFB;
+  if ((CIA1.portB & 0x04) == 0) { return 1; }
+  CIA1.portA = 0xFE;
+  if ((CIA1.portB & 0x04) == 0) {
+    CIA1.portA = 0xFD;
+    if ((CIA1.portB & 0x80) != 0) { return 1; }
+  }
+  return 0;
+}
+
+fn waitForSpace(): void {
+  while (space() == 1) { frame(); }
+  while (space() == 0) { frame(); }
+}
+
+fn rand(): u8 {
+  rnd = rnd + 73;
+  rnd = rnd + tick;
+  rnd = rnd + VIC2.rasterLine;
+  rnd2 = rnd2 + rnd;
+  rnd2 = rnd2 + 29;
+  rnd = rnd + rnd2;
+  return rnd;
+}
+
+fn put4(sr: u8, sc: u8, ch: u8, hue: u8): void {
+  let sr1: u8 = sr + 1;
+  let sc1: u8 = sc + 1;
+  poke(screen(sr, sc), ch);
+  poke(color(sr, sc), hue);
+  poke(screen(sr, sc1), ch);
+  poke(color(sr, sc1), hue);
+  poke(screen(sr1, sc), ch);
+  poke(color(sr1, sc), hue);
+  poke(screen(sr1, sc1), ch);
+  poke(color(sr1, sc1), hue);
+}
+
+fn drawCell(gr: u8, gc: u8): void {
+  let idx: u8 = rowIdx[gr];
+  idx = idx + gc;
+  let v: u8 = grid[idx];
+  let sr: u8 = scrR[gr];
+  let sc: u8 = scrC[gc];
+  if (v == 0) { put4(sr, sc, 0x20, COLOR_BLACK); }
+  if (v == 1) { put4(sr, sc, 0xA0, COLOR_DARK_GREY); }
+  if (v == 2) { put4(sr, sc, 0xA0, COLOR_BROWN); }
+  if (v == 4) { put4(sr, sc, 0xA0, COLOR_YELLOW); }
+  if (v == 5) { put4(sr, sc, 0xA0, COLOR_RED); }
+  if (v == 6) { put4(sr, sc, 0x12, COLOR_LIGHT_GREEN); }
+  if (v == 7) { put4(sr, sc, 0x02, COLOR_CYAN); }
+}
+
+fn hud(): void {
+  poke(screen(4, 32), hundreds + 0x30);
+  poke(screen(4, 33), tens + 0x30);
+  poke(screen(4, 34), ones + 0x30);
+  poke(screen(8, 32), lives + 0x30);
+  poke(screen(12, 32), stage + 0x31);
+  poke(screen(16, 32), maxB + 0x30);
+  poke(screen(20, 32), rng + 0x30);
+}
+
+fn addScore(): void {
+  ones = ones + 1;
+  if (ones == 10) {
+    ones = 0;
+    tens = tens + 1;
+    if (tens == 10) {
+      tens = 0;
+      hundreds = hundreds + 1;
+      if (hundreds == 10) { hundreds = 0; }
+    }
+  }
+  hud();
+}
+
+fn genMap(): void {
+  for (let i: u8 = 0; i < 176; i++) {
+    grid[i] = 0;
+    pick[i] = 0;
+  }
+  for (let gr: u8 = 0; gr < 11; gr++) {
+    for (let gc: u8 = 0; gc < 15; gc++) {
+      let idx: u8 = rowIdx[gr];
+      idx = idx + gc;
+      let v: u8 = 2;
+      if (gr < 3) {
+        if (gc < 3) { v = 0; }
+      }
+      if ((gr & 1) == 0) {
+        if ((gc & 1) == 0) { v = 1; }
+      }
+      if (gr == 0) { v = 1; }
+      if (gr == 10) { v = 1; }
+      if (gc == 0) { v = 1; }
+      if (gc == 14) { v = 1; }
+      if (v == 2) {
+        let q: u8 = rand();
+        if (q >= 150) { v = 0; }
+      }
+      if (v == 2) {
+        let r2: u8 = rand();
+        if (r2 < 20) {
+          pick[idx] = 6;
+        } else if (r2 < 40) {
+          pick[idx] = 7;
+        }
+      }
+      grid[idx] = v;
+    }
+  }
+  for (let k: u8 = 0; k < 4; k++) {
+    let sr: u8 = spR[k];
+    let sc: u8 = spC[k];
+    let si: u8 = rowIdx[sr];
+    si = si + sc;
+    grid[si] = 0;
+    pick[si] = 0;
+  }
+  for (let gr: u8 = 0; gr < 11; gr++) {
+    for (let gc: u8 = 0; gc < 15; gc++) {
+      drawCell(gr, gc);
+    }
+  }
+}
+
+fn addFlame(gr: u8, gc: u8): void {
+  let idx: u8 = rowIdx[gr];
+  idx = idx + gc;
+  let v: u8 = grid[idx];
+  if (v == 6) { pick[idx] = 0; }
+  if (v == 7) { pick[idx] = 0; }
+  grid[idx] = 4;
+  let s: u8 = 0;
+  let done: u8 = 0;
+  while (done == 0) {
+    let t: u8 = fT[s];
+    if (t == 0) {
+      fR[s] = gr;
+      fC[s] = gc;
+      fT[s] = 15;
+      done = 1;
+    }
+    s = s + 1;
+    if (s >= 64) { done = 1; }
+  }
+  drawCell(gr, gc);
+}
+
+fn chain(gr: u8, gc: u8): void {
+  for (let j: u8 = 0; j < 3; j++) {
+    let t: u8 = bT[j];
+    if (t != 0) {
+      let r: u8 = bR[j];
+      let c: u8 = bC[j];
+      if (r == gr) {
+        if (c == gc) { bT[j] = 1; }
+      }
+    }
+  }
+}
+
+fn explode(j: u8): void {
+  let r: u8 = bR[j];
+  let c: u8 = bC[j];
+  bT[j] = 0;
+  nBomb = nBomb - 1;
+  addFlame(r, c);
+  for (let d: u8 = 0; d < 4; d++) {
+    let rr: u8 = r;
+    let cc: u8 = c;
+    let k: u8 = 0;
+    let go: u8 = 1;
+    while (go == 1) {
+      if (d == 0) { rr = rr - 1; }
+      if (d == 1) { cc = cc + 1; }
+      if (d == 2) { rr = rr + 1; }
+      if (d == 3) { cc = cc - 1; }
+      k = k + 1;
+      let idx: u8 = rowIdx[rr];
+      idx = idx + cc;
+      let v: u8 = grid[idx];
+      if (v == 1) { go = 0; }
+      if (v == 2) {
+        addFlame(rr, cc);
+        addScore();
+        go = 0;
+      }
+      if (v == 5) {
+        chain(rr, cc);
+        go = 0;
+      }
+      if (v == 0) { addFlame(rr, cc); }
+      if (v == 6) { addFlame(rr, cc); }
+      if (v == 7) { addFlame(rr, cc); }
+      if (k >= rng) { go = 0; }
+    }
+  }
+}
+
+fn tickBombs(): void {
+  for (let j: u8 = 0; j < 3; j++) {
+    let t: u8 = bT[j];
+    if (t != 0) {
+      if (t == 1) {
+        explode(j);
+      } else {
+        t = t - 1;
+        bT[j] = t;
+      }
+    }
+  }
+}
+
+fn tickFlames(): void {
+  for (let s: u8 = 0; s < 64; s++) {
+    let t: u8 = fT[s];
+    if (t != 0) {
+      t = t - 1;
+      fT[s] = t;
+      if (t == 0) {
+        let r: u8 = fR[s];
+        let c: u8 = fC[s];
+        let idx: u8 = rowIdx[r];
+        idx = idx + c;
+        let m: u8 = grid[idx];
+        if (m == 4) {
+          let np: u8 = pick[idx];
+          grid[idx] = np;
+          pick[idx] = 0;
+          drawCell(r, c);
+        }
+      }
+    }
+  }
+}
+
+fn placeBomb(): void {
+  if (nBomb >= maxB) { return; }
+  let idx: u8 = rowIdx[pr];
+  idx = idx + pc;
+  let v: u8 = grid[idx];
+  if (v != 0) { return; }
+  let j: u8 = 0;
+  let done: u8 = 0;
+  while (done == 0) {
+    let t: u8 = bT[j];
+    if (t == 0) {
+      bR[j] = pr;
+      bC[j] = pc;
+      bT[j] = 90;
+      grid[idx] = 5;
+      nBomb = nBomb + 1;
+      drawCell(pr, pc);
+      done = 1;
+    }
+    j = j + 1;
+    if (j >= 3) { done = 1; }
+  }
+}
+
+fn movePlayer(): void {
+  if (pwait > 0) {
+    pwait = pwait - 1;
+    return;
+  }
+  let nr: u8 = pr;
+  let nc: u8 = pc;
+  let moved: u8 = 0;
+  if (upKey() == 1) {
+    nr = pr - 1;
+    moved = 1;
+  } else if (rightKey() == 1) {
+    nc = pc + 1;
+    moved = 1;
+  } else if (downKey() == 1) {
+    nr = pr + 1;
+    moved = 1;
+  } else if (leftKey() == 1) {
+    nc = pc - 1;
+    moved = 1;
+  }
+  if (moved == 1) {
+    let idx: u8 = rowIdx[nr];
+    idx = idx + nc;
+    let v: u8 = grid[idx];
+    let ok: u8 = 0;
+    if (v == 0) { ok = 1; }
+    if (v == 4) { ok = 1; }
+    if (v == 6) { ok = 1; }
+    if (v == 7) { ok = 1; }
+    if (ok == 1) {
+      pr = nr;
+      pc = nc;
+      pwait = 4;
+      if (v == 6) {
+        if (rng < 5) { rng = rng + 1; }
+        grid[idx] = 0;
+        drawCell(nr, nc);
+        hud();
+      }
+      if (v == 7) {
+        if (maxB < 3) { maxB = maxB + 1; }
+        grid[idx] = 0;
+        drawCell(nr, nc);
+        hud();
+      }
+    }
+  }
+}
+
+fn moveEnemy(k: u8, bit: u8): void {
+  if ((mask & bit) == 0) { return; }
+  let r: u8 = er[k];
+  let c: u8 = ec[k];
+  let d: u8 = ed[k];
+  let q: u8 = rand();
+  if (q < 70) {
+    if (pc > c) {
+      d = 1;
+    } else if (pc < c) {
+      d = 3;
+    } else if (pr > r) {
+      d = 2;
+    } else {
+      d = 0;
+    }
+  }
+  let nr: u8 = r;
+  let nc: u8 = c;
+  if (d == 0) { nr = r - 1; }
+  if (d == 1) { nc = c + 1; }
+  if (d == 2) { nr = r + 1; }
+  if (d == 3) { nc = c - 1; }
+  let idx: u8 = rowIdx[nr];
+  idx = idx + nc;
+  let v: u8 = grid[idx];
+  let ok: u8 = 0;
+  if (v == 0) { ok = 1; }
+  if (v == 6) { ok = 1; }
+  if (v == 7) { ok = 1; }
+  if (ok == 1) {
+    er[k] = nr;
+    ec[k] = nc;
+    ed[k] = d;
+  } else {
+    let q2: u8 = rand();
+    d = 0;
+    if (q2 >= 64) { d = 1; }
+    if (q2 >= 128) { d = 2; }
+    if (q2 >= 192) { d = 3; }
+    ed[k] = d;
+  }
+}
+
+fn moveEnemies(): void {
+  moveEnemy(0, 2);
+  moveEnemy(1, 4);
+  moveEnemy(2, 8);
+  moveEnemy(3, 16);
+}
+
+fn hitEnemy(k: u8, bit: u8): void {
+  if ((mask & bit) == 0) { return; }
+  let r: u8 = er[k];
+  let c: u8 = ec[k];
+  if (r == pr) {
+    if (c == pc) { alive = 0; }
+  }
+  let ei: u8 = rowIdx[r];
+  ei = ei + c;
+  let ev: u8 = grid[ei];
+  if (ev == 4) {
+    mask = mask - bit;
+    for (let n: u8 = 0; n < 5; n++) { addScore(); }
+  }
+}
+
+fn checkHits(): void {
+  let idx: u8 = rowIdx[pr];
+  idx = idx + pc;
+  let v: u8 = grid[idx];
+  if (v == 4) { alive = 0; }
+  hitEnemy(0, 2);
+  hitEnemy(1, 4);
+  hitEnemy(2, 8);
+  hitEnemy(3, 16);
+}
+
+fn showSprites(): void {
+  let px: u8 = colX[pc];
+  let py: u8 = rowY[pr];
+  VIC2.sprite0x = px;
+  VIC2.sprite0y = py;
+  let c: u8 = ec[0];
+  let r: u8 = er[0];
+  px = colX[c];
+  py = rowY[r];
+  VIC2.sprite1x = px;
+  VIC2.sprite1y = py;
+  c = ec[1];
+  r = er[1];
+  px = colX[c];
+  py = rowY[r];
+  VIC2.sprite2x = px;
+  VIC2.sprite2y = py;
+  c = ec[2];
+  r = er[2];
+  px = colX[c];
+  py = rowY[r];
+  poke(0xD006, px);
+  poke(0xD007, py);
+  c = ec[3];
+  r = er[3];
+  px = colX[c];
+  py = rowY[r];
+  poke(0xD008, px);
+  poke(0xD009, py);
+  VIC2.spriteEnable = mask;
+}
+
+fn loadStage(): void {
+  VIC2.spriteEnable = 0;
+  clrscr();
+  genMap();
+  puts(0, 1, "BLAST MAZE", COLOR_LIGHT_RED);
+  puts(0, 13, "SPACE BOMB", COLOR_LIGHT_GREY);
+  puts(3, 32, "SCORE", COLOR_WHITE);
+  puts(4, 32, "000", COLOR_YELLOW);
+  puts(7, 32, "LIVES", COLOR_WHITE);
+  puts(8, 32, "3", COLOR_LIGHT_RED);
+  puts(11, 32, "STAGE", COLOR_WHITE);
+  puts(12, 32, "1", COLOR_CYAN);
+  puts(15, 32, "BOMBS", COLOR_WHITE);
+  puts(16, 32, "1", COLOR_CYAN);
+  puts(19, 32, "RANGE", COLOR_WHITE);
+  puts(20, 32, "2", COLOR_LIGHT_GREEN);
+  pr = 1;
+  pc = 1;
+  pwait = 0;
+  spHeld = 1;
+  nBomb = 0;
+  alive = 1;
+  for (let j: u8 = 0; j < 3; j++) { bT[j] = 0; }
+  for (let s: u8 = 0; s < 64; s++) { fT[s] = 0; }
+  for (let k: u8 = 0; k < 4; k++) {
+    er[k] = spR[k];
+    ec[k] = spC[k];
+    ed[k] = k;
+  }
+  mask = mInit[stage];
+  edelay = eDel[stage];
+  ewait = edelay;
+  hud();
+  showSprites();
+}
+
+// Returns 1 when every bug is gone, 0 when the player dies.
+fn playStage(): u8 {
+  while (alive == 1) {
+    frame();
+    if (space() == 1) {
+      if (spHeld == 0) {
+        spHeld = 1;
+        placeBomb();
+      }
+    } else {
+      spHeld = 0;
+    }
+    movePlayer();
+    tickBombs();
+    tickFlames();
+    if (ewait == 0) {
+      ewait = edelay;
+      moveEnemies();
+    } else {
+      ewait = ewait - 1;
+    }
+    checkHits();
+    showSprites();
+    if (alive == 1) {
+      if ((mask & 30) == 0) { return 1; }
+    }
+  }
+  return 0;
+}
+
+fn flash(hue: u8): void {
+  VIC2.borderColor = hue;
+  for (let n: u8 = 0; n < 40; n++) { frame(); }
+  VIC2.borderColor = COLOR_BLACK;
+}
+
+program @ 0x0810 {
+  VIC2.ctrl1 = 0x1B;
+  VIC2.ctrl2 = 0x08;
+  VIC2.memPointers = 0x15;
+  VIC2.bgColor0 = COLOR_BLACK;
+  VIC2.borderColor = COLOR_BLACK;
+  VIC2.spriteXmsb = 0;
+  VIC2.spriteYexp = 0;
+  poke(0xD01D, 0);
+  poke(0xD01C, 0);
+  poke(0xD01B, 0);
+  CIA1.ddrA = 0xFF;
+  CIA1.ddrB = 0;
+  poke(SPRITE_PTRS, spritePtr(SHAPE));
+  poke(SPRITE_PTRS + 1, spritePtr(ENSHAPE));
+  poke(SPRITE_PTRS + 2, spritePtr(ENSHAPE));
+  poke(SPRITE_PTRS + 3, spritePtr(ENSHAPE));
+  poke(SPRITE_PTRS + 4, spritePtr(ENSHAPE));
+  VIC2.sprite0color = COLOR_WHITE;
+  VIC2.sprite1color = COLOR_LIGHT_RED;
+  VIC2.sprite2color = COLOR_CYAN;
+  poke(0xD02A, COLOR_LIGHT_GREEN);
+  poke(0xD02B, COLOR_LIGHT_GREY);
+  VIC2.spriteEnable = 0;
+  clrscr();
+  puts(6, 14, "BLAST MAZE", COLOR_LIGHT_RED);
+  puts(9, 5, "BOMB THE BRICKS AND THE BUGS", COLOR_YELLOW);
+  puts(11, 7, "W A S D OR ARROWS MOVE", COLOR_LIGHT_GREY);
+  puts(12, 7, "SPACE PLANTS A BOMB", COLOR_LIGHT_GREY);
+  puts(14, 4, "R = MORE RANGE   B = MORE BOMBS", COLOR_CYAN);
+  puts(16, 6, "STAY OUT OF THE FLAMES", COLOR_LIGHT_RED);
+  puts(19, 14, "PRESS SPACE", COLOR_WHITE);
+  waitForSpace();
+  loop {
+    stage = 0;
+    lives = 3;
+    maxB = 1;
+    rng = 2;
+    hundreds = 0;
+    tens = 0;
+    ones = 0;
+    loadStage();
+    let playing: u8 = 1;
+    let won: u8 = 0;
+    while (playing == 1) {
+      let r: u8 = playStage();
+      if (r == 1) {
+        flash(COLOR_GREEN);
+        if (stage == 5) {
+          won = 1;
+          playing = 0;
+        } else {
+          stage = stage + 1;
+          loadStage();
+        }
+      } else {
+        flash(COLOR_RED);
+        lives = lives - 1;
+        if (lives == 0) {
+          playing = 0;
+        } else {
+          loadStage();
+        }
+      }
+    }
+    VIC2.spriteEnable = 0;
+    clrscr();
+    if (won == 1) {
+      VIC2.borderColor = COLOR_GREEN;
+      puts(10, 15, "YOU WIN", COLOR_YELLOW);
+      puts(12, 8, "THE MAZE IS CLEAR", COLOR_WHITE);
+    } else {
+      VIC2.borderColor = COLOR_RED;
+      puts(10, 15, "GAME OVER", COLOR_YELLOW);
+    }
+    puts(15, 11, "SPACE TO PLAY AGAIN", COLOR_WHITE);
+    waitForSpace();
+    VIC2.borderColor = COLOR_BLACK;
+  }
+}
