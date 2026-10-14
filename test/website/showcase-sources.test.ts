@@ -983,6 +983,19 @@ describe('showcase: space-invaders', () => {
   });
 });
 
+describe('showcase: asteroid-run', () => {
+  const cell = (c: C64, row: number, col: number) => c.peek(0x0400 + row * 40 + col);
+
+  it('compiles and shows the ASCII title before instructions', () => {
+    expect(compile(source('asteroid-run')).length).toBeGreaterThan(2);
+    const splash = boot(source('asteroid-run'), 5);
+    expect(cell(splash, 5, 1)).toBe(0x2a); // '*' in the ASTEROID wordmark
+
+    const instructions = boot(source('asteroid-run'), 65);
+    expect(cell(instructions, 9, 12)).toBe(12); // L of LEFT/RIGHT TURN
+  });
+});
+
 describe('showcase: music-box', () => {
   // The program writes the SID registers. They are write-only on the bus, so the tests read the
   // register file the chip keeps (after letting it catch up with the writes).
