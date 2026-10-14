@@ -996,6 +996,28 @@ describe('showcase: asteroid-run', () => {
   });
 });
 
+describe('showcase: bot-hop', () => {
+  const cell = (c: C64, row: number, col: number) => c.peek(0x0400 + row * 40 + col);
+
+  it('compiles and shows the title screen', () => {
+    expect(compile(source('bot-hop')).length).toBeGreaterThan(2);
+    const c = boot(source('bot-hop'), 400);
+    expect(cell(c, 8, 8)).toBe(2); // B of BOT HOP 2
+    expect(cell(c, 16, 6)).toBe(16); // P of PRESS SPACE
+  });
+
+  it('starts level 1 with three lives and three coins on SPACE', () => {
+    const c = boot(source('bot-hop'), 400);
+    c.keyDown('SPACE');
+    for (let f = 0; f < 5; f++) c.runFrame();
+    c.keyUp('SPACE');
+    for (let f = 0; f < 200; f++) c.runFrame();
+    expect(cell(c, 8, 30)).toBe(0x33); // lives
+    expect(cell(c, 12, 30)).toBe(0x31); // level 1
+    expect(cell(c, 16, 30)).toBe(0x33); // coins left
+  });
+});
+
 describe('showcase: music-box', () => {
   // The program writes the SID registers. They are write-only on the bus, so the tests read the
   // register file the chip keeps (after letting it catch up with the writes).

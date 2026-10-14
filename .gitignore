@@ -3,3 +3,4 @@ dist
 .testdata
 .superpowers
 .playwright-mcp
+.idea

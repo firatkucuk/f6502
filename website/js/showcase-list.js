@@ -41,6 +41,13 @@ export const SHOWCASES = [
     hint: 'Press SPACE to start. LEFT/RIGHT turn, UP thrusts, SPACE fires.',
   },
   {
+    id: 'bot-hop',
+    title: 'Bot Hop',
+    blurb:
+      'Nine-level platformer with a surprise at the end. Collect three coins, stomp or shoot the bugs and walk through the green door. Later levels get faster.',
+    hint: 'Press SPACE to start. A, D or the arrow keys move, SPACE jumps, F shoots.',
+  },
+  {
     id: 'crystal-climb',
     title: 'Crystal Climb',
     blurb:
