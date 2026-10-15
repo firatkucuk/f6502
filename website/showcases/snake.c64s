@@ -99,9 +99,9 @@ fn addScore(): void {
       if (hundreds == 10) { hundreds = 0; }
     }
   }
-  poke(screen(0, 36), hundreds + 0x30);
-  poke(screen(0, 37), tens + 0x30);
-  poke(screen(0, 38), ones + 0x30);
+  poke(screen(0, 35), hundreds + 0x30);
+  poke(screen(0, 36), tens + 0x30);
+  poke(screen(0, 37), ones + 0x30);
 }
 
 // Pick a random empty cell for the food and draw it.
