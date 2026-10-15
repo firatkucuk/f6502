@@ -1186,3 +1186,14 @@ describe('showcase: music-box', () => {
     expect(colour(c, 21, 14)).toBe(1); // F is white
   });
 });
+
+describe('showcase: street-fighter', () => {
+  const cell = (c: C64, row: number, col: number) => c.peek(0x0400 + row * 40 + col);
+
+  it('compiles and shows the title screen', () => {
+    expect(compile(source('street-fighter')).length).toBeGreaterThan(2);
+    const c = boot(source('street-fighter'), 400);
+    expect(cell(c, 5, 13)).toBe(0x13); // S of STREET FIGHTER
+    expect(cell(c, 8, 12)).toBe(0x10); // P of PRESS 1 OR 2
+  });
+});
