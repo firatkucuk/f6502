@@ -48,6 +48,20 @@ export const SHOWCASES = [
     hint: 'Press SPACE to start. A, D or the arrow keys move, SPACE jumps, F shoots.',
   },
   {
+    id: 'snake',
+    title: 'Snake',
+    blurb:
+      'Eat the red blocks to grow without hitting the walls or yourself. The snake speeds up as it gets longer, and reaching length 100 wins. The body is a circular buffer of row and column pairs.',
+    hint: 'Press SPACE to start. W, A, S, D or the arrow keys steer.',
+  },
+  {
+    id: 'blast-maze',
+    title: 'Blast Maze',
+    blurb:
+      'Plant bombs to blast bricks and bugs in a grid maze. Pick up R for more range and B for more bombs, clear every bug to finish a stage. Six stages, three lives.',
+    hint: 'Press SPACE to start. W, A, S, D or the arrow keys move, SPACE plants a bomb.',
+  },
+  {
     id: 'crystal-climb',
     title: 'Crystal Climb',
     blurb:
