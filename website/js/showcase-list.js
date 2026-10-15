@@ -83,4 +83,12 @@ export const SHOWCASES = [
     hint: 'Click the page or press a key to start the sound.',
     sound: true,
   },
+  {
+    id: 'street-fighter',
+    title: 'Street Fighter',
+    blurb:
+      'A one-on-one fighting game with four fighters, each with a special move. Multicolor expanded sprites, character-mode stages, SID sound effects and an AI opponent. Play against the computer or a friend on the same keyboard.',
+    hint: 'Press 1 or 2 to start, then F (P1) or O (P2) to pick a fighter. P1: W A S D, F punch, G kick. P2: I J K L, O punch, P kick. Click the page first to start the sound.',
+    sound: true,
+  },
 ];
