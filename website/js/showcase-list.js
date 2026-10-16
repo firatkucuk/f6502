@@ -41,6 +41,27 @@ export const SHOWCASES = [
     hint: 'Press SPACE to start. LEFT/RIGHT turn, UP thrusts, SPACE fires.',
   },
   {
+    id: 'bot-hop',
+    title: 'Bot Hop',
+    blurb:
+      'Nine-level platformer with a surprise at the end. Collect three coins, stomp or shoot the bugs and walk through the green door. Later levels get faster.',
+    hint: 'Press SPACE to start. A, D or the arrow keys move, SPACE jumps, F shoots.',
+  },
+  {
+    id: 'snake',
+    title: 'Snake',
+    blurb:
+      'Eat the red blocks to grow without hitting the walls or yourself. The snake speeds up as it gets longer, and reaching length 100 wins. The body is a circular buffer of row and column pairs.',
+    hint: 'Press SPACE to start. W, A, S, D or the arrow keys steer.',
+  },
+  {
+    id: 'blast-maze',
+    title: 'Blast Maze',
+    blurb:
+      'Plant bombs to blast bricks and bugs in a grid maze. Pick up R for more range and B for more bombs, clear every bug to finish a stage. Six stages, three lives.',
+    hint: 'Press SPACE to start. W, A, S, D or the arrow keys move, SPACE plants a bomb.',
+  },
+  {
     id: 'crystal-climb',
     title: 'Crystal Climb',
     blurb:
@@ -60,6 +81,14 @@ export const SHOWCASES = [
     blurb:
       'A four-bar tune on all three SID voices: a pulse lead, a triangle bass and a sawtooth arpeggio. The notes come from tables read with t[i], and each voice lights up its own lane.',
     hint: 'Click the page or press a key to start the sound.',
+    sound: true,
+  },
+  {
+    id: 'street-fighter',
+    title: 'Street Fighter',
+    blurb:
+      'A one-on-one fighting game with four fighters, each with a special move. Multicolor expanded sprites, character-mode stages, SID sound effects and an AI opponent. Play against the computer or a friend on the same keyboard.',
+    hint: 'Press 1 or 2 to start, then F (P1) or O (P2) to pick a fighter. P1: W A S D, F punch, G kick. P2: I J K L, O punch, P kick. Click the page first to start the sound.',
     sound: true,
   },
 ];
