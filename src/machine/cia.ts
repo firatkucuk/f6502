@@ -221,8 +221,10 @@ export class Cia implements IoChip {
         if (!(this.cra & 0x01) && value & 0x01) this.taDelay = 1;
         // A force-load together with the start bit goes through the 6526 load pipeline: the
         // counter holds the latch for three ticks before it counts, whether the timer was
-        // stopped or already running (VICE's CIA timer model; the VICE VIC-II reference tests of
-        // spritecrunch, spritebug and sprite DMA all sync on it).
+        // stopped or already running. The values a program can read match VICE's CIA timer
+        // model (the VICE VIC-II reference tests of spritecrunch, spritebug and sprite DMA
+        // sync on it); the underflow VICE can produce during the hold on a counter of 1 or 2
+        // is not modelled, the latch is loaded at once.
         if (value & 0x10) {
           this.ta = this.taLatch;
           if (value & 0x01) this.taDelay = 3;

@@ -92,7 +92,7 @@ describe('raster IRQ', () => {
     expect(vic.irq).toBe(false);
     runCycles(vic, 63);
     expect(vic.raster).toBe(100);
-    expect(vic.read(0x19) & 0x01).toBe(1); // the flag is set in cycle 1 of the line
+    expect(vic.read(0x19) & 0x81).toBe(0x81); // flag and bit 7 are visible at once
     expect(vic.irq).toBe(false); // the line reaches the CPU one cycle later
     runCycles(vic, 1);
     expect(vic.irq).toBe(true);

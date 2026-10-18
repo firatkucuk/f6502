@@ -219,8 +219,8 @@
     "name": "dentest/den01-49-1.prg",
     "prg": "VICII/dentest/den01-49-1.prg",
     "reference": "VICII/dentest/references/den01-49-1.prg.png",
-    "expect": "known-fail:34715 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 34715
+    "expect": "known-fail:1224 px differ; unanalysed, may include stock-charset glyph differences (#43)",
+    "mismatches": 1224
   },
   {
     "name": "dentest/den01-49-2.prg",
