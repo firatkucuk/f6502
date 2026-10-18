@@ -83,11 +83,13 @@ describe('Timer A', () => {
     expect(c.read(0x04)).toBe(99);
   });
 
-  it('force-load without the start bit loads at once', () => {
+  it('force-load without the start bit loads a stopped timer at once', () => {
     const c = cia();
-    c.write(0x04, 100);
-    c.write(0x05, 0);
-    c.write(0x0e, 0x10);
+    startTimerA(c, 100);
+    ticks(c, 10);
+    c.write(0x0e, 0x00); // stop
+    expect(c.read(0x04)).not.toBe(100);
+    c.write(0x0e, 0x10); // force load, no start
     expect(c.read(0x04)).toBe(100);
   });
 });

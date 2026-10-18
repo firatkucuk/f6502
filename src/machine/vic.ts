@@ -149,7 +149,8 @@ export class VicII implements IoChip {
       case 0x18:
         return this.regs[0x18]! | 0x01;
       case 0x19:
-        return (this.status & 0x0f) | 0x70 | (this.irq ? 0x80 : 0);
+        // Bit 7 follows the flag at once (VICE); only the line to the CPU is delayed.
+        return (this.status & 0x0f) | 0x70 | (this.status & this.enable & 0x0f ? 0x80 : 0);
       case 0x1a:
         return this.enable | 0xf0;
       case 0x1e:
@@ -198,6 +199,9 @@ export class VicII implements IoChip {
     const regs = this.regs;
 
     // Line start: the raster counter increments in cycle 1; it wraps to 0 in cycle 2 of line 0.
+    // VICE samples DEN once more in cycle 1, before the raster counter moves on, so a $D011
+    // write in the last cycle of line $30 still counts.
+    if (c === 1 && this.raster === 0x30 && (regs[0x11]! & 0x10) !== 0) this.denSeen = true;
     if (c === 1) {
       this.baStart = -1;
       if (this.raster === LINES - 1) {
