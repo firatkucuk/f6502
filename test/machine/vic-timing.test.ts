@@ -39,6 +39,22 @@ describe('BA waveform', () => {
     expect(cyclesLow(recordLine(vic, 51))).toEqual([]);
   });
 
+  it('a DEN write in the last cycle of line $30 counts, one in cycle 1 of line $31 does not', () => {
+    // The CPU write of cycle N lands after the VIC processed cycle N; the raster counter moves on
+    // in cycle 1, so the last cycle of line $30 is the last write VICE still counts.
+    const late = setup();
+    late.vic.write(0x11, 0x0b);
+    while (!(late.vic.raster === 0x30 && late.vic.debug.cycle === 1)) late.vic.tick();
+    late.vic.write(0x11, 0x1b);
+    expect(cyclesLow(recordLine(late.vic, 51))).toEqual(range(12, 54));
+
+    const tooLate = setup();
+    tooLate.vic.write(0x11, 0x0b);
+    while (!(tooLate.vic.raster === 0x31 && tooLate.vic.debug.cycle === 2)) tooLate.vic.tick();
+    tooLate.vic.write(0x11, 0x1b);
+    expect(cyclesLow(recordLine(tooLate.vic, 51))).toEqual([]);
+  });
+
   it('one sprite adds a 5-cycle window; adjacent windows merge; wrapped windows cross the line', () => {
     const w = setup();
     const { vic, ram } = w;

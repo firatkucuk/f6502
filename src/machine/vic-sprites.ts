@@ -103,13 +103,15 @@ export class VicSprites {
         }
         break;
       case 55:
-        for (let n = 0; n < 8; n++) {
-          if ((regs[0x17]! >> n) & 1) this.expandFF[n]! ^= 1;
-        }
         this.dmaCheck(raster);
         break;
       case 56:
         this.dmaCheck(raster);
+        // VICE checks the expansion flip-flop here, after the second DMA check, and only for
+        // sprites whose DMA is on (Bauer places it in cycle 55).
+        for (let n = 0; n < 8; n++) {
+          if (this.dma[n] && (regs[0x17]! >> n) & 1) this.expandFF[n]! ^= 1;
+        }
         break;
       case 58:
         for (let n = 0; n < 8; n++) {
@@ -178,7 +180,7 @@ export class VicSprites {
       ) {
         this.dma[n] = 1;
         this.mcBase[n] = 0;
-        if ((regs[0x17]! >> n) & 1) this.expandFF[n] = 0;
+        this.expandFF[n] = 1;
       }
     }
   }
