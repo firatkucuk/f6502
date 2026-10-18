@@ -25,6 +25,10 @@ export class VicSprites {
   /** Bitmask of sprites whose display flag is on. */
   active = 0;
   private running = 0;
+  /** Cycle whose events ran last; a $D017 write lands after it. */
+  private lastCycle = 0;
+  /** Sprites whose expansion flip-flop was set by a $D017 write between cycles 15 and 16. */
+  private readonly crunched = new Uint8Array(8);
 
   /** True while any sprite is displayed or still shifting out a started row. */
   get busy(): boolean {
@@ -44,6 +48,7 @@ export class VicSprites {
     this.display.fill(0);
     this.mcBase.fill(0);
     this.running = 0;
+    this.crunched.fill(0);
     this.mc.fill(0);
     this.expandFF.fill(1);
     this.data.fill(0);
@@ -59,7 +64,11 @@ export class VicSprites {
    * hardware; applying it when $D017 is written is equivalent and costs nothing per cycle.
    */
   yExpandWritten(value: number): void {
-    for (let n = 0; n < 8; n++) if (((value >> n) & 1) === 0) this.expandFF[n] = 1;
+    for (let n = 0; n < 8; n++) {
+      if (((value >> n) & 1) !== 0) continue;
+      if (this.lastCycle === 15 && this.dma[n] && !this.expandFF[n]) this.crunched[n] = 1;
+      this.expandFF[n] = 1;
+    }
   }
 
   /** Bit n set = sprite n's DMA is on. */
@@ -72,6 +81,7 @@ export class VicSprites {
   /** DMA bookkeeping and fetch events for cycle `c` of line `raster`. */
   cycle(c: number, raster: number): void {
     const regs = this.regs;
+    this.lastCycle = c;
     switch (c) {
       case 15:
         for (let n = 0; n < 8; n++)
@@ -79,7 +89,16 @@ export class VicSprites {
         break;
       case 16:
         for (let n = 0; n < 8; n++) {
-          if (this.dma[n] && this.expandFF[n]) this.mcBase[n] = (this.mcBase[n]! + 1) & 0x3f;
+          if (this.crunched[n]) {
+            // Sprite crunch (VICE): the flip-flop was set after the +2 step, so MCBASE takes a
+            // bit-wise mix of MCBASE and MC instead of the plain +1.
+            const base = this.mcBase[n]!;
+            const mc = this.mc[n]!;
+            this.mcBase[n] = (0x2a & (base & mc)) | (0x15 & (base | mc));
+            this.crunched[n] = 0;
+          } else if (this.dma[n] && this.expandFF[n]) {
+            this.mcBase[n] = (this.mcBase[n]! + 1) & 0x3f;
+          }
           if (this.mcBase[n] === 63) this.dma[n] = 0;
         }
         break;
