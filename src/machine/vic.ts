@@ -67,8 +67,15 @@ export class VicII implements IoChip {
     this.reset();
   }
 
+  /**
+   * IRQ condition at the start of the current tick. VICE raises the line in the second half of
+   * the cycle, so a new interrupt reaches the CPU one cycle after the VIC sets the flag; an
+   * acknowledge or mask write still drops it at once.
+   */
+  private irqBefore = false;
+
   get irq(): boolean {
-    return (this.status & this.enable & 0x0f) !== 0;
+    return this.irqBefore && (this.status & this.enable & 0x0f) !== 0;
   }
 
   get debug() {
@@ -97,6 +104,7 @@ export class VicII implements IoChip {
     this.mainBorder = true;
     this.verticalBorder = true;
     this.baLow = false;
+    this.irqBefore = false;
     this.lineWrapPending = false;
     this.vcBase = this.vc = this.rc = this.vmli = 0;
     this.raster = 0;
@@ -185,6 +193,7 @@ export class VicII implements IoChip {
   // ---- per-cycle machine --------------------------------------------------
 
   tick(): void {
+    this.irqBefore = (this.status & this.enable & 0x0f) !== 0;
     const c = this.cycle;
     const regs = this.regs;
 

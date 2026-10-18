@@ -114,6 +114,27 @@ describe('sprite crunch', () => {
   });
 });
 
+describe('Y-expansion flip-flop', () => {
+  it('is toggled at the end of cycle 56 (as VICE), so a $D017 write in cycle 55 is seen, 56 is not', () => {
+    const run = (writeAfter: number) => {
+      const r = rig();
+      enable(r, 0, 100, 50);
+      for (let raster = 40; raster <= 52; raster++) line(r, raster);
+      line(r, 53, {
+        cycle: writeAfter,
+        fn: () => {
+          r.regs[0x17] = 1;
+        },
+      });
+      const before = r.sprites.mcBase[0]!;
+      line(r, 54);
+      return (r.sprites.mcBase[0]! - before + 64) % 64;
+    };
+    expect(run(55)).toBe(0); // seen by the toggle: the flip-flop clears and MCBASE holds
+    expect(run(56)).toBe(3); // written after the toggle: MCBASE still advances
+  });
+});
+
 describe('shifters', () => {
   it('a started shifter finishes its row after the display flag drops at cycle 58', () => {
     const r = rig();

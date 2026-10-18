@@ -59,11 +59,35 @@ describe('Timer A', () => {
     expect(c.read(0x05)).toBe(0x12);
   });
 
-  it('force-load copies the latch into the counter', () => {
+  it('force-load with the start bit holds the latch for three ticks before counting', () => {
     const c = cia();
     startTimerA(c, 100);
     ticks(c, 10);
-    c.write(0x0e, 0x11); // start + force load
+    expect(c.read(0x04)).toBe(91); // running, one start-delay tick
+    c.write(0x0e, 0x11); // start + force load on a running timer
+    expect(c.read(0x04)).toBe(100);
+    ticks(c, 3);
+    expect(c.read(0x04)).toBe(100); // the load pipeline: no count yet
+    ticks(c, 1);
+    expect(c.read(0x04)).toBe(99);
+  });
+
+  it('start + force-load on a stopped timer takes the same three ticks', () => {
+    const c = cia();
+    c.write(0x04, 100);
+    c.write(0x05, 0);
+    c.write(0x0e, 0x11);
+    ticks(c, 3);
+    expect(c.read(0x04)).toBe(100);
+    ticks(c, 1);
+    expect(c.read(0x04)).toBe(99);
+  });
+
+  it('force-load without the start bit loads at once', () => {
+    const c = cia();
+    c.write(0x04, 100);
+    c.write(0x05, 0);
+    c.write(0x0e, 0x10);
     expect(c.read(0x04)).toBe(100);
   });
 });
