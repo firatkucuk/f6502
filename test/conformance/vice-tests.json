@@ -592,8 +592,8 @@
     "name": "sequencer-bug/bug.prg",
     "prg": "VICII/sequencer-bug/bug.prg",
     "reference": "VICII/sequencer-bug/references/bug.prg.png",
-    "expect": "known-fail:442 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 442
+    "expect": "known-fail:58 px differ after the VICE sprite crunch formula; unanalysed, may include stock-charset glyph differences (#43)",
+    "mismatches": 58
   },
   {
     "name": "spritebug/spritebug-104.prg",

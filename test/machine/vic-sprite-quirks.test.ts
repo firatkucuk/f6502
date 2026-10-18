@@ -71,6 +71,7 @@ describe('sprite crunch', () => {
   /** Y-expanded sprite; returns mcBase after the cycle-16 of the line where expandFF is 0. */
   function mcBaseAfterLine(clearAt: number | null) {
     const r = rig();
+    const seen = { base: 0, mc: 0 };
     enable(r, 0, 100, 50);
     r.regs[0x17] = 0x01;
     for (let raster = 40; raster <= 52; raster++) line(r, raster);
@@ -84,12 +85,14 @@ describe('sprite crunch', () => {
         : {
             cycle: clearAt,
             fn: () => {
+              seen.base = r.sprites.mcBase[0]!;
+              seen.mc = r.sprites.mc[0]!;
               r.regs[0x17] = 0;
               r.sprites.yExpandWritten(0); // what VicII.write does
             },
           },
     );
-    return { before, after: r.sprites.mcBase[0]! };
+    return { before, after: r.sprites.mcBase[0]!, ...seen };
   }
 
   it('clearing Y-expand before cycle 15 advances MCBASE by 3, after cycle 16 not at all', () => {
@@ -101,12 +104,13 @@ describe('sprite crunch', () => {
     expect(delta(early)).toBe(3);
   });
 
-  it('clearing between cycle 15 and 16 advances MCBASE by only 1 (the crunch)', () => {
+  it('clearing between cycle 15 and 16 mixes MCBASE and MC bit-wise (the crunch, as VICE)', () => {
     const none = mcBaseAfterLine(null);
     const crunch = mcBaseAfterLine(15);
     const d = (o: { before: number; after: number }) => (o.after - o.before + 64) % 64;
     expect(d(none)).toBe(0); // on this line the flip-flop is clear, so no increment normally
-    expect(d(crunch)).toBe(1); // flip-flop set between cycle 15 and 16: +0 at 15, +1 at 16
+    const { base, mc } = crunch;
+    expect(crunch.after).toBe((0x2a & (base & mc)) | (0x15 & (base | mc)));
   });
 });
 
