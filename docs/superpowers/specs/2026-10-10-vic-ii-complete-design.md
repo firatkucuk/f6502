@@ -68,7 +68,7 @@ site.
 - Multicolour modes: the pair is `10` or `11`.
 - Invalid modes render black but the flag follows the mode they resemble (ECM+BMM like bitmap,
   ECM+MCM like multicolour text).
-- Outside the display window (borders, idle) the flag is false.
+- Outside the graphics cycles (16-55) the flag is false. The border does not clear it, and idle-state graphics (`$3FFF`/`$39FF`) set it for their set bits (amended in sub-project 4, pinned in `vic-deferred.test.ts`).
 
 **G-access addresses**
 
