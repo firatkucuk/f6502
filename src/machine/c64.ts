@@ -70,6 +70,7 @@ export class C64 {
     this.port.senseLow = () => this.tape.sense;
     this.vic = new VicII({
       readMem: (a) => this.bus.vicRead(a),
+      isCharRom: (a) => this.bus.vicSeesCharRom(a),
       readColor: (i) => this.bus.colorRam[i & 0x3ff]!,
       floatingBus: () => this.bus.ram[this.cpu.regs.pc]!,
     });

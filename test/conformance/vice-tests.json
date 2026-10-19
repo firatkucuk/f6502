@@ -70,28 +70,56 @@
     "prg": "VICII/border/vborder-32-08.prg",
     "reference": "VICII/border/references/vborder-32-08.prg.png",
     "expect": "pass",
-    "ignore": [[32, 35, 100, 50]]
+    "ignore": [
+      [
+        32,
+        35,
+        100,
+        50
+      ]
+    ]
   },
   {
     "name": "border/vborder-32-09.prg",
     "prg": "VICII/border/vborder-32-09.prg",
     "reference": "VICII/border/references/vborder-32-09.prg.png",
     "expect": "pass",
-    "ignore": [[32, 35, 100, 50]]
+    "ignore": [
+      [
+        32,
+        35,
+        100,
+        50
+      ]
+    ]
   },
   {
     "name": "border/vborder-33-08.prg",
     "prg": "VICII/border/vborder-33-08.prg",
     "reference": "VICII/border/references/vborder-33-08.prg.png",
     "expect": "pass",
-    "ignore": [[32, 35, 100, 50]]
+    "ignore": [
+      [
+        32,
+        35,
+        100,
+        50
+      ]
+    ]
   },
   {
     "name": "border/vborder-33-09.prg",
     "prg": "VICII/border/vborder-33-09.prg",
     "reference": "VICII/border/references/vborder-33-09.prg.png",
     "expect": "pass",
-    "ignore": [[32, 35, 100, 50]]
+    "ignore": [
+      [
+        32,
+        35,
+        100,
+        50
+      ]
+    ]
   },
   {
     "name": "border/vborder2-21.prg",
@@ -527,21 +555,42 @@
     "prg": "VICII/spritebug/spritebug-104.prg",
     "reference": "VICII/spritebug/references/spritebug-104.prg.png",
     "expect": "pass",
-    "ignore": [[32, 35, 100, 50]]
+    "ignore": [
+      [
+        32,
+        35,
+        100,
+        50
+      ]
+    ]
   },
   {
     "name": "spritebug/spritebug-105.prg",
     "prg": "VICII/spritebug/spritebug-105.prg",
     "reference": "VICII/spritebug/references/spritebug-105.prg.png",
     "expect": "pass",
-    "ignore": [[32, 35, 100, 50]]
+    "ignore": [
+      [
+        32,
+        35,
+        100,
+        50
+      ]
+    ]
   },
   {
     "name": "spritebug/spritebug-106.prg",
     "prg": "VICII/spritebug/spritebug-106.prg",
     "reference": "VICII/spritebug/references/spritebug-106.prg.png",
     "expect": "pass",
-    "ignore": [[32, 35, 100, 50]]
+    "ignore": [
+      [
+        32,
+        35,
+        100,
+        50
+      ]
+    ]
   },
   {
     "name": "spritecrunch/spritecrunch-3b-00.prg",
@@ -579,7 +628,14 @@
     "prg": "VICII/spritecrunch/spritecrunch2-09.prg",
     "reference": "VICII/spritecrunch/references/spritecrunch2-09.prg.png",
     "expect": "pass",
-    "ignore": [[32, 35, 100, 50]]
+    "ignore": [
+      [
+        32,
+        35,
+        100,
+        50
+      ]
+    ]
   },
   {
     "name": "spritecrunch/spritecrunch2-25.prg",
@@ -773,24 +829,23 @@
     "name": "vicii_timing/vicii_reg_timing-a5.prg",
     "prg": "VICII/vicii_timing/vicii_reg_timing-a5.prg",
     "reference": "VICII/vicii_timing/references/vicii_reg_timing-a5.prg.png",
-    "expect": "known-fail:63 px differ; unanalysed (#43)",
-    "mismatches": 63,
+    "expect": "known-fail:7 px differ; unanalysed (#43)",
+    "mismatches": 7,
     "start": 2080
   },
   {
     "name": "vicii_timing/vicii_reg_timing-ff.prg",
     "prg": "VICII/vicii_timing/vicii_reg_timing-ff.prg",
     "reference": "VICII/vicii_timing/references/vicii_reg_timing-ff.prg.png",
-    "expect": "known-fail:63 px differ; unanalysed (#43)",
-    "mismatches": 63,
+    "expect": "known-fail:7 px differ; unanalysed (#43)",
+    "mismatches": 7,
     "start": 2080
   },
   {
     "name": "vicii_timing/vicii_reg_timing.prg",
     "prg": "VICII/vicii_timing/vicii_reg_timing.prg",
     "reference": "VICII/vicii_timing/references/vicii_reg_timing.prg.png",
-    "expect": "known-fail:56 px differ; unanalysed (#43)",
-    "mismatches": 56,
+    "expect": "pass",
     "start": 2080
   },
   {
@@ -803,29 +858,29 @@
     "name": "videomode/videomode-v.prg",
     "prg": "VICII/videomode/videomode-v.prg",
     "reference": "VICII/videomode/references/videomode-v.prg.png",
-    "expect": "known-fail:14 px differ; unanalysed (#43)",
-    "mismatches": 14
+    "expect": "known-fail:6 px differ; unanalysed (#43)",
+    "mismatches": 6
   },
   {
     "name": "videomode/videomode-w.prg",
     "prg": "VICII/videomode/videomode-w.prg",
     "reference": "VICII/videomode/references/videomode-w.prg.png",
-    "expect": "known-fail:83 px differ; unanalysed (#43)",
-    "mismatches": 83
+    "expect": "known-fail:79 px differ; unanalysed (#43)",
+    "mismatches": 79
   },
   {
     "name": "videomode/videomode-x.prg",
     "prg": "VICII/videomode/videomode-x.prg",
     "reference": "VICII/videomode/references/videomode-x.prg.png",
-    "expect": "known-fail:16 px differ; unanalysed (#43)",
-    "mismatches": 16
+    "expect": "known-fail:10 px differ; unanalysed (#43)",
+    "mismatches": 10
   },
   {
     "name": "videomode/videomode-y.prg",
     "prg": "VICII/videomode/videomode-y.prg",
     "reference": "VICII/videomode/references/videomode-y.prg.png",
-    "expect": "known-fail:9 px differ; unanalysed (#43)",
-    "mismatches": 9
+    "expect": "known-fail:1 px differ; unanalysed (#43)",
+    "mismatches": 1
   },
   {
     "name": "videomode/videomode-z.prg",
@@ -845,7 +900,6 @@
     "name": "videomode/videomode2.prg",
     "prg": "VICII/videomode/videomode2.prg",
     "reference": "VICII/videomode/references/videomode2.prg.png",
-    "expect": "known-fail:4 px differ; unanalysed (#43)",
-    "mismatches": 4
+    "expect": "pass"
   }
 ]
