@@ -60,8 +60,9 @@ describe('opening the side border', () => {
     const { vic } = setup();
     runFrames(vic, 2);
     // Pixels are drawn two cycles after their cycle: the X=335 compare (cycle 54) is decided in
-    // cycle 56 and the X=344 compare (cycle 56) in cycle 58, with the registers of that cycle.
-    runTo(vic, 100, 58); // raster 100, about to process cycle 58
+    // cycle 56 with the current CSEL, the X=344 compare (cycle 56) in cycle 58 with the CSEL
+    // of the cycle before (VICE evaluates the CSEL=1 compares one cycle earlier).
+    runTo(vic, 100, 57); // raster 100, about to process cycle 57
     vic.write(0x16, 0x00); // CSEL=0: the X=344 compare no longer matches, X=335 is already past
     runTo(vic, 100, 61);
     vic.write(0x16, 0x08); // CSEL=1 again for the next line's left compare
@@ -71,6 +72,19 @@ describe('opening the side border', () => {
     expect(px(vic, 380, y)).toBe(P(6));
     expect(px(vic, 360, y + 1)).toBe(P(14)); // the next line is back to a normal border
     expect(px(vic, 360, y - 1)).toBe(P(14));
+  });
+});
+
+describe('the X=344 compare samples CSEL one cycle earlier', () => {
+  it('a CSEL write in cycle 58 is too late to cancel the right border', () => {
+    const { vic } = setup();
+    runFrames(vic, 2);
+    runTo(vic, 100, 58);
+    vic.write(0x16, 0x00);
+    runTo(vic, 100, 61);
+    vic.write(0x16, 0x08);
+    while (vic.raster !== 102) vic.tick();
+    expect(px(vic, 360, 100 - 15)).toBe(P(14)); // the border closed as usual
   });
 });
 
