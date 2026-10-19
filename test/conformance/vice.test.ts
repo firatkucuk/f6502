@@ -79,7 +79,8 @@ function stockKernalState(c64: C64): void {
   write(0xd020, 0x0e);
   write(0xd021, 0x06);
   [0x01, 0x02, 0x03, 0x04, 0x00].forEach((v, i) => write(0xd022 + i, v));
-  for (let n = 0; n < 8; n++) write(0xd027 + n, n + 1);
+  for (let n = 0; n < 7; n++) write(0xd027 + n, n + 1);
+  write(0xd02e, 0x0c);
   write(0x0286, 0x0e);
   for (let i = 0; i < 1000; i++) write(0xd800 + i, 0x0e);
 }

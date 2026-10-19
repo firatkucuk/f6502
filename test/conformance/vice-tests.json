@@ -558,22 +558,19 @@
     "name": "spritecrunch/spritecrunch-3b-00.prg",
     "prg": "VICII/spritecrunch/spritecrunch-3b-00.prg",
     "reference": "VICII/spritecrunch/references/spritecrunch-3b-00.prg.png",
-    "expect": "known-fail:758 px differ; unanalysed (#43)",
-    "mismatches": 758
+    "expect": "pass"
   },
   {
     "name": "spritecrunch/spritecrunch-3c-00.prg",
     "prg": "VICII/spritecrunch/spritecrunch-3c-00.prg",
     "reference": "VICII/spritecrunch/references/spritecrunch-3c-00.prg.png",
-    "expect": "known-fail:758 px differ; unanalysed (#43)",
-    "mismatches": 758
+    "expect": "pass"
   },
   {
     "name": "spritecrunch/spritecrunch-3d-00.prg",
     "prg": "VICII/spritecrunch/spritecrunch-3d-00.prg",
     "reference": "VICII/spritecrunch/references/spritecrunch-3d-00.prg.png",
-    "expect": "known-fail:758 px differ; unanalysed (#43)",
-    "mismatches": 758
+    "expect": "pass"
   },
   {
     "name": "spritecrunch/spritecrunch2-07.prg",
