@@ -9,7 +9,7 @@ function runTo(vic: VicII, raster: number, cycle: number): void {
 }
 
 /** Sprite 0 (all data bytes $00) at Y=50 is enabled just before `cycle` of line 50. */
-function firstRow(cycle: number): number {
+function firstRow(cycle: number, busWriteCycle?: number): number {
   const { vic, ram } = vicWorld();
   vic.write(0x11, 0x1b);
   vic.write(0x18, 0x12);
@@ -22,6 +22,10 @@ function firstRow(cycle: number): number {
   runFrames(vic, 2);
   runTo(vic, 50, cycle);
   vic.write(0x15, 0x01);
+  if (busWriteCycle !== undefined) {
+    runTo(vic, 50, busWriteCycle);
+    vic.write(0x2f, 0x7f); // the CPU leaves $7f on the VIC's bus
+  }
   while (vic.raster !== 52) vic.tick();
   return px(vic, 96, 51 - 15); // first pixel of the sprite's first row
 }
@@ -32,6 +36,16 @@ describe('sprite byte 0 is read from the idle bus while the BA prefetch window i
   });
 
   it('a sprite enabled before cycle 56 gets BA one cycle late, so byte 0 reads $ff', () => {
+    expect(firstRow(56)).toBe(PALETTE[1]!);
+  });
+});
+
+describe('a sprite access that cannot fetch takes the byte the CPU left on the bus', () => {
+  it('byte 0 is the value written to a VIC register in the following cycle', () => {
+    expect(firstRow(56, 59)).toBe(PALETTE[6]!); // bit 7 of $7f is clear
+  });
+
+  it('without a bus write byte 0 is $ff (idle bus)', () => {
     expect(firstRow(56)).toBe(PALETTE[1]!);
   });
 });

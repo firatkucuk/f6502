@@ -41,6 +41,9 @@ export class VicSprites {
   active = 0;
   /** Cycle whose events ran last; a $D017 write lands after it. */
   private lastCycle = 0;
+  /** Sprites whose data byte 0 / byte 2 of the current fetch comes from the phi2 bus. */
+  private busByte0 = 0;
+  private busByte2 = 0;
   /** Sprites whose expansion flip-flop was set by a $D017 write between cycles 15 and 16. */
   private readonly crunched = new Uint8Array(8);
 
@@ -68,6 +71,7 @@ export class VicSprites {
     this.expxFlops = this.mcFlops = this.priBits = this.mcBits = this.expxBits = 0;
     this.pending = this.activeBits = this.haltBits = 0;
     this.active = 0;
+    this.busByte0 = this.busByte2 = 0;
   }
 
   /**
@@ -89,10 +93,34 @@ export class VicSprites {
     return m;
   }
 
-  /** DMA bookkeeping and fetch events for cycle `c` of line `raster`. */
-  cycle(c: number, raster: number): void {
+  /**
+   * DMA bookkeeping and fetch events for cycle `c` of line `raster`. `bus` is the byte the VIC's
+   * data bus carried during the CPU half of the previous cycle (VICE last_bus_phi2).
+   */
+  cycle(c: number, raster: number, bus = 0xff): void {
     const regs = this.regs;
     this.lastCycle = c;
+    // Phi2 accesses of the previous cycle that could not fetch (VICE sprite_dma_cycle_0/2 with the
+    // DMA off or the prefetch window open) take the bus byte; the phi1 access of a sprite whose
+    // DMA is off reads the idle address (vicii_fetch_sprite_dma_1 -> vicii_fetch_idle).
+    {
+      const n0 = FETCH_AT[c === 1 ? 63 : c - 1]!;
+      if (n0 >= 0) {
+        const m = 1 << n0;
+        if (this.busByte0 & m) {
+          this.data[n0] = (this.data[n0]! & 0x00ffff) | (bus << 16);
+          this.busByte0 &= ~m;
+        }
+        if (!this.dma[n0]) {
+          this.data[n0] = (this.data[n0]! & 0xff00ff) | (this.mem.readMem(0x3fff) << 8);
+        }
+      }
+      const n2 = FETCH_AT[c <= 2 ? c + 61 : c - 2]!;
+      if (n2 >= 0 && this.busByte2 & (1 << n2)) {
+        this.data[n2] = (this.data[n2]! & 0xffff00) | bus;
+        this.busByte2 &= ~(1 << n2);
+      }
+    }
     switch (c) {
       case 15:
         for (let n = 0; n < 8; n++)
@@ -257,12 +285,23 @@ export class VicSprites {
   private fetch(n: number): void {
     const vm = ((this.regs[0x18]! >> 4) & 0x0f) << 10;
     const pointer = this.mem.readMem(vm + 0x3f8 + n);
-    if (!this.dma[n]) return;
+    const m = 1 << n;
+    if (!this.dma[n]) {
+      // No DMA: bytes 0 and 2 come from the phi2 bus and byte 1 from the idle fetch; cycle()
+      // fills them in over the next two cycles.
+      this.busByte0 |= m;
+      this.busByte2 |= m;
+      return;
+    }
     // MC is a 6-bit counter: a row that starts at 62 or 63 wraps to the start of the sprite block.
     const at = (i: number) => pointer * 64 + ((this.mc[n]! + i) & 0x3f);
-    // While the prefetch window is open the phi2 accesses see the idle bus ($ff) instead.
-    const b0 = this.prefetch0 ? 0xff : this.mem.readMem(at(0));
-    const b2 = this.prefetch2 ? 0xff : this.mem.readMem(at(2));
+    // While the prefetch window is open the phi2 accesses see the bus instead.
+    let b0 = 0xff;
+    let b2 = 0xff;
+    if (this.prefetch0) this.busByte0 |= m;
+    else b0 = this.mem.readMem(at(0));
+    if (this.prefetch2) this.busByte2 |= m;
+    else b2 = this.mem.readMem(at(2));
     this.data[n] = (b0 << 16) | (this.mem.readMem(at(1)) << 8) | b2;
     this.mc[n] = (this.mc[n]! + 3) & 0x3f;
   }
