@@ -287,6 +287,14 @@ export class VicII implements IoChip {
       if (cond) this.rc = 0;
     }
 
+    // The phi2 sprite accesses (bytes 0 and 2, in this cycle and the next) read the idle bus
+    // while the prefetch window after BA went low is still open (VICE sprite_dma_cycle_0/2).
+    const baAt = (cc: number) =>
+      (cond && cc >= 12 && cc <= LAST_C_CYCLE) || (SPRITE_BA[cc]! & this.sprites.dmaMask()) !== 0;
+    const pf0 = baAt(c) ? Math.max(0, this.prefetchCycles - 1) : 4;
+    const pf2 = baAt((c % CYCLES_PER_LINE) + 1) ? Math.max(0, pf0 - 1) : 4;
+    this.sprites.prefetch0 = pf0 > 0;
+    this.sprites.prefetch2 = pf2 > 0;
     this.sprites.cycle(c, this.raster);
 
     // BA for this cycle: the CPU consults it before its access. The matrix fetch holds BA only

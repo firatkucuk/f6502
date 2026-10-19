@@ -34,6 +34,9 @@ export class VicSprites {
   readonly outLow = new Uint8Array(8);
   readonly outPix = new Uint8Array(8);
   readonly outPri = new Uint8Array(8);
+  /** The BA prefetch window is open for the phi2 accesses of the next fetch (see vic.ts). */
+  prefetch0 = false;
+  prefetch2 = false;
   /** Bitmask of sprites whose display flag is on. */
   active = 0;
   /** Cycle whose events ran last; a $D017 write lands after it. */
@@ -256,10 +259,10 @@ export class VicSprites {
     const pointer = this.mem.readMem(vm + 0x3f8 + n);
     if (!this.dma[n]) return;
     const base = pointer * 64 + this.mc[n]!;
-    this.data[n] =
-      (this.mem.readMem(base) << 16) |
-      (this.mem.readMem(base + 1) << 8) |
-      this.mem.readMem(base + 2);
+    // While the prefetch window is open the phi2 accesses see the idle bus ($ff) instead.
+    const b0 = this.prefetch0 ? 0xff : this.mem.readMem(base);
+    const b2 = this.prefetch2 ? 0xff : this.mem.readMem(base + 2);
+    this.data[n] = (b0 << 16) | (this.mem.readMem(base + 1) << 8) | b2;
     this.mc[n]! += 3;
   }
 
