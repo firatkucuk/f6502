@@ -37,6 +37,8 @@ export class VicSprites {
   /** Output of the last `sample()`: bit n set = sprite n has an opaque pixel here. */
   mask = 0;
   readonly colors = new Uint8Array(8);
+  /** Colour register ($D025/$D026/$D027+n) each sprite's last opaque pixel takes its colour from. */
+  readonly colorReg = new Uint8Array(8);
 
   constructor(
     private readonly regs: Uint8Array,
@@ -145,18 +147,19 @@ export class VicSprites {
         this.shiftData[n] = this.data[n]!;
       }
       const word = this.shiftData[n]!;
-      let colour = -1;
+      let reg = -1;
       if ((regs[0x1c]! >> n) & 1) {
         const pair = (word >> (22 - (src & ~1))) & 3;
-        if (pair === 1) colour = regs[0x25]! & 0x0f;
-        else if (pair === 2) colour = regs[0x27 + n]! & 0x0f;
-        else if (pair === 3) colour = regs[0x26]! & 0x0f;
+        if (pair === 1) reg = 0x25;
+        else if (pair === 2) reg = 0x27 + n;
+        else if (pair === 3) reg = 0x26;
       } else if ((word >> (23 - src)) & 1) {
-        colour = regs[0x27 + n]! & 0x0f;
+        reg = 0x27 + n;
       }
-      if (colour >= 0) {
+      if (reg >= 0) {
         mask |= 1 << n;
-        this.colors[n] = colour;
+        this.colors[n] = regs[reg]! & 0x0f;
+        this.colorReg[n] = reg;
       }
       // The shifter advances every pixel; with X-expand set every second pixel (flip-flop).
       if ((regs[0x1d]! >> n) & 1 && !this.hold[n]) {

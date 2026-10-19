@@ -59,9 +59,11 @@ describe('opening the side border', () => {
   it('switching CSEL off just before the right compare and on again opens the border for that line', () => {
     const { vic } = setup();
     runFrames(vic, 2);
-    runTo(vic, 100, 55); // raster 100, about to process cycle 55 (X 336..343)
-    vic.write(0x16, 0x00); // CSEL=0: the right compare moves to X=335, which is already past
-    runTo(vic, 100, 58);
+    // Pixels are drawn two cycles after their cycle: the X=335 compare (cycle 54) is decided in
+    // cycle 56 and the X=344 compare (cycle 56) in cycle 58, with the registers of that cycle.
+    runTo(vic, 100, 58); // raster 100, about to process cycle 58
+    vic.write(0x16, 0x00); // CSEL=0: the X=344 compare no longer matches, X=335 is already past
+    runTo(vic, 100, 61);
     vic.write(0x16, 0x08); // CSEL=1 again for the next line's left compare
     while (vic.raster !== 102) vic.tick();
     const y = 100 - 15;
