@@ -169,3 +169,17 @@ describe('TOD', () => {
     expect(c.read(0x08)).toBe(0x00); // reading tenths unlatches
   });
 });
+
+describe('port write hook', () => {
+  it('is called after writes to port A/B and their direction registers', () => {
+    let calls = 0;
+    const c = new Cia({ inputA: () => 0xff, inputB: () => 0xff, onPortWrite: () => calls++ });
+    c.write(0x00, 1);
+    c.write(0x01, 1);
+    c.write(0x02, 1);
+    c.write(0x03, 1);
+    expect(calls).toBe(4);
+    c.write(0x04, 1); // timer latch: no port change
+    expect(calls).toBe(4);
+  });
+});
