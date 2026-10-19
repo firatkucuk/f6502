@@ -14,6 +14,13 @@ const FIRST_VISIBLE_CYCLE = 12;
 const LAST_VISIBLE_CYCLE = 59;
 const FIRST_G_CYCLE = 16;
 const LAST_G_CYCLE = 55;
+/**
+ * The VIC's draw pipeline: pixels of a screen cycle are composed PIXEL_DELAY cycles after it and
+ * its sprite pixels generated SPRITE_DELAY cycles after it, so register writes, border compares and
+ * sprite positions see the registers of those later cycles.
+ */
+const PIXEL_DELAY = 2;
+const SPRITE_DELAY = 1;
 const FIRST_C_CYCLE = 15;
 const LAST_C_CYCLE = 54;
 const FIRST_VISIBLE_RASTER = 15;
@@ -73,6 +80,15 @@ export class VicII implements IoChip {
   private readonly prevColor = new Uint8Array(8);
   private readonly prevFg = new Uint8Array(8);
   private readonly shiftedColor = new Uint8Array(8);
+  /** Graphics pixels per cycle (indexed by cycle & 63) waiting for the draw stage. */
+  private readonly pipeColor = new Uint8Array(64 * 8);
+  private readonly pipeFg = new Uint8Array(64 * 8);
+  /** Sprite pixels per cycle: bit mask of opaque sprites, lowest sprite, its colour register. */
+  private readonly spMask = new Uint8Array(64 * 8);
+  private readonly spLow = new Uint8Array(64 * 8);
+  private readonly spReg = new Uint8Array(64 * 8);
+  /** Whether the sprite stage produced any pixel data for a cycle (indexed by cycle & 63). */
+  private readonly spriteActive = new Uint8Array(64);
   private readonly shiftedFg = new Uint8Array(8);
   private readonly sprites: Sprites;
   private spriteSpriteHits = 0;
@@ -276,8 +292,15 @@ export class VicII implements IoChip {
     // check_badline later in the cycle. A badline that starts in cycle 16 or later therefore
     // leaves the g-access of that cycle idle, which does not advance VC (DMA delay).
     if (cond) this.displayState = true;
-    const visible = c >= FIRST_VISIBLE_CYCLE && c <= LAST_VISIBLE_CYCLE;
-    if (visible || this.sprites.busy) this.outputCycle(c, visible);
+    this.pushPixels(c);
+    let sa = c - SPRITE_DELAY;
+    if (sa < 1) sa += CYCLES_PER_LINE;
+    this.spriteStage(sa);
+    let sc = c - PIXEL_DELAY;
+    const sameLine = sc >= 1;
+    if (!sameLine) sc += CYCLES_PER_LINE;
+    const visible = sameLine && sc >= FIRST_VISIBLE_CYCLE && sc <= LAST_VISIBLE_CYCLE;
+    if (visible || this.spriteActive[sc & 63]) this.outputCycle(sc, visible);
 
     if (c === 58) {
       if (this.rc === 7) {
@@ -392,22 +415,50 @@ export class VicII implements IoChip {
     this.matched = match;
   }
 
-  private outputCycle(c: number, visible: boolean): void {
-    const regs = this.regs;
-
-    const xs = regs[0x16]! & 7;
+  /** Applies XSCROLL to this cycle's graphics and stores the 8 pixels for the draw stage. */
+  private pushPixels(c: number): void {
+    const xs = this.regs[0x16]! & 7;
+    const base = (c & 63) * 8;
     for (let i = 0; i < 8; i++) {
       if (i >= xs) {
-        this.shiftedColor[i] = this.gColor[i - xs]!;
-        this.shiftedFg[i] = this.gFg[i - xs]!;
+        this.pipeColor[base + i] = this.gColor[i - xs]!;
+        this.pipeFg[base + i] = this.gFg[i - xs]!;
       } else {
-        this.shiftedColor[i] = this.prevColor[8 + i - xs]!;
-        this.shiftedFg[i] = this.prevFg[8 + i - xs]!;
+        this.pipeColor[base + i] = this.prevColor[8 + i - xs]!;
+        this.pipeFg[base + i] = this.prevFg[8 + i - xs]!;
       }
     }
     this.prevColor.set(this.gColor);
     this.prevFg.set(this.gFg);
+  }
 
+  /** Generates the sprite pixels of screen cycle `c` into the ring (SPRITE_DELAY after it). */
+  private spriteStage(c: number): void {
+    const base = (c & 63) * 8;
+    if (!this.sprites.busy) {
+      if (this.spriteActive[c & 63]) this.spMask.fill(0, base, base + 8);
+      this.spriteActive[c & 63] = 0;
+      return;
+    }
+    this.spriteActive[c & 63] = 1;
+    const x0 = ((((c - FIRST_VISIBLE_CYCLE) * 8 + 496) % 504) + 504) % 504;
+    for (let i = 0; i < 8; i++) {
+      this.sprites.sample((x0 + i) % 504);
+      const mask = this.sprites.mask;
+      this.spMask[base + i] = mask;
+      if (mask !== 0) {
+        const n = 31 - Math.clz32(mask & -mask); // lowest-numbered sprite wins
+        this.spLow[base + i] = n;
+        this.spReg[base + i] = this.sprites.colorReg[n]!;
+      }
+    }
+  }
+
+  /** Composes the pixels of screen cycle `c`: graphics, sprites and border (PIXEL_DELAY after it). */
+  private outputCycle(c: number, visible: boolean): void {
+    const regs = this.regs;
+
+    const base = (c & 63) * 8;
     const csel = (regs[0x16]! & 0x08) !== 0;
     const rsel = (regs[0x11]! & 0x08) !== 0;
     const left = csel ? 24 : 31;
@@ -419,7 +470,6 @@ export class VicII implements IoChip {
     const rowBase = (this.raster - FIRST_VISIBLE_RASTER) * FRAME_WIDTH;
     const fx0 = (c - FIRST_VISIBLE_CYCLE) * 8;
     const x0 = ((((c - FIRST_VISIBLE_CYCLE) * 8 + 496) % 504) + 504) % 504;
-    const spritesOn = this.sprites.busy;
 
     for (let i = 0; i < 8; i++) {
       const x = (x0 + i) % 504;
@@ -432,17 +482,14 @@ export class VicII implements IoChip {
           if (!this.verticalBorder) this.mainBorder = false;
         }
       }
-      let colour = this.shiftedColor[i]!;
-      const fg = this.shiftedFg[i]!;
-      if (spritesOn) {
-        this.sprites.sample(x);
-        const mask = this.sprites.mask;
-        if (mask !== 0) {
-          if ((mask & (mask - 1)) !== 0) this.hitSprites(mask);
-          if (fg) this.hitBackground(mask);
-          const n = 31 - Math.clz32(mask & -mask); // lowest-numbered sprite wins
-          if (!((regs[0x1b]! >> n) & 1 && fg)) colour = this.sprites.colors[n]!;
-        }
+      let colour = this.pipeColor[base + i]!;
+      const fg = this.pipeFg[base + i]!;
+      const mask = this.spriteActive[c & 63] ? this.spMask[base + i]! : 0;
+      if (mask !== 0) {
+        if ((mask & (mask - 1)) !== 0) this.hitSprites(mask);
+        if (fg) this.hitBackground(mask);
+        const n = this.spLow[base + i]!;
+        if (!((regs[0x1b]! >> n) & 1 && fg)) colour = regs[this.spReg[base + i]!]! & 0x0f;
       }
       if (writeFrame) {
         this.frame[rowBase + fx0 + i] = PALETTE[this.mainBorder ? border : colour]!;

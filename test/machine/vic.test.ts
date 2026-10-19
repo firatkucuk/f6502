@@ -227,3 +227,17 @@ describe('light pen', () => {
     expect(vic.read(0x14)).toBe(0);
   });
 });
+
+describe('draw pipeline delay', () => {
+  it('a border colour written in cycle W shows from the screen position of cycle W-2', () => {
+    const { vic } = world();
+    vic.write(0x20, 0x0e);
+    while (!(vic.raster === 20 && vic.debug.cycle === 30)) vic.tick(); // cycle 29 processed
+    vic.write(0x20, 0x02); // the CPU write of cycle 29: seen by the draw stage from cycle 30 on
+    while (vic.raster === 20) vic.tick();
+    const y = 20 - 15;
+    // the draw stage composes screen cycle 28 (X = (28 - 12) * 8 = 128) when cycle 30 runs
+    expect(vic.frame[y * FRAME_WIDTH + 127]).toBe(PALETTE[14]!);
+    expect(vic.frame[y * FRAME_WIDTH + 128]).toBe(PALETTE[2]!);
+  });
+});
