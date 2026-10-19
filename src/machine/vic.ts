@@ -67,6 +67,9 @@ export class VicII implements IoChip {
   private status = 0;
   private enable = 0;
   private matched = false;
+  /** CSEL as it was when the previous cycle began: the 24/344 compares of VICE see it. */
+  private cselPrev = false;
+  private cselNow = false;
   private displayState = false;
   private vcBase = 0;
   private vc = 0;
@@ -235,6 +238,8 @@ export class VicII implements IoChip {
   // ---- per-cycle machine --------------------------------------------------
 
   tick(): void {
+    this.cselPrev = this.cselNow;
+    this.cselNow = (this.regs[0x16]! & 0x08) !== 0;
     this.irqBefore = (this.status & this.enable & 0x0f) !== 0;
     const c = this.cycle;
     const regs = this.regs;
@@ -463,8 +468,6 @@ export class VicII implements IoChip {
     const base = (c & 63) * 8;
     const csel = (regs[0x16]! & 0x08) !== 0;
     const rsel = (regs[0x11]! & 0x08) !== 0;
-    const left = csel ? 24 : 31;
-    const right = csel ? 344 : 335;
     const bottom = rsel ? 251 : 247;
     const border = regs[0x20]! & 0x0f;
     const writeFrame =
@@ -477,8 +480,8 @@ export class VicII implements IoChip {
       const x = (x0 + i) % 504;
       if (visible) {
         // Bauer 3.9: the border flip-flops are driven by the X and Y comparisons.
-        if (x === right) this.mainBorder = true;
-        if (x === left) {
+        if (x === 344 ? this.cselPrev : x === 335 && !csel) this.mainBorder = true;
+        if (x === 24 ? this.cselPrev : x === 31 && !csel) {
           if (this.raster === bottom) this.setVerticalBorder = true;
           this.verticalBorder = this.setVerticalBorder;
           if (!this.verticalBorder) this.mainBorder = false;

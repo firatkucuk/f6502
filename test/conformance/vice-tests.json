@@ -876,24 +876,24 @@
     "name": "vicii_timing/vicii_reg_timing-a5.prg",
     "prg": "VICII/vicii_timing/vicii_reg_timing-a5.prg",
     "reference": "VICII/vicii_timing/references/vicii_reg_timing-a5.prg.png",
-    "expect": "known-fail:6876 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 6876,
+    "expect": "known-fail:6805 px differ; unanalysed, may include stock-charset glyph differences (#43)",
+    "mismatches": 6805,
     "start": 2080
   },
   {
     "name": "vicii_timing/vicii_reg_timing-ff.prg",
     "prg": "VICII/vicii_timing/vicii_reg_timing-ff.prg",
     "reference": "VICII/vicii_timing/references/vicii_reg_timing-ff.prg.png",
-    "expect": "known-fail:8475 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 8475,
+    "expect": "known-fail:8404 px differ; unanalysed, may include stock-charset glyph differences (#43)",
+    "mismatches": 8404,
     "start": 2080
   },
   {
     "name": "vicii_timing/vicii_reg_timing.prg",
     "prg": "VICII/vicii_timing/vicii_reg_timing.prg",
     "reference": "VICII/vicii_timing/references/vicii_reg_timing.prg.png",
-    "expect": "known-fail:6867 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 6867,
+    "expect": "known-fail:6796 px differ; unanalysed, may include stock-charset glyph differences (#43)",
+    "mismatches": 6796,
     "start": 2080
   },
   {
