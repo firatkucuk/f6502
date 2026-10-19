@@ -689,8 +689,7 @@
     "name": "spriteenable/spriteenable2.prg",
     "prg": "VICII/spriteenable/spriteenable2.prg",
     "reference": "VICII/spriteenable/references/spriteenable2.prg.png",
-    "expect": "known-fail:8 px differ; unanalysed (#43)",
-    "mismatches": 8
+    "expect": "pass"
   },
   {
     "name": "spriteenable/spriteenable3.prg",
