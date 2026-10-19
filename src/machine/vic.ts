@@ -28,6 +28,8 @@ const LAST_VISIBLE_RASTER = 286;
 
 export interface VicMemory {
   readMem(addr14: number): number;
+  /** True if a VIC fetch at `addr14` sees the character ROM instead of RAM. */
+  isCharRom?(addr14: number): boolean;
   readColor(index: number): number;
   /** The byte on the data bus when the VIC cannot fetch (VICE: RAM at the CPU's PC). */
   floatingBus?(): number;
@@ -69,6 +71,8 @@ export class VicII implements IoChip {
   private matched = false;
   /** The border state the pixels of the cycle before were drawn with (VICE border_state). */
   private borderState = false;
+  /** $D011 as it was a cycle ago (VICE reg11_delay). */
+  private reg11Delay = 0;
   private readonly borderPixels = new Uint8Array(8);
   private displayState = false;
   private vcBase = 0;
@@ -341,6 +345,7 @@ export class VicII implements IoChip {
     }
 
     this.checkRasterCompare();
+    this.reg11Delay = this.regs[0x11]!;
     this.cycle = c === CYCLES_PER_LINE ? 1 : c + 1;
   }
 
@@ -372,25 +377,14 @@ export class VicII implements IoChip {
   /** g-access (phi1, cycles 16-55) then c-access (phi2, cycles 15-54). */
   private graphics(c: number): void {
     const regs = this.regs;
-    const ecm = (regs[0x11]! & 0x40) !== 0;
-    const mode = (ecm ? 4 : 0) | (regs[0x11]! & 0x20 ? 2 : 0) | (regs[0x16]! & 0x10 ? 1 : 0);
     if (c >= FIRST_G_CYCLE && c <= LAST_G_CYCLE) {
       let glyph: number;
       if (this.displayState) {
-        const code = this.chars[this.vmli & 63]!;
-        let addr: number;
-        if (mode & 2) {
-          addr = ((regs[0x18]! & 0x08) << 10) | (this.vc << 3) | this.rc;
-          if (ecm) addr &= ~0x600; // ECM forces address bits 9 and 10 low (like the idle access)
-        } else {
-          const cb = ((regs[0x18]! >> 1) & 0x07) << 11;
-          addr = cb + ((ecm ? code & 0x3f : code) << 3) + this.rc;
-        }
-        glyph = this.mem.readMem(addr);
+        glyph = this.mem.readMem(this.graphicsAddress());
         this.vc = (this.vc + 1) & 0x3ff;
         this.vmli = (this.vmli + 1) & 63;
       } else {
-        glyph = this.mem.readMem(ecm ? 0x39ff : 0x3fff);
+        glyph = this.mem.readMem((regs[0x11]! & 0x40) !== 0 ? 0x39ff : 0x3fff);
       }
       this.gbuf = glyph;
     }
@@ -406,6 +400,33 @@ export class VicII implements IoChip {
         this.colors[this.vmli & 63] = this.mem.readColor(this.vc & 0x3ff) & 0x0f;
       }
     }
+  }
+
+  /** VICE g_fetch_addr: the address of a g-access for the video mode bits in `d011`. */
+  private graphicsAddressFor(d011: number): number {
+    const regs = this.regs;
+    let a: number;
+    if (d011 & 0x20) a = (this.vc << 3) | this.rc | ((regs[0x18]! & 0x08) << 10);
+    else a = (this.chars[this.vmli & 63]! << 3) | this.rc | ((regs[0x18]! & 0x0e) << 10);
+    if (d011 & 0x40) a &= 0x39ff;
+    return a;
+  }
+
+  /**
+   * VICE vicii_fetch_graphics for the 6569R3: BMM takes effect for the fetch address one cycle
+   * early (current OR delayed), and changing from RAM to character ROM fetches latches the low
+   * address byte with the previous mode and the high bits with the new one.
+   */
+  private graphicsAddress(): number {
+    const d011 = this.regs[0x11]!;
+    let addr = this.graphicsAddressFor(d011 | (this.reg11Delay & 0x20));
+    if ((d011 ^ this.reg11Delay) & 0x20) {
+      const from = this.graphicsAddressFor(this.reg11Delay);
+      const to = this.graphicsAddressFor(d011);
+      const isRom = this.mem.isCharRom;
+      if (isRom !== undefined && !isRom(from) && isRom(to)) addr = (from & 0xff) | (to & 0x3f00);
+    }
+    return addr;
   }
 
   private checkRasterCompare(): void {

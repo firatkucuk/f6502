@@ -71,12 +71,16 @@ export class C64Bus implements Bus {
     else this.ram[addr] = value;
   }
 
+  /** True if a VIC fetch at `addr14` sees the character ROM (banks 0 and 2, $1000-$1fff). */
+  vicSeesCharRom(addr14: number): boolean {
+    const a = addr14 & 0x3fff;
+    return (this.vicBank === 0 || this.vicBank === 2) && a >= 0x1000 && a < 0x2000;
+  }
+
   /** VIC-II memory fetch: 14-bit address within the current bank. */
   vicRead(addr14: number): number {
     const a = addr14 & 0x3fff;
-    if ((this.vicBank === 0 || this.vicBank === 2) && a >= 0x1000 && a < 0x2000) {
-      return this.roms.chargen[a & 0x0fff]!;
-    }
+    if (this.vicSeesCharRom(a)) return this.roms.chargen[a & 0x0fff]!;
     return this.ram[(this.vicBank << 14) | a]!;
   }
 
