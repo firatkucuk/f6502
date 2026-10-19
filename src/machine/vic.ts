@@ -40,6 +40,8 @@ export class VicII implements IoChip {
   private baStart = -1;
   private mainBorder = true;
   private verticalBorder = true;
+  /** Latched vertical border state (VICE set_vborder); the live flag follows it at cycle 1. */
+  private setVerticalBorder = true;
   private readonly regs = new Uint8Array(0x40);
   private status = 0;
   private enable = 0;
@@ -103,6 +105,7 @@ export class VicII implements IoChip {
     this.baStart = -1;
     this.mainBorder = true;
     this.verticalBorder = true;
+    this.setVerticalBorder = true;
     this.baLow = false;
     this.irqBefore = false;
     this.lineWrapPending = false;
@@ -248,12 +251,18 @@ export class VicII implements IoChip {
       if (this.displayState) this.rc = (this.rc + 1) & 7;
     }
 
-    if (c === 63) {
+    // Vertical border compares run every cycle (VICE check_vborder_top/_bottom): DEN is sampled
+    // on each cycle of the top line, so a $D011 write that clears it later in that line (or in
+    // its first cycle, after the sample) still opens the border. The latched flag is applied to
+    // the live one at cycle 1 and at the left compare.
+    {
       const rsel = (regs[0x11]! & 0x08) !== 0;
-      const bottom = rsel ? 251 : 247;
-      const top = rsel ? 51 : 55;
-      if (this.raster === bottom) this.verticalBorder = true;
-      else if (this.raster === top && (regs[0x11]! & 0x10) !== 0) this.verticalBorder = false;
+      if (this.raster === (rsel ? 51 : 55) && (regs[0x11]! & 0x10) !== 0) {
+        this.verticalBorder = false;
+        this.setVerticalBorder = false;
+      }
+      if (this.raster === (rsel ? 251 : 247)) this.setVerticalBorder = true;
+      if (c === 1) this.verticalBorder = this.setVerticalBorder;
     }
 
     // BA for this cycle: the CPU consults it before its access.
@@ -339,10 +348,8 @@ export class VicII implements IoChip {
 
     const csel = (regs[0x16]! & 0x08) !== 0;
     const rsel = (regs[0x11]! & 0x08) !== 0;
-    const den = (regs[0x11]! & 0x10) !== 0;
     const left = csel ? 24 : 31;
     const right = csel ? 344 : 335;
-    const top = rsel ? 51 : 55;
     const bottom = rsel ? 251 : 247;
     const border = regs[0x20]! & 0x0f;
     const writeFrame =
@@ -358,8 +365,8 @@ export class VicII implements IoChip {
         // Bauer 3.9: the border flip-flops are driven by the X and Y comparisons.
         if (x === right) this.mainBorder = true;
         if (x === left) {
-          if (this.raster === bottom) this.verticalBorder = true;
-          else if (this.raster === top && den) this.verticalBorder = false;
+          if (this.raster === bottom) this.setVerticalBorder = true;
+          this.verticalBorder = this.setVerticalBorder;
           if (!this.verticalBorder) this.mainBorder = false;
         }
       }
