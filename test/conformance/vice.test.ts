@@ -10,6 +10,11 @@ interface Entry {
   prg: string; // relative to .testdata/vicetests
   reference: string;
   frames?: number;
+  /**
+   * SYS address to start the program at, for programs whose BASIC stub the OpenROMS BASIC cannot
+   * run (it has no expression evaluator, so `SYS(2080)` fails with ?NOT IMPLEMENTED ERROR).
+   */
+  start?: number;
   /** Number of differing pixels tolerated (default 0). */
   tolerance?: number;
   /**
@@ -111,7 +116,9 @@ describe('VICE VIC-II reference screenshots', () => {
       const c64 = new C64(roms());
       expect(c64.runUntilReady(600)).toBe(true);
       stockKernalState(c64);
-      c64.loadPrg(new Uint8Array(readFileSync(prg)));
+      const bytes = new Uint8Array(readFileSync(prg));
+      if (entry.start === undefined) c64.loadPrg(bytes);
+      else c64.loadPrg(bytes, { run: 'sys', start: entry.start });
       for (let i = 0; i < (entry.frames ?? 200); i++) c64.runFrame();
       const mismatches = diff(c64, reference, entry.ignore);
       if (REPORT) console.log(`VICE ${entry.name}: ${mismatches} differing pixels`);
