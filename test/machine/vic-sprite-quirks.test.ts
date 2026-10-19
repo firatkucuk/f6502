@@ -161,6 +161,23 @@ describe('sprite display needs the sprite still enabled in cycle 58', () => {
   });
 });
 
+describe('MC wraps inside the sprite block', () => {
+  it('a row that starts at byte 62 continues with bytes 63 and 0, not into the next block', () => {
+    const r = rig();
+    enable(r, 0, 100, 50);
+    r.ram.fill(0, 0x1000, 0x1040);
+    r.ram[0x1000] = 0xff; // byte 0 of the block: the third byte of the row
+    r.ram.fill(0xff, 0x1040, 0x1080); // the next block: what a non-wrapping read would see
+    for (let raster = 40; raster <= 49; raster++) line(r, raster);
+    // DMA turns on at cycle 55/56 and clears MCBASE; start the row at 62 afterwards
+    line(r, 50, { cycle: 57, fn: () => (r.sprites.mcBase[0] = 62) });
+    expect(r.sprites.mc[0]).toBe(1); // 62 + 3 wrapped to 6 bits
+    const masks = line(r, 51);
+    expect(masks[100 + 16]).toBe(1); // third byte = $ff from the start of the block
+    expect(masks[100 + 8]).toBe(0); // second byte (63) is clear
+  });
+});
+
 describe('shifters', () => {
   it('a started shifter finishes its row after the display flag drops at cycle 58', () => {
     const r = rig();

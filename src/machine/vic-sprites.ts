@@ -258,12 +258,13 @@ export class VicSprites {
     const vm = ((this.regs[0x18]! >> 4) & 0x0f) << 10;
     const pointer = this.mem.readMem(vm + 0x3f8 + n);
     if (!this.dma[n]) return;
-    const base = pointer * 64 + this.mc[n]!;
+    // MC is a 6-bit counter: a row that starts at 62 or 63 wraps to the start of the sprite block.
+    const at = (i: number) => pointer * 64 + ((this.mc[n]! + i) & 0x3f);
     // While the prefetch window is open the phi2 accesses see the idle bus ($ff) instead.
-    const b0 = this.prefetch0 ? 0xff : this.mem.readMem(base);
-    const b2 = this.prefetch2 ? 0xff : this.mem.readMem(base + 2);
-    this.data[n] = (b0 << 16) | (this.mem.readMem(base + 1) << 8) | b2;
-    this.mc[n]! += 3;
+    const b0 = this.prefetch0 ? 0xff : this.mem.readMem(at(0));
+    const b2 = this.prefetch2 ? 0xff : this.mem.readMem(at(2));
+    this.data[n] = (b0 << 16) | (this.mem.readMem(at(1)) << 8) | b2;
+    this.mc[n] = (this.mc[n]! + 3) & 0x3f;
   }
 
   private updateActive(): void {

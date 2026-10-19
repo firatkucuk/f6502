@@ -620,8 +620,7 @@
     "name": "spritecrunch/spritecrunch2-08.prg",
     "prg": "VICII/spritecrunch/spritecrunch2-08.prg",
     "reference": "VICII/spritecrunch/references/spritecrunch2-08.prg.png",
-    "expect": "known-fail:16 px differ; unanalysed (#43)",
-    "mismatches": 16
+    "expect": "pass"
   },
   {
     "name": "spritecrunch/spritecrunch2-09.prg",
