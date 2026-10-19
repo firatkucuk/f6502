@@ -4,6 +4,8 @@ export interface CiaInputs {
   /** External pin levels for port A / B (bits that are inputs are taken from here). */
   inputA: () => number;
   inputB: () => number;
+  /** Called after a write to port A/B or their direction registers (pin levels may have changed). */
+  onPortWrite?: () => void;
 }
 
 const TENTH_ACC = 985_248; // PAL cycles per second; +10 per cycle gives one tenth per 98,524.8
@@ -179,15 +181,19 @@ export class Cia implements IoChip {
     switch (reg & 0x0f) {
       case 0x00:
         this.pra = value;
+        this.inputs.onPortWrite?.();
         break;
       case 0x01:
         this.prb = value;
+        this.inputs.onPortWrite?.();
         break;
       case 0x02:
         this.ddra = value;
+        this.inputs.onPortWrite?.();
         break;
       case 0x03:
         this.ddrb = value;
+        this.inputs.onPortWrite?.();
         break;
       case 0x04:
         this.taLatch = (this.taLatch & 0xff00) | value;

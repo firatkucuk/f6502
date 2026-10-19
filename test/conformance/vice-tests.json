@@ -479,43 +479,43 @@
     "name": "fldscroll/fldscroll-20-60.prg",
     "prg": "VICII/fldscroll/fldscroll-20-60.prg",
     "reference": "VICII/fldscroll/references/fldscroll-20-60.prg.png",
-    "expect": "known-fail:34822 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 34822
+    "expect": "known-fail:2200 px differ; unanalysed, may include stock-charset glyph differences (#43)",
+    "mismatches": 2200
   },
   {
     "name": "fldscroll/fldscroll-21-60.prg",
     "prg": "VICII/fldscroll/fldscroll-21-60.prg",
     "reference": "VICII/fldscroll/references/fldscroll-21-60.prg.png",
-    "expect": "known-fail:34942 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 34942
+    "expect": "known-fail:2280 px differ; unanalysed, may include stock-charset glyph differences (#43)",
+    "mismatches": 2280
   },
   {
     "name": "fldscroll/fldscroll-22-60.prg",
     "prg": "VICII/fldscroll/fldscroll-22-60.prg",
     "reference": "VICII/fldscroll/references/fldscroll-22-60.prg.png",
-    "expect": "known-fail:28025 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 28025
+    "expect": "known-fail:2286 px differ; unanalysed, may include stock-charset glyph differences (#43)",
+    "mismatches": 2286
   },
   {
     "name": "fldscroll/fldscroll-29-60.prg",
     "prg": "VICII/fldscroll/fldscroll-29-60.prg",
     "reference": "VICII/fldscroll/references/fldscroll-29-60.prg.png",
-    "expect": "known-fail:10612 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 10612
+    "expect": "known-fail:2277 px differ; unanalysed, may include stock-charset glyph differences (#43)",
+    "mismatches": 2277
   },
   {
     "name": "fldscroll/fldscroll-2A-60.prg",
     "prg": "VICII/fldscroll/fldscroll-2A-60.prg",
     "reference": "VICII/fldscroll/references/fldscroll-2A-60.prg.png",
-    "expect": "known-fail:27368 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 27368
+    "expect": "known-fail:4513 px differ; unanalysed, may include stock-charset glyph differences (#43)",
+    "mismatches": 4513
   },
   {
     "name": "fldscroll/fldscroll-2B-60.prg",
     "prg": "VICII/fldscroll/fldscroll-2B-60.prg",
     "reference": "VICII/fldscroll/references/fldscroll-2B-60.prg.png",
-    "expect": "known-fail:27396 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 27396
+    "expect": "known-fail:4529 px differ; unanalysed, may include stock-charset glyph differences (#43)",
+    "mismatches": 4529
   },
   {
     "name": "flibug/blackmail-ee.prg",
@@ -556,8 +556,8 @@
     "name": "lp-trigger/test1.prg",
     "prg": "VICII/lp-trigger/test1.prg",
     "reference": "VICII/lp-trigger/references/test1.prg.png",
-    "expect": "known-fail:5727 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 5727
+    "expect": "known-fail:1680 px differ; unanalysed, may include stock-charset glyph differences (#43)",
+    "mismatches": 1680
   },
   {
     "name": "rasterirq/rasterirq_hold.prg",
@@ -746,8 +746,8 @@
     "name": "spritefetchbug/test-136-2a.prg",
     "prg": "VICII/spritefetchbug/test-136-2a.prg",
     "reference": "VICII/spritefetchbug/references/test-136-2a.prg.png",
-    "expect": "known-fail:3176 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 3176
+    "expect": "known-fail:3239 px differ; unanalysed, may include stock-charset glyph differences (#43)",
+    "mismatches": 3239
   },
   {
     "name": "spritepriorities/test1.prg",

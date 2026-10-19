@@ -59,6 +59,8 @@ export class C64 {
     this.cia1 = new Cia({
       inputA: () => this.keyboard.scanRows(this.cia1.outputB()),
       inputB: () => this.keyboard.scanColumns(this.cia1.outputA()),
+      // CIA1 port B bit 4 is wired to the VIC light pen input: driving it low triggers the pen.
+      onPortWrite: () => this.vic.setLightPen((this.cia1.outputB() & 0x10) === 0),
     });
     this.cia2 = new Cia({ inputA: () => 0xff, inputB: () => 0xff });
     this.tape = new Datasette({

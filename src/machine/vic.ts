@@ -41,6 +41,12 @@ export class VicII implements IoChip {
   /** Cycle at which BA went low for the current badline, or -1. */
   /** Badline condition as evaluated in the current cycle. */
   private badLine = false;
+  /** Light pen input level (true = low = pen active), a pending latch and the latched position. */
+  private lpLow = false;
+  private lpPending = false;
+  private lpTriggered = false;
+  private lpX = 0;
+  private lpY = 0;
   /**
    * VICE prefetch_cycles: counts down while BA is low and is 4 while it is high. A matrix fetch
    * with it still above 0 (BA low for fewer than 3 cycles, as in FLI) reads the floating bus.
@@ -112,6 +118,8 @@ export class VicII implements IoChip {
     this.displayState = false;
     this.badLine = false;
     this.prefetchCycles = 4;
+    this.lpLow = this.lpPending = this.lpTriggered = false;
+    this.lpX = this.lpY = 0;
     this.mainBorder = true;
     this.verticalBorder = true;
     this.setVerticalBorder = true;
@@ -165,6 +173,10 @@ export class VicII implements IoChip {
         return (this.status & 0x0f) | 0x70 | (this.status & this.enable & 0x0f ? 0x80 : 0);
       case 0x1a:
         return this.enable | 0xf0;
+      case 0x13:
+        return this.lpX;
+      case 0x14:
+        return this.lpY;
       case 0x1e:
         return this.spriteSpriteHits;
       case 0x1f:
@@ -227,6 +239,9 @@ export class VicII implements IoChip {
       this.vcBase = 0;
       this.frameCount++;
       this.newRaster();
+      // A pen still held low is latched again at the start of the frame (position $D1).
+      this.lpTriggered = false;
+      if (this.lpLow) this.triggerLightPen(2, true);
     }
     if (this.raster === 0x30 && (regs[0x11]! & 0x10) !== 0) this.denSeen = true;
 
@@ -283,7 +298,32 @@ export class VicII implements IoChip {
       if (c === 1) this.verticalBorder = this.setVerticalBorder;
     }
 
+    if (this.lpPending) {
+      this.lpPending = false;
+      this.triggerLightPen(c, false);
+    }
+
     this.cycle = c === CYCLES_PER_LINE ? 1 : c + 1;
+  }
+
+  /** The light pen input changed (CIA1 port B bit 4): a low level latches one cycle later. */
+  setLightPen(low: boolean): void {
+    if (low) this.lpPending = true;
+    this.lpLow = low;
+  }
+
+  /** VICE vicii_trigger_light_pen_internal for the 6569R3 (PAL). */
+  private triggerLightPen(c: number, retrigger: boolean): void {
+    if (this.lpTriggered) return;
+    this.lpTriggered = true;
+    if (this.raster === LINES - 1 && c > 1) return; // not on the last line, except cycle 1
+    // Raster X of the cycle (VICE keeps it in units of 8: cycle 1 is 400, then 8 per cycle),
+    // halved, plus the 6569R3's offset of 2.
+    let x = ((400 + 8 * (c - 1)) % 504) / 2 + 2;
+    if (retrigger) x = 0xd1;
+    this.lpX = x & 0xff;
+    this.lpY = this.raster & 0xff;
+    this.status |= 0x08;
   }
 
   private newRaster(): void {

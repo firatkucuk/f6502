@@ -183,3 +183,47 @@ describe('text mode rendering', () => {
     expect(w.vic.debug.vcBase).toBe(0);
   });
 });
+
+describe('light pen', () => {
+  function until(vic: VicII, raster: number, nextCycle: number) {
+    while (!(vic.raster === raster && vic.debug.cycle === nextCycle)) vic.tick();
+  }
+
+  it('latches X and Y one cycle after the pin goes low and raises IRQ flag 3', () => {
+    const { vic } = world();
+    vic.write(0x1a, 0x08);
+    until(vic, 100, 21); // cycle 20 has been processed
+    vic.setLightPen(true);
+    expect(vic.irq).toBe(false);
+    vic.tick(); // cycle 21 latches
+    // X of cycle 21 is 400 + 20 * 8 = 560 - 504 = 56 pixels, halved, plus the 6569R3 offset of 2
+    expect(vic.read(0x13)).toBe(56 / 2 + 2);
+    expect(vic.read(0x14)).toBe(100);
+    expect(vic.read(0x19) & 0x08).toBe(0x08);
+    vic.tick();
+    expect(vic.irq).toBe(true);
+  });
+
+  it('latches only once per frame', () => {
+    const { vic } = world();
+    until(vic, 100, 21);
+    vic.setLightPen(true);
+    vic.tick();
+    vic.setLightPen(false);
+    until(vic, 120, 30);
+    vic.setLightPen(true);
+    vic.tick();
+    expect(vic.read(0x14)).toBe(100);
+  });
+
+  it('a pen still held low latches again at the start of the next frame, at X $D1, Y 0', () => {
+    const { vic } = world();
+    until(vic, 100, 21);
+    vic.setLightPen(true);
+    vic.tick();
+    const frame = vic.frameCount;
+    while (vic.frameCount === frame) vic.tick();
+    expect(vic.read(0x13)).toBe(0xd1);
+    expect(vic.read(0x14)).toBe(0);
+  });
+});
