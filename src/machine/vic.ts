@@ -1,6 +1,6 @@
 import type { IoChip } from './io';
 import { PALETTE } from './palette';
-import { renderGraphics } from './vic-graphics';
+import { GraphicsPipe } from './vic-graphics';
 import { SPRITE_BA } from './vic-schedule';
 import { VicSprites as Sprites } from './vic-sprites';
 
@@ -80,11 +80,9 @@ export class VicII implements IoChip {
   /** Colour registers as they were when the previous cycle began. */
   private readonly prevCregs = new Uint8Array(0x30);
   private readonly cregsNow = new Uint8Array(0x30);
-  private readonly bgColors = new Uint8Array(4);
-  private readonly gColor = new Uint8Array(8);
-  private readonly gFg = new Uint8Array(8);
-  private readonly prevColor = new Uint8Array(8);
-  private readonly prevFg = new Uint8Array(8);
+  private readonly gfx = new GraphicsPipe();
+  /** The byte of this cycle's g-access (feeds the graphics pipe). */
+  private gbuf = 0;
   private readonly shiftedColor = new Uint8Array(8);
   /** Graphics pixels per cycle (indexed by cycle & 63) waiting for the draw stage. */
   private readonly pipeColor = new Uint8Array(64 * 8);
@@ -154,8 +152,8 @@ export class VicII implements IoChip {
     this.cycle = 2;
     this.chars.fill(0);
     this.colors.fill(0);
-    this.prevColor.fill(0);
-    this.prevFg.fill(0);
+    this.gfx.reset();
+    this.gbuf = 0;
     this.spriteSpriteHits = 0;
     this.spriteBgHits = 0;
     this.sprites.reset();
@@ -300,11 +298,11 @@ export class VicII implements IoChip {
     }
 
     this.graphics(c);
+    this.drawGraphics(c);
     // The condition enters display state after this cycle's g-access (phi1): VICE runs
     // check_badline later in the cycle. A badline that starts in cycle 16 or later therefore
     // leaves the g-access of that cycle idle, which does not advance VC (DMA delay).
     if (cond) this.displayState = true;
-    this.pushPixels(c);
     let sa = c - SPRITE_DELAY;
     if (sa < 1) sa += CYCLES_PER_LINE;
     this.spriteStage(sa);
@@ -375,21 +373,10 @@ export class VicII implements IoChip {
     const regs = this.regs;
     const ecm = (regs[0x11]! & 0x40) !== 0;
     const mode = (ecm ? 4 : 0) | (regs[0x11]! & 0x20 ? 2 : 0) | (regs[0x16]! & 0x10 ? 1 : 0);
-    const bg = this.bgColors;
-    // Background colours travel through the pipe as register codes and are resolved when the
-    // pixels are composed (VICE keeps colour codes in its render buffer too).
-    bg[0] = 0x21;
-    bg[1] = 0x22;
-    bg[2] = 0x23;
-    bg[3] = 0x24;
-
     if (c >= FIRST_G_CYCLE && c <= LAST_G_CYCLE) {
       let glyph: number;
-      let code = 0;
-      let nibble = 0;
       if (this.displayState) {
-        code = this.chars[this.vmli & 63]!;
-        nibble = this.colors[this.vmli & 63]!;
+        const code = this.chars[this.vmli & 63]!;
         let addr: number;
         if (mode & 2) {
           addr = ((regs[0x18]! & 0x08) << 10) | (this.vc << 3) | this.rc;
@@ -404,10 +391,7 @@ export class VicII implements IoChip {
       } else {
         glyph = this.mem.readMem(ecm ? 0x39ff : 0x3fff);
       }
-      renderGraphics(this.gColor, this.gFg, mode, glyph, code, nibble, bg);
-    } else {
-      this.gColor.fill(bg[0]);
-      this.gFg.fill(0);
+      this.gbuf = glyph;
     }
 
     if (this.badLine && c >= FIRST_C_CYCLE && c <= LAST_C_CYCLE) {
@@ -430,21 +414,25 @@ export class VicII implements IoChip {
     this.matched = match;
   }
 
-  /** Applies XSCROLL to this cycle's graphics and stores the 8 pixels for the draw stage. */
-  private pushPixels(c: number): void {
-    const xs = this.regs[0x16]! & 7;
-    const base = (c & 63) * 8;
-    for (let i = 0; i < 8; i++) {
-      if (i >= xs) {
-        this.pipeColor[base + i] = this.gColor[i - xs]!;
-        this.pipeFg[base + i] = this.gFg[i - xs]!;
-      } else {
-        this.pipeColor[base + i] = this.prevColor[8 + i - xs]!;
-        this.pipeFg[base + i] = this.prevFg[8 + i - xs]!;
-      }
-    }
-    this.prevColor.set(this.gColor);
-    this.prevFg.set(this.gFg);
+  /**
+   * Draws the graphics pixels of screen cycle `c - PIXEL_DELAY` into the ring (VICE draws a cycle's
+   * pixels in a later cycle, after that cycle's g-access has fed the pipe).
+   */
+  private drawGraphics(c: number): void {
+    let sc = c - PIXEL_DELAY;
+    if (sc < 1) sc += CYCLES_PER_LINE;
+    this.gfx.drawCycle(
+      this.regs,
+      c >= FIRST_G_CYCLE && c <= LAST_G_CYCLE,
+      this.verticalBorder,
+      !this.displayState,
+      this.gbuf,
+      this.chars,
+      this.colors,
+    );
+    const base = (sc & 63) * 8;
+    this.pipeColor.set(this.gfx.color, base);
+    this.pipeFg.set(this.gfx.fg, base);
   }
 
   /** Generates the sprite pixels of screen cycle `c` into the ring (SPRITE_DELAY after it). */
