@@ -3,6 +3,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { C64 } from '../../src/machine/c64';
+import { PALETTE } from '../../src/machine/palette';
 import { decodePng } from './png';
 
 interface Entry {
@@ -24,6 +25,12 @@ interface Entry {
    * test's text label, whose glyph shapes come from the stock character ROM we do not have.
    */
   ignore?: [number, number, number, number][];
+  /**
+   * Reference defect: inside `area` (reference pixels, inclusive) the reference shows colour
+   * `map[c]` where the program now draws colour `c` (the reference predates a change to the
+   * program). Our pixels are translated before the comparison; `reason` says why.
+   */
+  remap?: { area: [number, number, number, number]; map: Record<string, number>; reason: string };
   /** Known-fail only: the exact number of differing pixels; any change (better or worse) fails. */
   mismatches?: number;
   /** 'pass' or 'known-fail:<reason>' */
@@ -86,7 +93,12 @@ function stockKernalState(c64: C64): void {
 }
 
 /** Number of differing pixels between our frame and the reference (RGB must match exactly). */
-function diff(c64: C64, referencePath: string, ignore: Entry['ignore'] = []): number {
+function diff(
+  c64: C64,
+  referencePath: string,
+  ignore: Entry['ignore'] = [],
+  remap?: Entry['remap'],
+): number {
   const ref = decodePng(new Uint8Array(readFileSync(referencePath)));
   if (ref.width !== 384 || ref.height !== 272) {
     throw new Error(`reference ${referencePath} is ${ref.width}x${ref.height}, expected 384x272`);
@@ -96,9 +108,17 @@ function diff(c64: C64, referencePath: string, ignore: Entry['ignore'] = []): nu
   let different = 0;
   for (let y = 0; y < 271; y++) {
     for (let x = 0; x < 384; x++) {
-      const v = pixels[(y + 1) * 384 + x]!;
+      let v = pixels[(y + 1) * 384 + x]!;
       const i = y * 384 + x;
       if (ignore.some(([x0, y0, x1, y1]) => x >= x0 && x <= x1 && y >= y0 && y <= y1)) continue;
+      if (remap) {
+        const [x0, y0, x1, y1] = remap.area;
+        if (x >= x0 && x <= x1 && y >= y0 && y <= y1) {
+          const from = PALETTE.indexOf(v);
+          const to = remap.map[String(from)];
+          if (to !== undefined) v = PALETTE[to]!;
+        }
+      }
       const r = v & 0xff;
       const g = (v >> 8) & 0xff;
       const b = (v >> 16) & 0xff;
@@ -137,7 +157,7 @@ describe('VICE VIC-II reference screenshots', () => {
         rom.kernal.set([0x68, 0xa8, 0x68, 0xaa, 0x68, 0x40], 0xfebc - 0xe000);
       }
       for (let i = 0; i < (entry.frames ?? 200); i++) c64.runFrame();
-      const mismatches = diff(c64, reference, entry.ignore);
+      const mismatches = diff(c64, reference, entry.ignore, entry.remap);
       if (REPORT) console.log(`VICE ${entry.name}: ${mismatches} differing pixels`);
       const tolerance = entry.tolerance ?? 0;
       if (entry.expect === 'pass') {
