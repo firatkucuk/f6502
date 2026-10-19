@@ -100,6 +100,26 @@ describe('opening the bottom border', () => {
   });
 });
 
+describe('the bottom border is latched at the left compare', () => {
+  /** RSEL is cleared before `cycle` of line 247; returns a pixel in the middle of that line. */
+  function line247(cycle: number): number {
+    const { vic } = setup();
+    runFrames(vic, 2);
+    runTo(vic, 247, cycle);
+    vic.write(0x11, 0x13); // RSEL=0: the bottom compare is line 247
+    while (vic.raster !== 248) vic.tick();
+    return px(vic, 100, 247 - 15);
+  }
+
+  it('cleared before cycle 17 (CSEL=1) the border starts in the same line', () => {
+    expect(line247(17)).toBe(P(14));
+  });
+
+  it('cleared before cycle 18 the compare was missed: the line is still graphics', () => {
+    expect(line247(18)).toBe(P(6));
+  });
+});
+
 describe('top border compare samples DEN on every cycle of the top line', () => {
   /**
    * Runs until the next tick processes `nextCycle` of `raster` (the CPU write slot just before
