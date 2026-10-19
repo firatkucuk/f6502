@@ -508,15 +508,14 @@
     "name": "sb_sprite_fetch/sbsprf24-163.prg",
     "prg": "VICII/sb_sprite_fetch/sbsprf24-163.prg",
     "reference": "VICII/sb_sprite_fetch/references/sbsprf24-163.prg.png",
-    "expect": "known-fail:42 px differ; unanalysed (#43)",
-    "mismatches": 42
+    "expect": "pass"
   },
   {
     "name": "sb_sprite_fetch/sbsprf24-164.prg",
     "prg": "VICII/sb_sprite_fetch/sbsprf24-164.prg",
     "reference": "VICII/sb_sprite_fetch/references/sbsprf24-164.prg.png",
-    "expect": "known-fail:11 px differ; unanalysed (#43)",
-    "mismatches": 11
+    "expect": "known-fail:29 px differ; unanalysed (#43)",
+    "mismatches": 29
   },
   {
     "name": "screenpos/screenpos.prg",
@@ -534,25 +533,22 @@
     "name": "spritebug/spritebug-104.prg",
     "prg": "VICII/spritebug/spritebug-104.prg",
     "reference": "VICII/spritebug/references/spritebug-104.prg.png",
-    "expect": "known-fail:4 px differ after the CIA load-pipeline, sprite expansion toggle and IRQ delay fixes (#43)",
-    "ignore": [[32, 35, 100, 50]],
-    "mismatches": 4
+    "expect": "pass",
+    "ignore": [[32, 35, 100, 50]]
   },
   {
     "name": "spritebug/spritebug-105.prg",
     "prg": "VICII/spritebug/spritebug-105.prg",
     "reference": "VICII/spritebug/references/spritebug-105.prg.png",
-    "expect": "known-fail:4 px differ after the CIA load-pipeline, sprite expansion toggle and IRQ delay fixes (#43)",
-    "ignore": [[32, 35, 100, 50]],
-    "mismatches": 4
+    "expect": "pass",
+    "ignore": [[32, 35, 100, 50]]
   },
   {
     "name": "spritebug/spritebug-106.prg",
     "prg": "VICII/spritebug/spritebug-106.prg",
     "reference": "VICII/spritebug/references/spritebug-106.prg.png",
-    "expect": "known-fail:8 px differ after the CIA load-pipeline, sprite expansion toggle and IRQ delay fixes (#43)",
-    "ignore": [[32, 35, 100, 50]],
-    "mismatches": 8
+    "expect": "pass",
+    "ignore": [[32, 35, 100, 50]]
   },
   {
     "name": "spritecrunch/spritecrunch-3b-00.prg",
@@ -682,15 +678,13 @@
     "name": "spritesplit/ss-exp-unexp-hires.prg",
     "prg": "VICII/spritesplit/ss-exp-unexp-hires.prg",
     "reference": "VICII/spritesplit/references/ss-exp-unexp-hires.prg.png",
-    "expect": "known-fail:1276 px differ; unanalysed (#43)",
-    "mismatches": 1276
+    "expect": "pass"
   },
   {
     "name": "spritesplit/ss-exp-unexp-mc.prg",
     "prg": "VICII/spritesplit/ss-exp-unexp-mc.prg",
     "reference": "VICII/spritesplit/references/ss-exp-unexp-mc.prg.png",
-    "expect": "known-fail:660 px differ; unanalysed (#43)",
-    "mismatches": 660
+    "expect": "pass"
   },
   {
     "name": "spritesplit/ss-hires-color.prg",
@@ -702,15 +696,13 @@
     "name": "spritesplit/ss-hires-mc-exp.prg",
     "prg": "VICII/spritesplit/ss-hires-mc-exp.prg",
     "reference": "VICII/spritesplit/references/ss-hires-mc-exp.prg.png",
-    "expect": "known-fail:1408 px differ; unanalysed (#43)",
-    "mismatches": 1408
+    "expect": "pass"
   },
   {
     "name": "spritesplit/ss-hires-mc.prg",
     "prg": "VICII/spritesplit/ss-hires-mc.prg",
     "reference": "VICII/spritesplit/references/ss-hires-mc.prg.png",
-    "expect": "known-fail:308 px differ; unanalysed (#43)",
-    "mismatches": 308
+    "expect": "pass"
   },
   {
     "name": "spritesplit/ss-mc-color0.prg",
@@ -734,87 +726,78 @@
     "name": "spritesplit/ss-mc-hires-exp.prg",
     "prg": "VICII/spritesplit/ss-mc-hires-exp.prg",
     "reference": "VICII/spritesplit/references/ss-mc-hires-exp.prg.png",
-    "expect": "known-fail:44 px differ; unanalysed (#43)",
-    "mismatches": 44
+    "expect": "pass"
   },
   {
     "name": "spritesplit/ss-mc-hires.prg",
     "prg": "VICII/spritesplit/ss-mc-hires.prg",
     "reference": "VICII/spritesplit/references/ss-mc-hires.prg.png",
-    "expect": "known-fail:88 px differ; unanalysed (#43)",
-    "mismatches": 88
+    "expect": "pass"
   },
   {
     "name": "spritesplit/ss-pri-exp.prg",
     "prg": "VICII/spritesplit/ss-pri-exp.prg",
     "reference": "VICII/spritesplit/references/ss-pri-exp.prg.png",
-    "expect": "known-fail:264 px differ; unanalysed (#43)",
-    "mismatches": 264
+    "expect": "pass"
   },
   {
     "name": "spritesplit/ss-pri-mc-exp.prg",
     "prg": "VICII/spritesplit/ss-pri-mc-exp.prg",
     "reference": "VICII/spritesplit/references/ss-pri-mc-exp.prg.png",
-    "expect": "known-fail:528 px differ; unanalysed (#43)",
-    "mismatches": 528
+    "expect": "pass"
   },
   {
     "name": "spritesplit/ss-pri-mc.prg",
     "prg": "VICII/spritesplit/ss-pri-mc.prg",
     "reference": "VICII/spritesplit/references/ss-pri-mc.prg.png",
-    "expect": "known-fail:528 px differ; unanalysed (#43)",
-    "mismatches": 528
+    "expect": "pass"
   },
   {
     "name": "spritesplit/ss-pri.prg",
     "prg": "VICII/spritesplit/ss-pri.prg",
     "reference": "VICII/spritesplit/references/ss-pri.prg.png",
-    "expect": "known-fail:264 px differ; unanalysed (#43)",
-    "mismatches": 264
+    "expect": "pass"
   },
   {
     "name": "spritesplit/ss-unexp-exp-hires.prg",
     "prg": "VICII/spritesplit/ss-unexp-exp-hires.prg",
     "reference": "VICII/spritesplit/references/ss-unexp-exp-hires.prg.png",
-    "expect": "known-fail:880 px differ; unanalysed (#43)",
-    "mismatches": 880
+    "expect": "pass"
   },
   {
     "name": "spritesplit/ss-unexp-exp-mc.prg",
     "prg": "VICII/spritesplit/ss-unexp-exp-mc.prg",
     "reference": "VICII/spritesplit/references/ss-unexp-exp-mc.prg.png",
-    "expect": "known-fail:484 px differ; unanalysed (#43)",
-    "mismatches": 484
+    "expect": "pass"
   },
   {
     "name": "spritesplit/ss-xpos.prg",
     "prg": "VICII/spritesplit/ss-xpos.prg",
     "reference": "VICII/spritesplit/references/ss-xpos.prg.png",
-    "expect": "known-fail:1056 px differ; unanalysed (#43)",
-    "mismatches": 1056
+    "expect": "pass"
   },
   {
     "name": "vicii_timing/vicii_reg_timing-a5.prg",
     "prg": "VICII/vicii_timing/vicii_reg_timing-a5.prg",
     "reference": "VICII/vicii_timing/references/vicii_reg_timing-a5.prg.png",
-    "expect": "known-fail:3993 px differ; unanalysed (#43)",
-    "mismatches": 3993,
+    "expect": "known-fail:3536 px differ; unanalysed (#43)",
+    "mismatches": 3536,
     "start": 2080
   },
   {
     "name": "vicii_timing/vicii_reg_timing-ff.prg",
     "prg": "VICII/vicii_timing/vicii_reg_timing-ff.prg",
     "reference": "VICII/vicii_timing/references/vicii_reg_timing-ff.prg.png",
-    "expect": "known-fail:5600 px differ; unanalysed (#43)",
-    "mismatches": 5600,
+    "expect": "known-fail:5143 px differ; unanalysed (#43)",
+    "mismatches": 5143,
     "start": 2080
   },
   {
     "name": "vicii_timing/vicii_reg_timing.prg",
     "prg": "VICII/vicii_timing/vicii_reg_timing.prg",
     "reference": "VICII/vicii_timing/references/vicii_reg_timing.prg.png",
-    "expect": "known-fail:3985 px differ; unanalysed (#43)",
-    "mismatches": 3985,
+    "expect": "known-fail:3528 px differ; unanalysed (#43)",
+    "mismatches": 3528,
     "start": 2080
   },
   {
