@@ -114,22 +114,22 @@
     "name": "border/vborder2-22.prg",
     "prg": "VICII/border/vborder2-22.prg",
     "reference": "VICII/border/references/vborder2-22.prg.png",
-    "expect": "known-fail:1945 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 1945
+    "expect": "known-fail:665 px differ; unanalysed, may include stock-charset glyph differences (#43)",
+    "mismatches": 665
   },
   {
     "name": "border/vborder2-35.prg",
     "prg": "VICII/border/vborder2-35.prg",
     "reference": "VICII/border/references/vborder2-35.prg.png",
-    "expect": "known-fail:1952 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 1952
+    "expect": "known-fail:992 px differ; unanalysed, may include stock-charset glyph differences (#43)",
+    "mismatches": 992
   },
   {
     "name": "border/vborder2-36.prg",
     "prg": "VICII/border/vborder2-36.prg",
     "reference": "VICII/border/references/vborder2-36.prg.png",
-    "expect": "known-fail:1783 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 1783
+    "expect": "known-fail:823 px differ; unanalysed, may include stock-charset glyph differences (#43)",
+    "mismatches": 823
   },
   {
     "name": "border/vborder2-63.prg",
@@ -257,8 +257,8 @@
     "name": "dentest/den10-51-1.prg",
     "prg": "VICII/dentest/den10-51-1.prg",
     "reference": "VICII/dentest/references/den10-51-1.prg.png",
-    "expect": "known-fail:64000 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 64000
+    "expect": "known-fail:1212 px differ; unanalysed, may include stock-charset glyph differences (#43)",
+    "mismatches": 1212
   },
   {
     "name": "dentest/den10-51-2.prg",
@@ -284,15 +284,15 @@
     "name": "dentest/denrsel-1.prg",
     "prg": "VICII/dentest/denrsel-1.prg",
     "reference": "VICII/dentest/references/denrsel-1.prg.png",
-    "expect": "known-fail:86720 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 86720
+    "expect": "known-fail:1244 px differ; unanalysed, may include stock-charset glyph differences (#43)",
+    "mismatches": 1244
   },
   {
     "name": "dentest/denrsel-2.prg",
     "prg": "VICII/dentest/denrsel-2.prg",
     "reference": "VICII/dentest/references/denrsel-2.prg.png",
-    "expect": "known-fail:86720 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 86720
+    "expect": "known-fail:1246 px differ; unanalysed, may include stock-charset glyph differences (#43)",
+    "mismatches": 1246
   },
   {
     "name": "dentest/denrsel-63.prg",
@@ -311,15 +311,15 @@
     "name": "dentest/denrsel-s1.prg",
     "prg": "VICII/dentest/denrsel-s1.prg",
     "reference": "VICII/dentest/references/denrsel-s1.prg.png",
-    "expect": "known-fail:86720 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 86720
+    "expect": "known-fail:1253 px differ; unanalysed, may include stock-charset glyph differences (#43)",
+    "mismatches": 1253
   },
   {
     "name": "dentest/denrsel-s2.prg",
     "prg": "VICII/dentest/denrsel-s2.prg",
     "reference": "VICII/dentest/references/denrsel-s2.prg.png",
-    "expect": "known-fail:86720 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 86720
+    "expect": "known-fail:1255 px differ; unanalysed, may include stock-charset glyph differences (#43)",
+    "mismatches": 1255
   },
   {
     "name": "dentest/denrsel55.prg",

@@ -84,6 +84,30 @@ describe('opening the bottom border', () => {
   });
 });
 
+describe('top border compare samples DEN on every cycle of the top line', () => {
+  /**
+   * Runs until the next tick processes `nextCycle` of `raster` (the CPU write slot just before
+   * it), clears DEN there, and returns a pixel in the middle of the window on raster 100
+   * (framebuffer row 85).
+   */
+  function windowPixelAfterDenCleared(raster: number, nextCycle: number): number {
+    const { vic } = setup();
+    runFrames(vic, 1);
+    runTo(vic, raster, nextCycle);
+    vic.write(0x11, 0x0b); // DEN off, RSEL on, YSCROLL 3
+    runTo(vic, 100, 40);
+    return px(vic, 100, 85);
+  }
+
+  it('a DEN write in cycle 1 of line 51 still opens the border (DEN was set when compared)', () => {
+    expect(windowPixelAfterDenCleared(51, 2)).toBe(P(6)); // after cycle 1 of line 51
+  });
+
+  it('a DEN write in the last cycle of line 50 is too early: the border stays closed', () => {
+    expect(windowPixelAfterDenCleared(50, 1)).toBe(P(14)); // after cycle 63 of line 50
+  });
+});
+
 describe('the foreground flag does not depend on the border', () => {
   it('a sprite behind the foreground still collides with graphics under the 38-column side strip', () => {
     const w = setup();
