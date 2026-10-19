@@ -70,56 +70,28 @@
     "prg": "VICII/border/vborder-32-08.prg",
     "reference": "VICII/border/references/vborder-32-08.prg.png",
     "expect": "pass",
-    "ignore": [
-      [
-        32,
-        35,
-        100,
-        50
-      ]
-    ]
+    "ignore": [[32, 35, 100, 50]]
   },
   {
     "name": "border/vborder-32-09.prg",
     "prg": "VICII/border/vborder-32-09.prg",
     "reference": "VICII/border/references/vborder-32-09.prg.png",
     "expect": "pass",
-    "ignore": [
-      [
-        32,
-        35,
-        100,
-        50
-      ]
-    ]
+    "ignore": [[32, 35, 100, 50]]
   },
   {
     "name": "border/vborder-33-08.prg",
     "prg": "VICII/border/vborder-33-08.prg",
     "reference": "VICII/border/references/vborder-33-08.prg.png",
     "expect": "pass",
-    "ignore": [
-      [
-        32,
-        35,
-        100,
-        50
-      ]
-    ]
+    "ignore": [[32, 35, 100, 50]]
   },
   {
     "name": "border/vborder-33-09.prg",
     "prg": "VICII/border/vborder-33-09.prg",
     "reference": "VICII/border/references/vborder-33-09.prg.png",
     "expect": "pass",
-    "ignore": [
-      [
-        32,
-        35,
-        100,
-        50
-      ]
-    ]
+    "ignore": [[32, 35, 100, 50]]
   },
   {
     "name": "border/vborder2-21.prg",
@@ -143,8 +115,7 @@
     "name": "border/vborder2-36.prg",
     "prg": "VICII/border/vborder2-36.prg",
     "reference": "VICII/border/references/vborder2-36.prg.png",
-    "expect": "known-fail:320 px differ; unanalysed (#43)",
-    "mismatches": 320
+    "expect": "pass"
   },
   {
     "name": "border/vborder2-63.prg",
@@ -556,42 +527,21 @@
     "prg": "VICII/spritebug/spritebug-104.prg",
     "reference": "VICII/spritebug/references/spritebug-104.prg.png",
     "expect": "pass",
-    "ignore": [
-      [
-        32,
-        35,
-        100,
-        50
-      ]
-    ]
+    "ignore": [[32, 35, 100, 50]]
   },
   {
     "name": "spritebug/spritebug-105.prg",
     "prg": "VICII/spritebug/spritebug-105.prg",
     "reference": "VICII/spritebug/references/spritebug-105.prg.png",
     "expect": "pass",
-    "ignore": [
-      [
-        32,
-        35,
-        100,
-        50
-      ]
-    ]
+    "ignore": [[32, 35, 100, 50]]
   },
   {
     "name": "spritebug/spritebug-106.prg",
     "prg": "VICII/spritebug/spritebug-106.prg",
     "reference": "VICII/spritebug/references/spritebug-106.prg.png",
     "expect": "pass",
-    "ignore": [
-      [
-        32,
-        35,
-        100,
-        50
-      ]
-    ]
+    "ignore": [[32, 35, 100, 50]]
   },
   {
     "name": "spritecrunch/spritecrunch-3b-00.prg",
@@ -629,14 +579,7 @@
     "prg": "VICII/spritecrunch/spritecrunch2-09.prg",
     "reference": "VICII/spritecrunch/references/spritecrunch2-09.prg.png",
     "expect": "pass",
-    "ignore": [
-      [
-        32,
-        35,
-        100,
-        50
-      ]
-    ]
+    "ignore": [[32, 35, 100, 50]]
   },
   {
     "name": "spritecrunch/spritecrunch2-25.prg",

@@ -67,9 +67,9 @@ export class VicII implements IoChip {
   private status = 0;
   private enable = 0;
   private matched = false;
-  /** CSEL as it was when the previous cycle began: the 24/344 compares of VICE see it. */
-  private cselPrev = false;
-  private cselNow = false;
+  /** The border state the pixels of the cycle before were drawn with (VICE border_state). */
+  private borderState = false;
+  private readonly borderPixels = new Uint8Array(8);
   private displayState = false;
   private vcBase = 0;
   private vc = 0;
@@ -142,6 +142,7 @@ export class VicII implements IoChip {
     this.lpLow = this.lpPending = this.lpTriggered = false;
     this.lpX = this.lpY = 0;
     this.mainBorder = true;
+    this.borderState = true;
     this.verticalBorder = true;
     this.setVerticalBorder = true;
     this.baLow = false;
@@ -242,8 +243,6 @@ export class VicII implements IoChip {
   tick(): void {
     this.prevCregs.set(this.cregsNow);
     this.cregsNow.set(this.regs.subarray(0, 0x30));
-    this.cselPrev = this.cselNow;
-    this.cselNow = (this.regs[0x16]! & 0x08) !== 0;
     this.irqBefore = (this.status & this.enable & 0x0f) !== 0;
     const c = this.cycle;
     const regs = this.regs;
@@ -298,6 +297,7 @@ export class VicII implements IoChip {
     }
 
     this.graphics(c);
+    this.checkHorizontalBorder(c);
     this.drawGraphics(c);
     // The condition enters display state after this cycle's g-access (phi1): VICE runs
     // check_badline later in the cycle. A badline that starts in cycle 16 or later therefore
@@ -310,6 +310,7 @@ export class VicII implements IoChip {
     const sameLine = sc >= 1;
     if (!sameLine) sc += CYCLES_PER_LINE;
     const visible = sameLine && sc >= FIRST_VISIBLE_CYCLE && sc <= LAST_VISIBLE_CYCLE;
+    this.drawBorder();
     if (visible || this.spriteActive[sc & 63]) this.outputCycle(sc, visible);
 
     if (c === 58) {
@@ -457,31 +458,59 @@ export class VicII implements IoChip {
     this.spriteActive[c & 63] = any !== 0 ? 1 : 0;
   }
 
+  /**
+   * VICE check_hborder: the left border ends in cycle 17 (CSEL=1) or 18 (CSEL=0) and the right
+   * border starts in cycle 56 (CSEL=0) or 57 (CSEL=1). The bottom compare of the vertical border
+   * is repeated at the left compare, which then latches it.
+   */
+  private checkHorizontalBorder(c: number): void {
+    const regs = this.regs;
+    const csel = (regs[0x16]! & 0x08) !== 0;
+    if (csel ? c === 17 : c === 18) {
+      const bottom = (regs[0x11]! & 0x08) !== 0 ? 251 : 247;
+      if (this.raster === bottom) this.setVerticalBorder = true;
+      this.verticalBorder = this.setVerticalBorder;
+      if (!this.verticalBorder) this.mainBorder = false;
+    }
+    if (csel ? c === 57 : c === 56) this.mainBorder = true;
+  }
+
+  /**
+   * VICE draw_border8: which of the 8 pixels being composed show the border. With CSEL=1 a change
+   * of the main border applies from the next group of 8, with CSEL=0 from its last pixel.
+   */
+  private drawBorder(): void {
+    const px = this.borderPixels;
+    if (!(this.borderState || this.mainBorder)) {
+      px.fill(0);
+      return;
+    }
+    if (this.borderState && this.mainBorder) {
+      px.fill(1);
+      return;
+    }
+    if ((this.regs[0x16]! & 0x08) !== 0) {
+      px.fill(this.borderState ? 1 : 0);
+      this.borderState = this.mainBorder;
+    } else {
+      px.fill(this.borderState ? 1 : 0, 0, 7);
+      px[7] = 0;
+      this.borderState = this.mainBorder;
+      if (this.borderState) px[7] = 1;
+    }
+  }
+
   /** Composes the pixels of screen cycle `c`: graphics, sprites and border (PIXEL_DELAY after it). */
   private outputCycle(c: number, visible: boolean): void {
     const regs = this.regs;
 
     const base = (c & 63) * 8;
-    const csel = (regs[0x16]! & 0x08) !== 0;
-    const rsel = (regs[0x11]! & 0x08) !== 0;
-    const bottom = rsel ? 251 : 247;
     const writeFrame =
       visible && this.raster >= FIRST_VISIBLE_RASTER && this.raster <= LAST_VISIBLE_RASTER;
     const rowBase = (this.raster - FIRST_VISIBLE_RASTER) * FRAME_WIDTH;
     const fx0 = (c - FIRST_VISIBLE_CYCLE) * 8;
-    const x0 = ((((c - FIRST_VISIBLE_CYCLE) * 8 + 496) % 504) + 504) % 504;
 
     for (let i = 0; i < 8; i++) {
-      const x = (x0 + i) % 504;
-      if (visible) {
-        // Bauer 3.9: the border flip-flops are driven by the X and Y comparisons.
-        if (x === 344 ? this.cselPrev : x === 335 && !csel) this.mainBorder = true;
-        if (x === 24 ? this.cselPrev : x === 31 && !csel) {
-          if (this.raster === bottom) this.setVerticalBorder = true;
-          this.verticalBorder = this.setVerticalBorder;
-          if (!this.verticalBorder) this.mainBorder = false;
-        }
-      }
       // 6569: pixel 0 of a cycle still uses the colour registers of the previous cycle.
       const cregs = i === 0 ? this.prevCregs : regs;
       let colour = this.pipeColor[base + i]!;
@@ -495,7 +524,8 @@ export class VicII implements IoChip {
         if (!(this.spPri[base + i] && fg)) colour = cregs[this.spReg[base + i]!]! & 0x0f;
       }
       if (writeFrame) {
-        this.frame[rowBase + fx0 + i] = PALETTE[this.mainBorder ? cregs[0x20]! & 0x0f : colour]!;
+        this.frame[rowBase + fx0 + i] =
+          PALETTE[this.borderPixels[i] ? cregs[0x20]! & 0x0f : colour]!;
       }
     }
   }
