@@ -711,7 +711,7 @@
     "name": "spritefetchbug/test-136-2a.prg",
     "prg": "VICII/spritefetchbug/test-136-2a.prg",
     "reference": "VICII/spritefetchbug/references/test-136-2a.prg.png",
-    "expect": "known-fail:160 px differ; unanalysed (#43)",
+    "expect": "known-fail:160 px differ; VICE bug #217: the reference was redrawn for real hardware (low bit of each multicolour sprite pair cleared), x64sc and we draw the VICE result (#43)",
     "mismatches": 160
   },
   {
@@ -826,7 +826,7 @@
     "name": "vicii_timing/vicii_reg_timing-a5.prg",
     "prg": "VICII/vicii_timing/vicii_reg_timing-a5.prg",
     "reference": "VICII/vicii_timing/references/vicii_reg_timing-a5.prg.png",
-    "expect": "known-fail:7 px differ; unanalysed (#43)",
+    "expect": "known-fail:7 px differ; hand-tweaked reference tagged unsafe in the testbench, one extra foreground pixel at the mode switch; x64sc r46274 renders identical pixels (#43)",
     "mismatches": 7,
     "start": 2080
   },
@@ -834,7 +834,7 @@
     "name": "vicii_timing/vicii_reg_timing-ff.prg",
     "prg": "VICII/vicii_timing/vicii_reg_timing-ff.prg",
     "reference": "VICII/vicii_timing/references/vicii_reg_timing-ff.prg.png",
-    "expect": "known-fail:7 px differ; unanalysed (#43)",
+    "expect": "known-fail:7 px differ; hand-tweaked reference tagged unsafe in the testbench, one extra foreground pixel at the mode switch; x64sc r46274 renders identical pixels (#43)",
     "mismatches": 7,
     "start": 2080
   },
@@ -855,7 +855,7 @@
     "name": "videomode/videomode-v.prg",
     "prg": "VICII/videomode/videomode-v.prg",
     "reference": "VICII/videomode/references/videomode-v.prg.png",
-    "expect": "known-fail:6 px differ; unanalysed (#43)",
+    "expect": "known-fail:6 px differ; hand-crafted reference tagged unsafe, matched to one unpublished breadbox, mode-switch pixels the readme calls uncertain; x64sc r46274 renders identical pixels (#43)",
     "mismatches": 6
   },
   {
@@ -873,28 +873,28 @@
     "name": "videomode/videomode-x.prg",
     "prg": "VICII/videomode/videomode-x.prg",
     "reference": "VICII/videomode/references/videomode-x.prg.png",
-    "expect": "known-fail:10 px differ; unanalysed (#43)",
+    "expect": "known-fail:10 px differ; hand-crafted reference tagged unsafe, matched to one unpublished breadbox, mode-switch pixels the readme calls uncertain; x64sc r46274 renders identical pixels (#43)",
     "mismatches": 10
   },
   {
     "name": "videomode/videomode-y.prg",
     "prg": "VICII/videomode/videomode-y.prg",
     "reference": "VICII/videomode/references/videomode-y.prg.png",
-    "expect": "known-fail:1 px differ; unanalysed (#43)",
+    "expect": "known-fail:1 px differ; hand-crafted reference tagged unsafe, matched to one unpublished breadbox, mode-switch pixels the readme calls uncertain; x64sc r46274 renders identical pixels (#43)",
     "mismatches": 1
   },
   {
     "name": "videomode/videomode-z.prg",
     "prg": "VICII/videomode/videomode-z.prg",
     "reference": "VICII/videomode/references/videomode-z.prg.png",
-    "expect": "known-fail:2 px differ; unanalysed (#43)",
+    "expect": "known-fail:2 px differ; hand-crafted reference tagged unsafe, matched to one unpublished breadbox, mode-switch pixels the readme calls uncertain; x64sc r46274 renders identical pixels (#43)",
     "mismatches": 2
   },
   {
     "name": "videomode/videomode1.prg",
     "prg": "VICII/videomode/videomode1.prg",
     "reference": "VICII/videomode/references/videomode1.prg.png",
-    "expect": "known-fail:2 px differ; unanalysed (#43)",
+    "expect": "known-fail:2 px differ; hand-crafted reference tagged unsafe, matched to one unpublished breadbox, mode-switch pixels the readme calls uncertain; x64sc r46274 renders identical pixels (#43)",
     "mismatches": 2
   },
   {
