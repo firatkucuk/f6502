@@ -28,14 +28,9 @@ function line(
   const masks = new Array<number>(504).fill(0);
   for (let c = 1; c <= 63; c++) {
     r.sprites.cycle(c, raster);
-    if (r.sprites.busy) {
-      const x0 = ((((c - 12) * 8 + 496) % 504) + 504) % 504;
-      for (let i = 0; i < 8; i++) {
-        const x = (x0 + i) % 504;
-        r.sprites.sample(x);
-        masks[x] = r.sprites.mask;
-      }
-    }
+    const x0 = ((((c - 12) * 8 + 496) % 504) + 504) % 504;
+    r.sprites.drawCycle(c, x0);
+    for (let i = 0; i < 8; i++) masks[(x0 + i) % 504] = r.sprites.outMask[i]!;
     if (afterCycle && afterCycle.cycle === c) afterCycle.fn();
   }
   return masks;
@@ -214,8 +209,36 @@ describe('X-expand switched mid-sprite', () => {
     // Cycle 25 covers X 96..103: switch to X-expand once it has been drawn.
     const masks = line(r, 52, { cycle: 25, fn: () => (r.regs[0x1d] = 0x01) });
     expect(masks.slice(96, 104)).toEqual([1, 0, 0, 1, 0, 0, 1, 0]); // source pixels 0..7
-    // Expanded from X=104: source pixel 8, 9, 10, 11, 12 each two pixels wide.
-    expect(masks.slice(104, 114)).toEqual([0, 0, 1, 1, 0, 0, 0, 0, 1, 1]);
+    // VICE latches X-expand at pixel 6 of the cycle group after the write: source pixels 8..13
+    // stay one pixel wide (X 104..109), then 14 and 15 are two pixels wide.
+    expect(masks.slice(104, 114)).toEqual([0, 1, 0, 0, 1, 0, 0, 0, 1, 1]);
+  });
+});
+
+describe('sprite X compare uses the position latched at the end of the previous cycle', () => {
+  function xRun(afterCycle: number): number[] {
+    const r = rig();
+    r.regs[0x15] = 0x01;
+    r.regs[0] = 100;
+    r.regs[1] = 50;
+    r.ram[0x07f8] = 0x40;
+    for (let row = 0; row < 21; row++) r.ram.set([0xff, 0xff, 0xff], 0x40 * 64 + row * 3);
+    for (let raster = 40; raster <= 51; raster++) line(r, raster);
+    // Cycle 25 draws X 96..103: the compare for X=100 happens there.
+    return line(r, 52, { cycle: afterCycle, fn: () => (r.regs[0] = 150) });
+  }
+
+  it('a write after cycle 23 has been drawn moves the start to the new X', () => {
+    const masks = xRun(23);
+    expect(masks[100]).toBe(0);
+    expect(masks[150]).toBe(1);
+  });
+
+  it('a write after cycle 24 has been drawn is too late for the group of cycle 25', () => {
+    const masks = xRun(24);
+    expect(masks[100]).toBe(1);
+    expect(masks[110]).toBe(1);
+    expect(masks[150]).toBe(0); // the sprite started at 100; the new X does not restart it
   });
 });
 

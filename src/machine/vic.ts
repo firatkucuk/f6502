@@ -20,7 +20,7 @@ const LAST_G_CYCLE = 55;
  * sprite positions see the registers of those later cycles.
  */
 const PIXEL_DELAY = 2;
-const SPRITE_DELAY = 1;
+const SPRITE_DELAY = 2;
 const FIRST_C_CYCLE = 15;
 const LAST_C_CYCLE = 54;
 const FIRST_VISIBLE_RASTER = 15;
@@ -93,6 +93,7 @@ export class VicII implements IoChip {
   private readonly spMask = new Uint8Array(64 * 8);
   private readonly spLow = new Uint8Array(64 * 8);
   private readonly spReg = new Uint8Array(64 * 8);
+  private readonly spPri = new Uint8Array(64 * 8);
   /** Whether the sprite stage produced any pixel data for a cycle (indexed by cycle & 63). */
   private readonly spriteActive = new Uint8Array(64);
   private readonly shiftedFg = new Uint8Array(8);
@@ -449,23 +450,23 @@ export class VicII implements IoChip {
   /** Generates the sprite pixels of screen cycle `c` into the ring (SPRITE_DELAY after it). */
   private spriteStage(c: number): void {
     const base = (c & 63) * 8;
-    if (!this.sprites.busy) {
-      if (this.spriteActive[c & 63]) this.spMask.fill(0, base, base + 8);
-      this.spriteActive[c & 63] = 0;
-      return;
-    }
-    this.spriteActive[c & 63] = 1;
     const x0 = ((((c - FIRST_VISIBLE_CYCLE) * 8 + 496) % 504) + 504) % 504;
+    const sp = this.sprites;
+    sp.drawCycle(c, x0);
+    let any = 0;
     for (let i = 0; i < 8; i++) {
-      this.sprites.sample((x0 + i) % 504);
-      const mask = this.sprites.mask;
+      const mask = sp.outMask[i]!;
       this.spMask[base + i] = mask;
+      any |= mask;
       if (mask !== 0) {
-        const n = 31 - Math.clz32(mask & -mask); // lowest-numbered sprite wins
+        const n = sp.outLow[i]!;
+        const pix = sp.outPix[i]!;
         this.spLow[base + i] = n;
-        this.spReg[base + i] = this.sprites.colorReg[n]!;
+        this.spReg[base + i] = pix === 1 ? 0x25 : pix === 3 ? 0x26 : 0x27 + n;
+        this.spPri[base + i] = sp.outPri[i]!;
       }
     }
+    this.spriteActive[c & 63] = any !== 0 ? 1 : 0;
   }
 
   /** Composes the pixels of screen cycle `c`: graphics, sprites and border (PIXEL_DELAY after it). */
@@ -503,7 +504,7 @@ export class VicII implements IoChip {
         if ((mask & (mask - 1)) !== 0) this.hitSprites(mask);
         if (fg) this.hitBackground(mask);
         const n = this.spLow[base + i]!;
-        if (!((regs[0x1b]! >> n) & 1 && fg)) colour = cregs[this.spReg[base + i]!]! & 0x0f;
+        if (!(this.spPri[base + i] && fg)) colour = cregs[this.spReg[base + i]!]! & 0x0f;
       }
       if (writeFrame) {
         this.frame[rowBase + fx0 + i] = PALETTE[this.mainBorder ? cregs[0x20]! & 0x0f : colour]!;

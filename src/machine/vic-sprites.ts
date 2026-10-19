@@ -17,28 +17,34 @@ export class VicSprites {
   readonly mc = new Uint8Array(8);
   private readonly expandFF = new Uint8Array(8).fill(1);
   private readonly data = new Int32Array(8);
-  private readonly shiftData = new Int32Array(8);
-  /** Source pixel (0..23) each running shifter outputs next, or -1 when idle. */
-  private readonly pos = new Int16Array(8).fill(-1);
-  /** X-expansion flip-flop: set while a shifter holds its source pixel for a second pixel. */
-  private readonly hold = new Uint8Array(8);
+  /** VICE draw state (vicii-draw-cycle.c): shift registers, pixel registers and flip-flops. */
+  private readonly sbufReg = new Int32Array(8);
+  private readonly pixelReg = new Uint8Array(8);
+  private readonly xPipe = new Int16Array(8);
+  private expxFlops = 0;
+  private mcFlops = 0;
+  private priBits = 0;
+  private mcBits = 0;
+  private expxBits = 0;
+  private pending = 0;
+  private activeBits = 0;
+  private haltBits = 0;
+  /** Per pixel of the last `drawCycle()`: sprite mask, lowest sprite, its pixel (1..3), priority. */
+  readonly outMask = new Uint8Array(8);
+  readonly outLow = new Uint8Array(8);
+  readonly outPix = new Uint8Array(8);
+  readonly outPri = new Uint8Array(8);
   /** Bitmask of sprites whose display flag is on. */
   active = 0;
-  private running = 0;
   /** Cycle whose events ran last; a $D017 write lands after it. */
   private lastCycle = 0;
   /** Sprites whose expansion flip-flop was set by a $D017 write between cycles 15 and 16. */
   private readonly crunched = new Uint8Array(8);
 
-  /** True while any sprite is displayed or still shifting out a started row. */
+  /** True while any sprite is displayed, pending or still shifting out a started row. */
   get busy(): boolean {
-    return (this.active | this.running) !== 0;
+    return (this.active | this.pending | this.activeBits) !== 0;
   }
-  /** Output of the last `sample()`: bit n set = sprite n has an opaque pixel here. */
-  mask = 0;
-  readonly colors = new Uint8Array(8);
-  /** Colour register ($D025/$D026/$D027+n) each sprite's last opaque pixel takes its colour from. */
-  readonly colorReg = new Uint8Array(8);
 
   constructor(
     private readonly regs: Uint8Array,
@@ -49,16 +55,16 @@ export class VicSprites {
     this.dma.fill(0);
     this.display.fill(0);
     this.mcBase.fill(0);
-    this.running = 0;
     this.crunched.fill(0);
     this.mc.fill(0);
     this.expandFF.fill(1);
     this.data.fill(0);
-    this.shiftData.fill(0);
-    this.pos.fill(-1);
-    this.hold.fill(0);
+    this.sbufReg.fill(0);
+    this.pixelReg.fill(0);
+    this.xPipe.fill(0);
+    this.expxFlops = this.mcFlops = this.priBits = this.mcBits = this.expxBits = 0;
+    this.pending = this.activeBits = this.haltBits = 0;
     this.active = 0;
-    this.mask = 0;
   }
 
   /**
@@ -131,49 +137,103 @@ export class VicSprites {
     if (n >= 0) this.fetch(n);
   }
 
-  /** Advances every active shifter by one pixel at raster X `x`. */
-  sample(x: number): void {
+  /**
+   * Draws the 8 pixels of screen cycle `c` whose first raster X is `x0` (VICE draw_sprites8). The
+   * events of the cycle sit at fixed pixels: the display flags are copied at pixel 4 of cycle 58, a
+   * sprite's shifter is loaded at pixel 4, cut at pixel 2 and halted from pixel 3 of its pointer
+   * cycle to pixel 7 of its DMA cycle; priority and X-expand are latched at pixel 6, the
+   * multicolour flags at pixel 7, and the X positions at the end of the cycle.
+   */
+  drawCycle(c: number, x0: number): void {
     const regs = this.regs;
-    let mask = 0;
+    let dma0 = 0;
+    let dma2 = 0;
     for (let n = 0; n < 8; n++) {
-      const displayed = ((this.active >> n) & 1) !== 0;
-      let src = this.pos[n]!;
-      if (src < 0) {
-        if (!displayed) continue;
-        const sx = regs[2 * n]! | (((regs[0x10]! >> n) & 1) << 8);
-        if (x !== sx) continue;
-        src = 0;
-        this.hold[n] = 0;
-        this.shiftData[n] = this.data[n]!;
-      }
-      const word = this.shiftData[n]!;
-      let reg = -1;
-      if ((regs[0x1c]! >> n) & 1) {
-        const pair = (word >> (22 - (src & ~1))) & 3;
-        if (pair === 1) reg = 0x25;
-        else if (pair === 2) reg = 0x27 + n;
-        else if (pair === 3) reg = 0x26;
-      } else if ((word >> (23 - src)) & 1) {
-        reg = 0x27 + n;
-      }
-      if (reg >= 0) {
-        mask |= 1 << n;
-        this.colors[n] = regs[reg]! & 0x0f;
-        this.colorReg[n] = reg;
-      }
-      // The shifter advances every pixel; with X-expand set every second pixel (flip-flop).
-      if ((regs[0x1d]! >> n) & 1 && !this.hold[n]) {
-        this.hold[n] = 1;
-      } else {
-        this.hold[n] = 0;
-        src++;
-      }
-      this.pos[n] = src >= 24 ? -1 : src;
+      const p = SPRITE_P_CYCLE[n]!;
+      if (p === c) dma0 = 1 << n;
+      if ((p % 63) + 1 === c) dma2 = 1 << n;
     }
-    let running = 0;
-    for (let n = 0; n < 8; n++) if (this.pos[n]! >= 0) running |= 1 << n;
-    this.running = running;
-    this.mask = mask;
+    let candidates = 0;
+    for (let n = 0; n < 8; n++) {
+      if ((x0 & 0x1f8) === (this.xPipe[n]! & 0x1f8)) candidates |= 1 << n;
+    }
+    for (let i = 0; i < 8; i++) {
+      if (i === 2) this.activeBits &= ~dma2;
+      else if (i === 3) this.haltBits |= dma0;
+      else if (i === 4) {
+        if (c === 58) this.pending = this.active;
+        if (dma2) {
+          for (let n = 0; n < 8; n++) if ((dma2 >> n) & 1) this.sbufReg[n] = this.data[n]!;
+        }
+      } else if (i === 6) {
+        this.priBits = regs[0x1b]!;
+        this.expxBits = regs[0x1d]!;
+      } else if (i === 7) {
+        const next = regs[0x1c]!;
+        this.mcFlops &= ~(next ^ this.mcBits);
+        this.mcBits = next;
+        this.haltBits &= ~dma2;
+      }
+      this.trigger((x0 + i) % 504, candidates);
+      this.drawPixel(i);
+    }
+    for (let n = 0; n < 8; n++) this.xPipe[n] = regs[2 * n]! | (((regs[0x10]! >> n) & 1) << 8);
+  }
+
+  private trigger(x: number, candidates: number): void {
+    if (candidates === 0 || this.pending === 0) return;
+    for (let n = 0; n < 8; n++) {
+      const m = 1 << n;
+      if (
+        candidates & m &&
+        this.pending & m &&
+        !(this.activeBits & m) &&
+        !(this.haltBits & m) &&
+        x === this.xPipe[n]
+      ) {
+        this.expxFlops |= m;
+        this.mcFlops |= m;
+        this.activeBits |= m;
+      }
+    }
+  }
+
+  private drawPixel(i: number): void {
+    let mask = 0;
+    let low = -1;
+    if (this.activeBits !== 0) {
+      for (let n = 7; n >= 0; n--) {
+        const m = 1 << n;
+        if (!(this.activeBits & m)) continue;
+        if (this.sbufReg[n] === 0 && this.pixelReg[n] === 0) {
+          this.activeBits &= ~m;
+          continue;
+        }
+        if (!(this.haltBits & m)) {
+          if (this.expxFlops & m) {
+            if (this.mcBits & m) {
+              if (this.mcFlops & m) this.pixelReg[n] = (this.sbufReg[n]! >> 22) & 3;
+              this.mcFlops ^= m;
+            } else {
+              this.pixelReg[n] = ((this.sbufReg[n]! >> 23) & 1) << 1;
+            }
+          }
+          if (this.expxFlops & m) this.sbufReg[n] = this.sbufReg[n]! << 1;
+          if (this.expxBits & m) this.expxFlops ^= m;
+          else this.expxFlops |= m;
+        }
+        if (this.pixelReg[n] !== 0) {
+          low = n;
+          mask |= m;
+        }
+      }
+    }
+    this.outMask[i] = mask;
+    if (low >= 0) {
+      this.outLow[i] = low;
+      this.outPix[i] = this.pixelReg[low]!;
+      this.outPri[i] = (this.priBits >> low) & 1;
+    }
   }
 
   private dmaCheck(raster: number): void {
