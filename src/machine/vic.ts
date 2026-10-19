@@ -145,6 +145,7 @@ export class VicII implements IoChip {
     this.prefetchCycles = 4;
     this.lpLow = this.lpPending = this.lpTriggered = false;
     this.lpX = this.lpY = 0;
+    this.lastBusPhi2 = 0xff;
     this.mainBorder = true;
     this.borderState = true;
     this.verticalBorder = true;
@@ -168,19 +169,27 @@ export class VicII implements IoChip {
 
   // ---- registers --------------------------------------------------------
 
+  /**
+   * The byte on the VIC's data bus during the CPU half of the current cycle (VICE last_bus_phi2):
+   * $FF unless the CPU reads or writes a VIC register, in which case it is that value. A sprite
+   * data access that cannot fetch (DMA off, or the BA prefetch window still open) takes it.
+   */
+  private lastBusPhi2 = 0xff;
+
   read(reg: number): number {
     reg &= 0x3f;
+    let v: number;
     if (reg === 0x1e) {
-      const v = this.spriteSpriteHits;
+      v = this.spriteSpriteHits;
       this.spriteSpriteHits = 0;
-      return v;
-    }
-    if (reg === 0x1f) {
-      const v = this.spriteBgHits;
+    } else if (reg === 0x1f) {
+      v = this.spriteBgHits;
       this.spriteBgHits = 0;
-      return v;
+    } else {
+      v = this.peek(reg);
     }
-    return this.peek(reg);
+    this.lastBusPhi2 = v;
+    return v;
   }
 
   peek(reg: number): number {
@@ -217,6 +226,7 @@ export class VicII implements IoChip {
   write(reg: number, value: number): void {
     reg &= 0x3f;
     value &= 0xff;
+    this.lastBusPhi2 = value;
     switch (reg) {
       case 0x19:
         this.status &= ~(value & 0x0f);
@@ -295,7 +305,10 @@ export class VicII implements IoChip {
     const pf2 = baAt((c % CYCLES_PER_LINE) + 1) ? Math.max(0, pf0 - 1) : 4;
     this.sprites.prefetch0 = pf0 > 0;
     this.sprites.prefetch2 = pf2 > 0;
-    this.sprites.cycle(c, this.raster);
+    // The phi2 accesses of the previous cycle see the bus as the CPU left it; VICE performs them
+    // at the start of the next cycle and then clears the bus to $FF.
+    this.sprites.cycle(c, this.raster, this.lastBusPhi2);
+    this.lastBusPhi2 = 0xff;
 
     // BA for this cycle: the CPU consults it before its access. The matrix fetch holds BA only
     // while the badline condition holds (VICE re-evaluates it every cycle).

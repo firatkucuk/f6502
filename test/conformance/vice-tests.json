@@ -535,8 +535,7 @@
     "name": "sb_sprite_fetch/sbsprf24-164.prg",
     "prg": "VICII/sb_sprite_fetch/sbsprf24-164.prg",
     "reference": "VICII/sb_sprite_fetch/references/sbsprf24-164.prg.png",
-    "expect": "known-fail:11 px differ; unanalysed (#43)",
-    "mismatches": 11
+    "expect": "pass"
   },
   {
     "name": "screenpos/screenpos.prg",

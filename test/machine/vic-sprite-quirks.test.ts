@@ -276,7 +276,8 @@ describe('ECM address mask', () => {
       const start = vic.frameCount;
       while (vic.frameCount === start) vic.tick();
     }
-    const bitmapReads = reads.filter((a) => a >= 0x2000 && a < 0x4000);
+    // $3fff is the sprites' idle access, which ignores ECM
+    const bitmapReads = reads.filter((a) => a >= 0x2000 && a < 0x3fff);
     expect(bitmapReads.length).toBeGreaterThan(1000);
     expect(bitmapReads.every((a) => (a & 0x600) === 0)).toBe(true);
   });
