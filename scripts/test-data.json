@@ -1050,5 +1050,12 @@
       "tape/tap204060/tap204060invonce.prg": "10423bb81cb9d48170e7beb60e77e0e44d3c40af0b6a1352dec365500f94f79b",
       "tape/tap204060/tap204060inv.prg": "3e85559870f6489da986de7af7b68663f1c8f4b24c229f43d7d06a88df2e6ec5"
     }
+  },
+  "vicechargen": {
+    "repo": "VICE-Team/svn-mirror",
+    "sha": "0f9540fe6344b8ef87966e9fba1640afa0524b5e",
+    "files": {
+      "vice/data/C64/chargen-901225-01.bin": "fd0d53b8480e86163ac98998976c72cc58d5dd8eb824ed7b829774e74213b420"
+    }
   }
 }

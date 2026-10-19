@@ -2,7 +2,7 @@
 //   node scripts/fetch-test-data.mjs          verify against the pinned manifest
 //   node scripts/fetch-test-data.mjs --pin    resolve HEAD SHAs, download, write the manifest
 //   node scripts/fetch-test-data.mjs --pin <source>...  pin only the named sources (klaus,
-//       singlestep, openroms, vicetests, sidtests, vdrive, tapetests); other manifest entries are kept. A bare --pin re-pins ALL sources
+//       singlestep, openroms, vicechargen, vicetests, sidtests, vdrive, tapetests); other manifest entries are kept. A bare --pin re-pins ALL sources
 //       and re-downloads everything (singlestep is about 1.1 GB).
 //   node scripts/fetch-test-data.mjs <source>...        verify/download only the named sources
 import { execSync } from 'node:child_process';
@@ -105,6 +105,13 @@ const SOURCES = {
       'LICENSE',
       'COPYING',
     ],
+  },
+  // The stock character ROM the VICE reference screenshots were rendered with. Downloaded on
+  // demand like the other sources and never committed.
+  vicechargen: {
+    repo: 'VICE-Team/svn-mirror',
+    dest: 'vicechargen',
+    files: ['vice/data/C64/chargen-901225-01.bin'],
   },
   vicetests: { repo: 'libsidplayfp/VICE-testprogs', dest: 'vicetests', list: listViceTests },
   vdrive: {

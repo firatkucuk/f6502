@@ -3,21 +3,19 @@
     "name": "D011Test/disable-bad.prg",
     "prg": "VICII/D011Test/disable-bad.prg",
     "reference": "VICII/D011Test/references/disable-bad.prg.png",
-    "expect": "known-fail:400 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 400
+    "expect": "pass"
   },
   {
     "name": "banking/banking.prg",
     "prg": "VICII/banking/banking.prg",
     "reference": "VICII/banking/references/banking.prg.png",
-    "expect": "known-fail:3480 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 3480
+    "expect": "pass"
   },
   {
     "name": "border/border-250.prg",
     "prg": "VICII/border/border-250.prg",
     "reference": "VICII/border/references/border-250.prg.png",
-    "expect": "known-fail:1286 px differ; unanalysed, may include stock-charset glyph differences (#43)",
+    "expect": "known-fail:1286 px differ; unanalysed (#43)",
     "mismatches": 1286
   },
   {
@@ -36,43 +34,42 @@
     "name": "border/border-bm-idle.prg",
     "prg": "VICII/border/border-bm-idle.prg",
     "reference": "VICII/border/references/border-bm-idle.prg.png",
-    "expect": "known-fail:8112 px differ; unanalysed, may include stock-charset glyph differences (#43)",
+    "expect": "known-fail:8112 px differ; unanalysed (#43)",
     "mismatches": 8112
   },
   {
     "name": "border/border-bm-ysh.prg",
     "prg": "VICII/border/border-bm-ysh.prg",
     "reference": "VICII/border/references/border-bm-ysh.prg.png",
-    "expect": "known-fail:5335 px differ; unanalysed, may include stock-charset glyph differences (#43)",
+    "expect": "known-fail:5335 px differ; unanalysed (#43)",
     "mismatches": 5335
   },
   {
     "name": "border/border-bm-ysh2.prg",
     "prg": "VICII/border/border-bm-ysh2.prg",
     "reference": "VICII/border/references/border-bm-ysh2.prg.png",
-    "expect": "known-fail:4652 px differ; unanalysed, may include stock-charset glyph differences (#43)",
+    "expect": "known-fail:4652 px differ; unanalysed (#43)",
     "mismatches": 4652
   },
   {
     "name": "border/border-mcbm.prg",
     "prg": "VICII/border/border-mcbm.prg",
     "reference": "VICII/border/references/border-mcbm.prg.png",
-    "expect": "known-fail:1472 px differ; unanalysed, may include stock-charset glyph differences (#43)",
+    "expect": "known-fail:1472 px differ; unanalysed (#43)",
     "mismatches": 1472
   },
   {
     "name": "border/hvborder1.prg",
     "prg": "VICII/border/hvborder1.prg",
     "reference": "VICII/border/references/hvborder1.prg.png",
-    "expect": "known-fail:532 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 532
+    "expect": "pass"
   },
   {
     "name": "border/hvborder2.prg",
     "prg": "VICII/border/hvborder2.prg",
     "reference": "VICII/border/references/hvborder2.prg.png",
-    "expect": "known-fail:1108 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 1108
+    "expect": "known-fail:460 px differ; unanalysed (#43)",
+    "mismatches": 460
   },
   {
     "name": "border/vborder-32-08.prg",
@@ -106,43 +103,38 @@
     "name": "border/vborder2-21.prg",
     "prg": "VICII/border/vborder2-21.prg",
     "reference": "VICII/border/references/vborder2-21.prg.png",
-    "expect": "known-fail:1303 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 1303
+    "expect": "pass"
   },
   {
     "name": "border/vborder2-22.prg",
     "prg": "VICII/border/vborder2-22.prg",
     "reference": "VICII/border/references/vborder2-22.prg.png",
-    "expect": "known-fail:665 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 665
+    "expect": "pass"
   },
   {
     "name": "border/vborder2-35.prg",
     "prg": "VICII/border/vborder2-35.prg",
     "reference": "VICII/border/references/vborder2-35.prg.png",
-    "expect": "known-fail:672 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 672
+    "expect": "pass"
   },
   {
     "name": "border/vborder2-36.prg",
     "prg": "VICII/border/vborder2-36.prg",
     "reference": "VICII/border/references/vborder2-36.prg.png",
-    "expect": "known-fail:983 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 983
+    "expect": "known-fail:320 px differ; unanalysed (#43)",
+    "mismatches": 320
   },
   {
     "name": "border/vborder2-63.prg",
     "prg": "VICII/border/vborder2-63.prg",
     "reference": "VICII/border/references/vborder2-63.prg.png",
-    "expect": "known-fail:823 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 823
+    "expect": "pass"
   },
   {
     "name": "border/vborder2-64.prg",
     "prg": "VICII/border/vborder2-64.prg",
     "reference": "VICII/border/references/vborder2-64.prg.png",
-    "expect": "known-fail:1323 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 1323
+    "expect": "pass"
   },
   {
     "name": "colorfetchbug/bitmap.prg",
@@ -154,29 +146,25 @@
     "name": "colorfetchbug/main.prg",
     "prg": "VICII/colorfetchbug/main.prg",
     "reference": "VICII/colorfetchbug/references/main.prg.png",
-    "expect": "known-fail:3094 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 3094
+    "expect": "pass"
   },
   {
     "name": "colorfetchbug/main2.prg",
     "prg": "VICII/colorfetchbug/main2.prg",
     "reference": "VICII/colorfetchbug/references/main2.prg.png",
-    "expect": "known-fail:3465 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 3465
+    "expect": "pass"
   },
   {
     "name": "colorfetchbug/main3.prg",
     "prg": "VICII/colorfetchbug/main3.prg",
     "reference": "VICII/colorfetchbug/references/main3.prg.png",
-    "expect": "known-fail:3493 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 3493
+    "expect": "pass"
   },
   {
     "name": "colorfetchbug/main4.prg",
     "prg": "VICII/colorfetchbug/main4.prg",
     "reference": "VICII/colorfetchbug/references/main4.prg.png",
-    "expect": "known-fail:3493 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 3493
+    "expect": "pass"
   },
   {
     "name": "colorsplit/colorsplit.prg",
@@ -188,36 +176,31 @@
     "name": "dentest/den01-48-0.prg",
     "prg": "VICII/dentest/den01-48-0.prg",
     "reference": "VICII/dentest/references/den01-48-0.prg.png",
-    "expect": "known-fail:1225 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 1225
+    "expect": "pass"
   },
   {
     "name": "dentest/den01-48-1.prg",
     "prg": "VICII/dentest/den01-48-1.prg",
     "reference": "VICII/dentest/references/den01-48-1.prg.png",
-    "expect": "known-fail:1225 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 1225
+    "expect": "pass"
   },
   {
     "name": "dentest/den01-48-2.prg",
     "prg": "VICII/dentest/den01-48-2.prg",
     "reference": "VICII/dentest/references/den01-48-2.prg.png",
-    "expect": "known-fail:1227 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 1227
+    "expect": "pass"
   },
   {
     "name": "dentest/den01-49-0.prg",
     "prg": "VICII/dentest/den01-49-0.prg",
     "reference": "VICII/dentest/references/den01-49-0.prg.png",
-    "expect": "known-fail:1224 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 1224
+    "expect": "pass"
   },
   {
     "name": "dentest/den01-49-1.prg",
     "prg": "VICII/dentest/den01-49-1.prg",
     "reference": "VICII/dentest/references/den01-49-1.prg.png",
-    "expect": "known-fail:1224 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 1224
+    "expect": "pass"
   },
   {
     "name": "dentest/den01-49-2.prg",
@@ -241,8 +224,7 @@
     "name": "dentest/den10-48-2.prg",
     "prg": "VICII/dentest/den10-48-2.prg",
     "reference": "VICII/dentest/references/den10-48-2.prg.png",
-    "expect": "known-fail:1227 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 1227
+    "expect": "pass"
   },
   {
     "name": "dentest/den10-51-0.prg",
@@ -254,22 +236,19 @@
     "name": "dentest/den10-51-1.prg",
     "prg": "VICII/dentest/den10-51-1.prg",
     "reference": "VICII/dentest/references/den10-51-1.prg.png",
-    "expect": "known-fail:1212 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 1212
+    "expect": "pass"
   },
   {
     "name": "dentest/den10-51-2.prg",
     "prg": "VICII/dentest/den10-51-2.prg",
     "reference": "VICII/dentest/references/den10-51-2.prg.png",
-    "expect": "known-fail:1214 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 1214
+    "expect": "pass"
   },
   {
     "name": "dentest/den10-51-3.prg",
     "prg": "VICII/dentest/den10-51-3.prg",
     "reference": "VICII/dentest/references/den10-51-3.prg.png",
-    "expect": "known-fail:1214 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 1214
+    "expect": "pass"
   },
   {
     "name": "dentest/denrsel-0.prg",
@@ -281,22 +260,19 @@
     "name": "dentest/denrsel-1.prg",
     "prg": "VICII/dentest/denrsel-1.prg",
     "reference": "VICII/dentest/references/denrsel-1.prg.png",
-    "expect": "known-fail:1244 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 1244
+    "expect": "pass"
   },
   {
     "name": "dentest/denrsel-2.prg",
     "prg": "VICII/dentest/denrsel-2.prg",
     "reference": "VICII/dentest/references/denrsel-2.prg.png",
-    "expect": "known-fail:1246 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 1246
+    "expect": "pass"
   },
   {
     "name": "dentest/denrsel-63.prg",
     "prg": "VICII/dentest/denrsel-63.prg",
     "reference": "VICII/dentest/references/denrsel-63.prg.png",
-    "expect": "known-fail:1248 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 1248
+    "expect": "pass"
   },
   {
     "name": "dentest/denrsel-s0.prg",
@@ -308,246 +284,214 @@
     "name": "dentest/denrsel-s1.prg",
     "prg": "VICII/dentest/denrsel-s1.prg",
     "reference": "VICII/dentest/references/denrsel-s1.prg.png",
-    "expect": "known-fail:1253 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 1253
+    "expect": "pass"
   },
   {
     "name": "dentest/denrsel-s2.prg",
     "prg": "VICII/dentest/denrsel-s2.prg",
     "reference": "VICII/dentest/references/denrsel-s2.prg.png",
-    "expect": "known-fail:1255 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 1255
+    "expect": "pass"
   },
   {
     "name": "dentest/denrsel55.prg",
     "prg": "VICII/dentest/denrsel55.prg",
     "reference": "VICII/dentest/references/denrsel55.prg.png",
-    "expect": "known-fail:1046 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 1046
+    "expect": "pass"
   },
   {
     "name": "dmadelay/test1-2a-03.prg",
     "prg": "VICII/dmadelay/test1-2a-03.prg",
     "reference": "VICII/dmadelay/references/test1-2a-03.prg.png",
-    "expect": "known-fail:1562 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 1562
+    "expect": "pass"
   },
   {
     "name": "dmadelay/test1-2a-04.prg",
     "prg": "VICII/dmadelay/test1-2a-04.prg",
     "reference": "VICII/dmadelay/references/test1-2a-04.prg.png",
-    "expect": "known-fail:1431 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 1431
+    "expect": "pass"
   },
   {
     "name": "dmadelay/test1-2a-10.prg",
     "prg": "VICII/dmadelay/test1-2a-10.prg",
     "reference": "VICII/dmadelay/references/test1-2a-10.prg.png",
-    "expect": "known-fail:1409 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 1409
+    "expect": "pass"
   },
   {
     "name": "dmadelay/test1-2a-11.prg",
     "prg": "VICII/dmadelay/test1-2a-11.prg",
     "reference": "VICII/dmadelay/references/test1-2a-11.prg.png",
-    "expect": "known-fail:1560 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 1560
+    "expect": "pass"
   },
   {
     "name": "dmadelay/test1-2a-16.prg",
     "prg": "VICII/dmadelay/test1-2a-16.prg",
     "reference": "VICII/dmadelay/references/test1-2a-16.prg.png",
-    "expect": "known-fail:1560 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 1560
+    "expect": "pass"
   },
   {
     "name": "dmadelay/test1-2a-17.prg",
     "prg": "VICII/dmadelay/test1-2a-17.prg",
     "reference": "VICII/dmadelay/references/test1-2a-17.prg.png",
-    "expect": "known-fail:1423 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 1423
+    "expect": "pass"
   },
   {
     "name": "dmadelay/test1-2a-18.prg",
     "prg": "VICII/dmadelay/test1-2a-18.prg",
     "reference": "VICII/dmadelay/references/test1-2a-18.prg.png",
-    "expect": "known-fail:1423 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 1423
+    "expect": "pass"
   },
   {
     "name": "dmadelay/test2-28-05.prg",
     "prg": "VICII/dmadelay/test2-28-05.prg",
     "reference": "VICII/dmadelay/references/test2-28-05.prg.png",
-    "expect": "known-fail:1567 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 1567
+    "expect": "pass"
   },
   {
     "name": "dmadelay/test2-28-06.prg",
     "prg": "VICII/dmadelay/test2-28-06.prg",
     "reference": "VICII/dmadelay/references/test2-28-06.prg.png",
-    "expect": "known-fail:1407 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 1407
+    "expect": "pass"
   },
   {
     "name": "dmadelay/test2-28-11.prg",
     "prg": "VICII/dmadelay/test2-28-11.prg",
     "reference": "VICII/dmadelay/references/test2-28-11.prg.png",
-    "expect": "known-fail:1407 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 1407
+    "expect": "pass"
   },
   {
     "name": "dmadelay/test2-28-12.prg",
     "prg": "VICII/dmadelay/test2-28-12.prg",
     "reference": "VICII/dmadelay/references/test2-28-12.prg.png",
-    "expect": "known-fail:1560 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 1560
+    "expect": "pass"
   },
   {
     "name": "dmadelay/test2-28-16.prg",
     "prg": "VICII/dmadelay/test2-28-16.prg",
     "reference": "VICII/dmadelay/references/test2-28-16.prg.png",
-    "expect": "known-fail:1558 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 1558
+    "expect": "pass"
   },
   {
     "name": "dmadelay/test2-28-17.prg",
     "prg": "VICII/dmadelay/test2-28-17.prg",
     "reference": "VICII/dmadelay/references/test2-28-17.prg.png",
-    "expect": "known-fail:1421 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 1421
+    "expect": "pass"
   },
   {
     "name": "dmadelay/test2-28-18.prg",
     "prg": "VICII/dmadelay/test2-28-18.prg",
     "reference": "VICII/dmadelay/references/test2-28-18.prg.png",
-    "expect": "known-fail:1421 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 1421
+    "expect": "pass"
   },
   {
     "name": "dmadelay/test3-28-07.prg",
     "prg": "VICII/dmadelay/test3-28-07.prg",
     "reference": "VICII/dmadelay/references/test3-28-07.prg.png",
-    "expect": "known-fail:1572 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 1572
+    "expect": "pass"
   },
   {
     "name": "dmadelay/test3-28-08.prg",
     "prg": "VICII/dmadelay/test3-28-08.prg",
     "reference": "VICII/dmadelay/references/test3-28-08.prg.png",
-    "expect": "known-fail:1407 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 1407
+    "expect": "pass"
   },
   {
     "name": "dmadelay/test3-28-13.prg",
     "prg": "VICII/dmadelay/test3-28-13.prg",
     "reference": "VICII/dmadelay/references/test3-28-13.prg.png",
-    "expect": "known-fail:1409 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 1409
+    "expect": "pass"
   },
   {
     "name": "dmadelay/test3-28-14.prg",
     "prg": "VICII/dmadelay/test3-28-14.prg",
     "reference": "VICII/dmadelay/references/test3-28-14.prg.png",
-    "expect": "known-fail:1580 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 1580
+    "expect": "pass"
   },
   {
     "name": "dmadelay/test3-28-18.prg",
     "prg": "VICII/dmadelay/test3-28-18.prg",
     "reference": "VICII/dmadelay/references/test3-28-18.prg.png",
-    "expect": "known-fail:1558 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 1558
+    "expect": "pass"
   },
   {
     "name": "dmadelay/test3-28-19.prg",
     "prg": "VICII/dmadelay/test3-28-19.prg",
     "reference": "VICII/dmadelay/references/test3-28-19.prg.png",
-    "expect": "known-fail:1406 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 1406
+    "expect": "pass"
   },
   {
     "name": "dmadelay/test3-28-1a.prg",
     "prg": "VICII/dmadelay/test3-28-1a.prg",
     "reference": "VICII/dmadelay/references/test3-28-1a.prg.png",
-    "expect": "known-fail:1425 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 1425
+    "expect": "pass"
   },
   {
     "name": "fldscroll/fldscroll-20-60.prg",
     "prg": "VICII/fldscroll/fldscroll-20-60.prg",
     "reference": "VICII/fldscroll/references/fldscroll-20-60.prg.png",
-    "expect": "known-fail:2200 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 2200
+    "expect": "pass"
   },
   {
     "name": "fldscroll/fldscroll-21-60.prg",
     "prg": "VICII/fldscroll/fldscroll-21-60.prg",
     "reference": "VICII/fldscroll/references/fldscroll-21-60.prg.png",
-    "expect": "known-fail:2280 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 2280
+    "expect": "pass"
   },
   {
     "name": "fldscroll/fldscroll-22-60.prg",
     "prg": "VICII/fldscroll/fldscroll-22-60.prg",
     "reference": "VICII/fldscroll/references/fldscroll-22-60.prg.png",
-    "expect": "known-fail:2286 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 2286
+    "expect": "pass"
   },
   {
     "name": "fldscroll/fldscroll-29-60.prg",
     "prg": "VICII/fldscroll/fldscroll-29-60.prg",
     "reference": "VICII/fldscroll/references/fldscroll-29-60.prg.png",
-    "expect": "known-fail:2277 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 2277
+    "expect": "pass"
   },
   {
     "name": "fldscroll/fldscroll-2A-60.prg",
     "prg": "VICII/fldscroll/fldscroll-2A-60.prg",
     "reference": "VICII/fldscroll/references/fldscroll-2A-60.prg.png",
-    "expect": "known-fail:4513 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 4513
+    "expect": "pass"
   },
   {
     "name": "fldscroll/fldscroll-2B-60.prg",
     "prg": "VICII/fldscroll/fldscroll-2B-60.prg",
     "reference": "VICII/fldscroll/references/fldscroll-2B-60.prg.png",
-    "expect": "known-fail:4529 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 4529
+    "expect": "pass"
   },
   {
     "name": "flibug/blackmail-ee.prg",
     "prg": "VICII/flibug/blackmail-ee.prg",
     "reference": "VICII/flibug/references/blackmail-ee.prg.png",
-    "expect": "known-fail:44476 px differ; unanalysed, may include stock-charset glyph differences (#43)",
+    "expect": "known-fail:44476 px differ; unanalysed (#43)",
     "mismatches": 44476
   },
   {
     "name": "flibug/blackmail-fixed.prg",
     "prg": "VICII/flibug/blackmail-fixed.prg",
     "reference": "VICII/flibug/references/blackmail-fixed.prg.png",
-    "expect": "known-fail:44476 px differ; unanalysed, may include stock-charset glyph differences (#43)",
+    "expect": "known-fail:44476 px differ; unanalysed (#43)",
     "mismatches": 44476
   },
   {
     "name": "frodotests/text26.prg",
     "prg": "VICII/frodotests/text26.prg",
     "reference": "VICII/frodotests/references/text26.prg.png",
-    "expect": "known-fail:29865 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 29865
+    "expect": "known-fail:29726 px differ; unanalysed (#43)",
+    "mismatches": 29726
   },
   {
     "name": "gfxfetch/gfxfetch.prg",
     "prg": "VICII/gfxfetch/gfxfetch.prg",
     "reference": "VICII/gfxfetch/references/gfxfetch.prg.png",
-    "expect": "known-fail:1934 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 1934
+    "expect": "pass"
   },
   {
     "name": "greydot/greydot.prg",
     "prg": "VICII/greydot/greydot.prg",
     "reference": "VICII/greydot/references/greydot.prg.png",
-    "expect": "known-fail:273 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 273
+    "expect": "pass"
   },
   {
     "name": "lp-trigger/test1.prg",
@@ -559,29 +503,27 @@
     "name": "rasterirq/rasterirq_hold.prg",
     "prg": "VICII/rasterirq/rasterirq_hold.prg",
     "reference": "VICII/rasterirq/references/rasterirq_hold.prg.png",
-    "expect": "known-fail:1440 px differ; stock-charset glyph differences (#43)",
-    "mismatches": 1440
+    "expect": "pass"
   },
   {
     "name": "sb_sprite_fetch/sbsprf24-163.prg",
     "prg": "VICII/sb_sprite_fetch/sbsprf24-163.prg",
     "reference": "VICII/sb_sprite_fetch/references/sbsprf24-163.prg.png",
-    "expect": "known-fail:204 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 204
+    "expect": "known-fail:42 px differ; unanalysed (#43)",
+    "mismatches": 42
   },
   {
     "name": "sb_sprite_fetch/sbsprf24-164.prg",
     "prg": "VICII/sb_sprite_fetch/sbsprf24-164.prg",
     "reference": "VICII/sb_sprite_fetch/references/sbsprf24-164.prg.png",
-    "expect": "known-fail:193 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 193
+    "expect": "known-fail:11 px differ; unanalysed (#43)",
+    "mismatches": 11
   },
   {
     "name": "screenpos/screenpos.prg",
     "prg": "VICII/screenpos/screenpos.prg",
     "reference": "VICII/screenpos/references/screenpos.prg.png",
-    "expect": "known-fail:1961 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 1961
+    "expect": "pass"
   },
   {
     "name": "sequencer-bug/bug.prg",
@@ -617,36 +559,35 @@
     "name": "spritecrunch/spritecrunch-3b-00.prg",
     "prg": "VICII/spritecrunch/spritecrunch-3b-00.prg",
     "reference": "VICII/spritecrunch/references/spritecrunch-3b-00.prg.png",
-    "expect": "known-fail:818 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 818
+    "expect": "known-fail:758 px differ; unanalysed (#43)",
+    "mismatches": 758
   },
   {
     "name": "spritecrunch/spritecrunch-3c-00.prg",
     "prg": "VICII/spritecrunch/spritecrunch-3c-00.prg",
     "reference": "VICII/spritecrunch/references/spritecrunch-3c-00.prg.png",
-    "expect": "known-fail:818 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 818
+    "expect": "known-fail:758 px differ; unanalysed (#43)",
+    "mismatches": 758
   },
   {
     "name": "spritecrunch/spritecrunch-3d-00.prg",
     "prg": "VICII/spritecrunch/spritecrunch-3d-00.prg",
     "reference": "VICII/spritecrunch/references/spritecrunch-3d-00.prg.png",
-    "expect": "known-fail:818 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 818
+    "expect": "known-fail:758 px differ; unanalysed (#43)",
+    "mismatches": 758
   },
   {
     "name": "spritecrunch/spritecrunch2-07.prg",
     "prg": "VICII/spritecrunch/spritecrunch2-07.prg",
     "reference": "VICII/spritecrunch/references/spritecrunch2-07.prg.png",
-    "expect": "known-fail:38 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 38
+    "expect": "pass"
   },
   {
     "name": "spritecrunch/spritecrunch2-08.prg",
     "prg": "VICII/spritecrunch/spritecrunch2-08.prg",
     "reference": "VICII/spritecrunch/references/spritecrunch2-08.prg.png",
-    "expect": "known-fail:40 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 40
+    "expect": "known-fail:16 px differ; unanalysed (#43)",
+    "mismatches": 16
   },
   {
     "name": "spritecrunch/spritecrunch2-09.prg",
@@ -659,36 +600,31 @@
     "name": "spritecrunch/spritecrunch2-25.prg",
     "prg": "VICII/spritecrunch/spritecrunch2-25.prg",
     "reference": "VICII/spritecrunch/references/spritecrunch2-25.prg.png",
-    "expect": "known-fail:35 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 35
+    "expect": "pass"
   },
   {
     "name": "spritecrunch/spritecrunch2-26.prg",
     "prg": "VICII/spritecrunch/spritecrunch2-26.prg",
     "reference": "VICII/spritecrunch/references/spritecrunch2-26.prg.png",
-    "expect": "known-fail:26 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 26
+    "expect": "pass"
   },
   {
     "name": "spritecrunch/spritecrunch2-27.prg",
     "prg": "VICII/spritecrunch/spritecrunch2-27.prg",
     "reference": "VICII/spritecrunch/references/spritecrunch2-27.prg.png",
-    "expect": "known-fail:40 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 40
+    "expect": "pass"
   },
   {
     "name": "spritecrunch/spritecrunch2-28.prg",
     "prg": "VICII/spritecrunch/spritecrunch2-28.prg",
     "reference": "VICII/spritecrunch/references/spritecrunch2-28.prg.png",
-    "expect": "known-fail:26 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 26
+    "expect": "pass"
   },
   {
     "name": "spritecrunch/spritecrunch2-29.prg",
     "prg": "VICII/spritecrunch/spritecrunch2-29.prg",
     "reference": "VICII/spritecrunch/references/spritecrunch2-29.prg.png",
-    "expect": "known-fail:25 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 25
+    "expect": "pass"
   },
   {
     "name": "spritedma/d017-54.prg",
@@ -706,43 +642,39 @@
     "name": "spriteenable/spriteenable1.prg",
     "prg": "VICII/spriteenable/spriteenable1.prg",
     "reference": "VICII/spriteenable/references/spriteenable1.prg.png",
-    "expect": "known-fail:332 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 332
+    "expect": "pass"
   },
   {
     "name": "spriteenable/spriteenable2.prg",
     "prg": "VICII/spriteenable/spriteenable2.prg",
     "reference": "VICII/spriteenable/references/spriteenable2.prg.png",
-    "expect": "known-fail:481 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 481
+    "expect": "known-fail:8 px differ; unanalysed (#43)",
+    "mismatches": 8
   },
   {
     "name": "spriteenable/spriteenable3.prg",
     "prg": "VICII/spriteenable/spriteenable3.prg",
     "reference": "VICII/spriteenable/references/spriteenable3.prg.png",
-    "expect": "known-fail:312 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 312
+    "expect": "pass"
   },
   {
     "name": "spriteenable/spriteenable4.prg",
     "prg": "VICII/spriteenable/spriteenable4.prg",
     "reference": "VICII/spriteenable/references/spriteenable4.prg.png",
-    "expect": "known-fail:381 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 381
+    "expect": "pass"
   },
   {
     "name": "spriteenable/spriteenable5.prg",
     "prg": "VICII/spriteenable/spriteenable5.prg",
     "reference": "VICII/spriteenable/references/spriteenable5.prg.png",
-    "expect": "known-fail:339 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 339
+    "expect": "pass"
   },
   {
     "name": "spritefetchbug/test-136-2a.prg",
     "prg": "VICII/spritefetchbug/test-136-2a.prg",
     "reference": "VICII/spritefetchbug/references/test-136-2a.prg.png",
-    "expect": "known-fail:506 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 506
+    "expect": "known-fail:249 px differ; unanalysed (#43)",
+    "mismatches": 249
   },
   {
     "name": "spritepriorities/test1.prg",
@@ -754,14 +686,14 @@
     "name": "spritesplit/ss-exp-unexp-hires.prg",
     "prg": "VICII/spritesplit/ss-exp-unexp-hires.prg",
     "reference": "VICII/spritesplit/references/ss-exp-unexp-hires.prg.png",
-    "expect": "known-fail:1276 px differ; unanalysed, may include stock-charset glyph differences (#43)",
+    "expect": "known-fail:1276 px differ; unanalysed (#43)",
     "mismatches": 1276
   },
   {
     "name": "spritesplit/ss-exp-unexp-mc.prg",
     "prg": "VICII/spritesplit/ss-exp-unexp-mc.prg",
     "reference": "VICII/spritesplit/references/ss-exp-unexp-mc.prg.png",
-    "expect": "known-fail:660 px differ; unanalysed, may include stock-charset glyph differences (#43)",
+    "expect": "known-fail:660 px differ; unanalysed (#43)",
     "mismatches": 660
   },
   {
@@ -774,14 +706,14 @@
     "name": "spritesplit/ss-hires-mc-exp.prg",
     "prg": "VICII/spritesplit/ss-hires-mc-exp.prg",
     "reference": "VICII/spritesplit/references/ss-hires-mc-exp.prg.png",
-    "expect": "known-fail:1408 px differ; unanalysed, may include stock-charset glyph differences (#43)",
+    "expect": "known-fail:1408 px differ; unanalysed (#43)",
     "mismatches": 1408
   },
   {
     "name": "spritesplit/ss-hires-mc.prg",
     "prg": "VICII/spritesplit/ss-hires-mc.prg",
     "reference": "VICII/spritesplit/references/ss-hires-mc.prg.png",
-    "expect": "known-fail:308 px differ; unanalysed, may include stock-charset glyph differences (#43)",
+    "expect": "known-fail:308 px differ; unanalysed (#43)",
     "mismatches": 308
   },
   {
@@ -806,70 +738,70 @@
     "name": "spritesplit/ss-mc-hires-exp.prg",
     "prg": "VICII/spritesplit/ss-mc-hires-exp.prg",
     "reference": "VICII/spritesplit/references/ss-mc-hires-exp.prg.png",
-    "expect": "known-fail:44 px differ; unanalysed, may include stock-charset glyph differences (#43)",
+    "expect": "known-fail:44 px differ; unanalysed (#43)",
     "mismatches": 44
   },
   {
     "name": "spritesplit/ss-mc-hires.prg",
     "prg": "VICII/spritesplit/ss-mc-hires.prg",
     "reference": "VICII/spritesplit/references/ss-mc-hires.prg.png",
-    "expect": "known-fail:88 px differ; unanalysed, may include stock-charset glyph differences (#43)",
+    "expect": "known-fail:88 px differ; unanalysed (#43)",
     "mismatches": 88
   },
   {
     "name": "spritesplit/ss-pri-exp.prg",
     "prg": "VICII/spritesplit/ss-pri-exp.prg",
     "reference": "VICII/spritesplit/references/ss-pri-exp.prg.png",
-    "expect": "known-fail:264 px differ; unanalysed, may include stock-charset glyph differences (#43)",
+    "expect": "known-fail:264 px differ; unanalysed (#43)",
     "mismatches": 264
   },
   {
     "name": "spritesplit/ss-pri-mc-exp.prg",
     "prg": "VICII/spritesplit/ss-pri-mc-exp.prg",
     "reference": "VICII/spritesplit/references/ss-pri-mc-exp.prg.png",
-    "expect": "known-fail:528 px differ; unanalysed, may include stock-charset glyph differences (#43)",
+    "expect": "known-fail:528 px differ; unanalysed (#43)",
     "mismatches": 528
   },
   {
     "name": "spritesplit/ss-pri-mc.prg",
     "prg": "VICII/spritesplit/ss-pri-mc.prg",
     "reference": "VICII/spritesplit/references/ss-pri-mc.prg.png",
-    "expect": "known-fail:528 px differ; unanalysed, may include stock-charset glyph differences (#43)",
+    "expect": "known-fail:528 px differ; unanalysed (#43)",
     "mismatches": 528
   },
   {
     "name": "spritesplit/ss-pri.prg",
     "prg": "VICII/spritesplit/ss-pri.prg",
     "reference": "VICII/spritesplit/references/ss-pri.prg.png",
-    "expect": "known-fail:264 px differ; unanalysed, may include stock-charset glyph differences (#43)",
+    "expect": "known-fail:264 px differ; unanalysed (#43)",
     "mismatches": 264
   },
   {
     "name": "spritesplit/ss-unexp-exp-hires.prg",
     "prg": "VICII/spritesplit/ss-unexp-exp-hires.prg",
     "reference": "VICII/spritesplit/references/ss-unexp-exp-hires.prg.png",
-    "expect": "known-fail:880 px differ; unanalysed, may include stock-charset glyph differences (#43)",
+    "expect": "known-fail:880 px differ; unanalysed (#43)",
     "mismatches": 880
   },
   {
     "name": "spritesplit/ss-unexp-exp-mc.prg",
     "prg": "VICII/spritesplit/ss-unexp-exp-mc.prg",
     "reference": "VICII/spritesplit/references/ss-unexp-exp-mc.prg.png",
-    "expect": "known-fail:484 px differ; unanalysed, may include stock-charset glyph differences (#43)",
+    "expect": "known-fail:484 px differ; unanalysed (#43)",
     "mismatches": 484
   },
   {
     "name": "spritesplit/ss-xpos.prg",
     "prg": "VICII/spritesplit/ss-xpos.prg",
     "reference": "VICII/spritesplit/references/ss-xpos.prg.png",
-    "expect": "known-fail:1056 px differ; unanalysed, may include stock-charset glyph differences (#43)",
+    "expect": "known-fail:1056 px differ; unanalysed (#43)",
     "mismatches": 1056
   },
   {
     "name": "vicii_timing/vicii_reg_timing-a5.prg",
     "prg": "VICII/vicii_timing/vicii_reg_timing-a5.prg",
     "reference": "VICII/vicii_timing/references/vicii_reg_timing-a5.prg.png",
-    "expect": "known-fail:3993 px differ; unanalysed, may include stock-charset glyph differences (#43)",
+    "expect": "known-fail:3993 px differ; unanalysed (#43)",
     "mismatches": 3993,
     "start": 2080
   },
@@ -877,7 +809,7 @@
     "name": "vicii_timing/vicii_reg_timing-ff.prg",
     "prg": "VICII/vicii_timing/vicii_reg_timing-ff.prg",
     "reference": "VICII/vicii_timing/references/vicii_reg_timing-ff.prg.png",
-    "expect": "known-fail:5600 px differ; unanalysed, may include stock-charset glyph differences (#43)",
+    "expect": "known-fail:5600 px differ; unanalysed (#43)",
     "mismatches": 5600,
     "start": 2080
   },
@@ -885,7 +817,7 @@
     "name": "vicii_timing/vicii_reg_timing.prg",
     "prg": "VICII/vicii_timing/vicii_reg_timing.prg",
     "reference": "VICII/vicii_timing/references/vicii_reg_timing.prg.png",
-    "expect": "known-fail:3985 px differ; unanalysed, may include stock-charset glyph differences (#43)",
+    "expect": "known-fail:3985 px differ; unanalysed (#43)",
     "mismatches": 3985,
     "start": 2080
   },
@@ -893,56 +825,55 @@
     "name": "videomode/rmwtest.prg",
     "prg": "VICII/videomode/rmwtest.prg",
     "reference": "VICII/videomode/references/rmwtest.prg.png",
-    "expect": "known-fail:3036 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 3036
+    "expect": "pass"
   },
   {
     "name": "videomode/videomode-v.prg",
     "prg": "VICII/videomode/videomode-v.prg",
     "reference": "VICII/videomode/references/videomode-v.prg.png",
-    "expect": "known-fail:2112 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 2112
+    "expect": "known-fail:69 px differ; unanalysed (#43)",
+    "mismatches": 69
   },
   {
     "name": "videomode/videomode-w.prg",
     "prg": "VICII/videomode/videomode-w.prg",
     "reference": "VICII/videomode/references/videomode-w.prg.png",
-    "expect": "known-fail:3134 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 3134
+    "expect": "known-fail:129 px differ; unanalysed (#43)",
+    "mismatches": 129
   },
   {
     "name": "videomode/videomode-x.prg",
     "prg": "VICII/videomode/videomode-x.prg",
     "reference": "VICII/videomode/references/videomode-x.prg.png",
-    "expect": "known-fail:2058 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 2058
+    "expect": "known-fail:76 px differ; unanalysed (#43)",
+    "mismatches": 76
   },
   {
     "name": "videomode/videomode-y.prg",
     "prg": "VICII/videomode/videomode-y.prg",
     "reference": "VICII/videomode/references/videomode-y.prg.png",
-    "expect": "known-fail:2876 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 2876
+    "expect": "known-fail:73 px differ; unanalysed (#43)",
+    "mismatches": 73
   },
   {
     "name": "videomode/videomode-z.prg",
     "prg": "VICII/videomode/videomode-z.prg",
     "reference": "VICII/videomode/references/videomode-z.prg.png",
-    "expect": "known-fail:3049 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 3049
+    "expect": "known-fail:57 px differ; unanalysed (#43)",
+    "mismatches": 57
   },
   {
     "name": "videomode/videomode1.prg",
     "prg": "VICII/videomode/videomode1.prg",
     "reference": "VICII/videomode/references/videomode1.prg.png",
-    "expect": "known-fail:2296 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 2296
+    "expect": "known-fail:34 px differ; unanalysed (#43)",
+    "mismatches": 34
   },
   {
     "name": "videomode/videomode2.prg",
     "prg": "VICII/videomode/videomode2.prg",
     "reference": "VICII/videomode/references/videomode2.prg.png",
-    "expect": "known-fail:1683 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 1683
+    "expect": "known-fail:71 px differ; unanalysed (#43)",
+    "mismatches": 71
   }
 ]
