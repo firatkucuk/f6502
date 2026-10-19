@@ -105,6 +105,30 @@ describe('raster IRQ', () => {
     expect(vic.irq).toBe(false);
   });
 
+  it('a compare line moved to the next line in the last cycle does not raise a new flag', () => {
+    const { vic } = world();
+    vic.write(0x12, 50);
+    runCycles(vic, 63 * 50 + 10);
+    vic.write(0x19, 0x01); // acknowledge line 50
+    while (!(vic.raster === 50 && vic.debug.cycle === 63)) vic.tick();
+    vic.tick(); // cycle 62 has been processed, cycle 63 is the last one
+    vic.write(0x12, 51); // VICE only stores the compare line: it is evaluated per cycle
+    vic.tick();
+    runCycles(vic, 5);
+    expect(vic.raster).toBe(51);
+    expect(vic.read(0x19) & 0x01).toBe(0);
+  });
+
+  it('a compare line written two lines ahead stays pending until that line', () => {
+    const { vic } = world();
+    vic.write(0x12, 60);
+    runCycles(vic, 63 * 30);
+    vic.write(0x12, 31);
+    runCycles(vic, 63);
+    expect(vic.raster).toBe(31);
+    expect(vic.read(0x19) & 0x01).toBe(1);
+  });
+
   it('a disabled raster IRQ sets the status flag but not the line', () => {
     const { vic } = world();
     vic.write(0x12, 10);

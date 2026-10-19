@@ -219,8 +219,9 @@ export class VicII implements IoChip {
         return; // collision registers are read-only
       case 0x11:
       case 0x12:
+        // The compare is evaluated once per cycle in tick(), not at the write (VICE only stores
+        // the new compare line), so a write in the last cycle of a line cannot clear the latch.
         this.regs[reg] = value;
-        this.checkRasterCompare();
         return;
       case 0x17:
         this.regs[reg] = value;
@@ -329,6 +330,7 @@ export class VicII implements IoChip {
       this.triggerLightPen(c, false);
     }
 
+    this.checkRasterCompare();
     this.cycle = c === CYCLES_PER_LINE ? 1 : c + 1;
   }
 
