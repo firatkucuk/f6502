@@ -77,6 +77,9 @@ export class VicII implements IoChip {
   private vmli = 0;
   private readonly chars = new Uint8Array(64);
   private readonly colors = new Uint8Array(64);
+  /** Colour registers as they were when the previous cycle began. */
+  private readonly prevCregs = new Uint8Array(0x30);
+  private readonly cregsNow = new Uint8Array(0x30);
   private readonly bgColors = new Uint8Array(4);
   private readonly gColor = new Uint8Array(8);
   private readonly gFg = new Uint8Array(8);
@@ -238,6 +241,8 @@ export class VicII implements IoChip {
   // ---- per-cycle machine --------------------------------------------------
 
   tick(): void {
+    this.prevCregs.set(this.cregsNow);
+    this.cregsNow.set(this.regs.subarray(0, 0x30));
     this.cselPrev = this.cselNow;
     this.cselNow = (this.regs[0x16]! & 0x08) !== 0;
     this.irqBefore = (this.status & this.enable & 0x0f) !== 0;
@@ -370,10 +375,12 @@ export class VicII implements IoChip {
     const ecm = (regs[0x11]! & 0x40) !== 0;
     const mode = (ecm ? 4 : 0) | (regs[0x11]! & 0x20 ? 2 : 0) | (regs[0x16]! & 0x10 ? 1 : 0);
     const bg = this.bgColors;
-    bg[0] = regs[0x21]! & 0x0f;
-    bg[1] = regs[0x22]! & 0x0f;
-    bg[2] = regs[0x23]! & 0x0f;
-    bg[3] = regs[0x24]! & 0x0f;
+    // Background colours travel through the pipe as register codes and are resolved when the
+    // pixels are composed (VICE keeps colour codes in its render buffer too).
+    bg[0] = 0x21;
+    bg[1] = 0x22;
+    bg[2] = 0x23;
+    bg[3] = 0x24;
 
     if (c >= FIRST_G_CYCLE && c <= LAST_G_CYCLE) {
       let glyph: number;
@@ -469,7 +476,6 @@ export class VicII implements IoChip {
     const csel = (regs[0x16]! & 0x08) !== 0;
     const rsel = (regs[0x11]! & 0x08) !== 0;
     const bottom = rsel ? 251 : 247;
-    const border = regs[0x20]! & 0x0f;
     const writeFrame =
       visible && this.raster >= FIRST_VISIBLE_RASTER && this.raster <= LAST_VISIBLE_RASTER;
     const rowBase = (this.raster - FIRST_VISIBLE_RASTER) * FRAME_WIDTH;
@@ -487,17 +493,20 @@ export class VicII implements IoChip {
           if (!this.verticalBorder) this.mainBorder = false;
         }
       }
+      // 6569: pixel 0 of a cycle still uses the colour registers of the previous cycle.
+      const cregs = i === 0 ? this.prevCregs : regs;
       let colour = this.pipeColor[base + i]!;
+      if (colour >= 0x20) colour = cregs[colour]! & 0x0f;
       const fg = this.pipeFg[base + i]!;
       const mask = this.spriteActive[c & 63] ? this.spMask[base + i]! : 0;
       if (mask !== 0) {
         if ((mask & (mask - 1)) !== 0) this.hitSprites(mask);
         if (fg) this.hitBackground(mask);
         const n = this.spLow[base + i]!;
-        if (!((regs[0x1b]! >> n) & 1 && fg)) colour = regs[this.spReg[base + i]!]! & 0x0f;
+        if (!((regs[0x1b]! >> n) & 1 && fg)) colour = cregs[this.spReg[base + i]!]! & 0x0f;
       }
       if (writeFrame) {
-        this.frame[rowBase + fx0 + i] = PALETTE[this.mainBorder ? border : colour]!;
+        this.frame[rowBase + fx0 + i] = PALETTE[this.mainBorder ? cregs[0x20]! & 0x0f : colour]!;
       }
     }
   }

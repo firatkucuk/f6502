@@ -257,11 +257,26 @@ describe('draw pipeline delay', () => {
     const { vic } = world();
     vic.write(0x20, 0x0e);
     while (!(vic.raster === 20 && vic.debug.cycle === 30)) vic.tick(); // cycle 29 processed
-    vic.write(0x20, 0x02); // the CPU write of cycle 29: seen by the draw stage from cycle 30 on
+    vic.write(0x20, 0x02); // the CPU write of cycle 29: seen by the draw stage from cycle 30 on (pixel 1)
     while (vic.raster === 20) vic.tick();
     const y = 20 - 15;
     // the draw stage composes screen cycle 28 (X = (28 - 12) * 8 = 128) when cycle 30 runs
     expect(vic.frame[y * FRAME_WIDTH + 127]).toBe(PALETTE[14]!);
-    expect(vic.frame[y * FRAME_WIDTH + 128]).toBe(PALETTE[2]!);
+    // 6569: pixel 0 of a cycle still shows the colour of the previous cycle
+    expect(vic.frame[y * FRAME_WIDTH + 128]).toBe(PALETTE[14]!);
+    expect(vic.frame[y * FRAME_WIDTH + 129]).toBe(PALETTE[2]!);
+  });
+
+  it('a background colour written in cycle W changes pixels at the same position, not 8 cycles later', () => {
+    const w = world();
+    setup(w);
+    const { vic } = w;
+    runFrame(vic);
+    while (!(vic.raster === 100 && vic.debug.cycle === 30)) vic.tick();
+    vic.write(0x21, 0x02); // blank cells: background colour
+    while (vic.raster === 100) vic.tick();
+    const y = 100 - 15;
+    expect(vic.frame[y * FRAME_WIDTH + 128]).toBe(PALETTE[6]!);
+    expect(vic.frame[y * FRAME_WIDTH + 129]).toBe(PALETTE[2]!);
   });
 });
