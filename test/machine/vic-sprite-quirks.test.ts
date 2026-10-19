@@ -135,6 +135,37 @@ describe('Y-expansion flip-flop', () => {
   });
 });
 
+describe('sprite display needs the sprite still enabled in cycle 58', () => {
+  const run = (disableAfter: number | null) => {
+    const r = rig();
+    enable(r, 0, 100, 50);
+    for (let raster = 40; raster <= 49; raster++) line(r, raster);
+    // DMA turns on in cycle 55/56 of the line equal to Y
+    line(
+      r,
+      50,
+      disableAfter === null
+        ? undefined
+        : {
+            cycle: disableAfter,
+            fn: () => {
+              r.regs[0x15] = 0;
+            },
+          },
+    );
+    return { dma: r.sprites.dma[0], display: r.sprites.display[0] };
+  };
+
+  it('a sprite disabled after its DMA started (cycle 56) but before cycle 58 is not displayed', () => {
+    expect(run(null)).toEqual({ dma: 1, display: 1 });
+    expect(run(56)).toEqual({ dma: 1, display: 0 });
+  });
+
+  it('disabling in cycle 58 or later still leaves the display on', () => {
+    expect(run(58)).toEqual({ dma: 1, display: 1 });
+  });
+});
+
 describe('shifters', () => {
   it('a started shifter finishes its row after the display flag drops at cycle 58', () => {
     const r = rig();
