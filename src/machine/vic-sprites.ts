@@ -117,7 +117,10 @@ export class VicSprites {
         for (let n = 0; n < 8; n++) {
           this.mc[n] = this.mcBase[n]!;
           if (!this.dma[n]) this.display[n] = 0;
-          else if (regs[1 + 2 * n] === (raster & 0xff)) this.display[n] = 1;
+          // VICE (check_sprite_display) also needs the sprite still enabled here: a sprite whose
+          // DMA started in cycle 55/56 but is disabled by cycle 58 is not displayed.
+          else if ((regs[0x15]! >> n) & 1 && regs[1 + 2 * n] === (raster & 0xff))
+            this.display[n] = 1;
         }
         this.updateActive();
         break;

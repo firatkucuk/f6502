@@ -711,15 +711,15 @@
     "name": "spriteenable/spriteenable1.prg",
     "prg": "VICII/spriteenable/spriteenable1.prg",
     "reference": "VICII/spriteenable/references/spriteenable1.prg.png",
-    "expect": "known-fail:760 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 760
+    "expect": "known-fail:384 px differ; unanalysed, may include stock-charset glyph differences (#43)",
+    "mismatches": 384
   },
   {
     "name": "spriteenable/spriteenable2.prg",
     "prg": "VICII/spriteenable/spriteenable2.prg",
     "reference": "VICII/spriteenable/references/spriteenable2.prg.png",
-    "expect": "known-fail:680 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 680
+    "expect": "known-fail:531 px differ; unanalysed, may include stock-charset glyph differences (#43)",
+    "mismatches": 531
   },
   {
     "name": "spriteenable/spriteenable3.prg",
@@ -732,8 +732,8 @@
     "name": "spriteenable/spriteenable4.prg",
     "prg": "VICII/spriteenable/spriteenable4.prg",
     "reference": "VICII/spriteenable/references/spriteenable4.prg.png",
-    "expect": "known-fail:582 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 582
+    "expect": "known-fail:433 px differ; unanalysed, may include stock-charset glyph differences (#43)",
+    "mismatches": 433
   },
   {
     "name": "spriteenable/spriteenable5.prg",
