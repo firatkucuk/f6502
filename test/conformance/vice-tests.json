@@ -149,36 +149,36 @@
     "name": "colorfetchbug/bitmap.prg",
     "prg": "VICII/colorfetchbug/bitmap.prg",
     "reference": "VICII/colorfetchbug/references/bitmap.prg.png",
-    "expect": "known-fail:8470 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 8470
+    "expect": "known-fail:2094 px differ; unanalysed, may include stock-charset glyph differences (#43)",
+    "mismatches": 2094
   },
   {
     "name": "colorfetchbug/main.prg",
     "prg": "VICII/colorfetchbug/main.prg",
     "reference": "VICII/colorfetchbug/references/main.prg.png",
-    "expect": "known-fail:9391 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 9391
+    "expect": "known-fail:5136 px differ; unanalysed, may include stock-charset glyph differences (#43)",
+    "mismatches": 5136
   },
   {
     "name": "colorfetchbug/main2.prg",
     "prg": "VICII/colorfetchbug/main2.prg",
     "reference": "VICII/colorfetchbug/references/main2.prg.png",
-    "expect": "known-fail:9463 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 9463
+    "expect": "known-fail:5306 px differ; unanalysed, may include stock-charset glyph differences (#43)",
+    "mismatches": 5306
   },
   {
     "name": "colorfetchbug/main3.prg",
     "prg": "VICII/colorfetchbug/main3.prg",
     "reference": "VICII/colorfetchbug/references/main3.prg.png",
-    "expect": "known-fail:10072 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 10072
+    "expect": "known-fail:5526 px differ; unanalysed, may include stock-charset glyph differences (#43)",
+    "mismatches": 5526
   },
   {
     "name": "colorfetchbug/main4.prg",
     "prg": "VICII/colorfetchbug/main4.prg",
     "reference": "VICII/colorfetchbug/references/main4.prg.png",
-    "expect": "known-fail:10128 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 10128
+    "expect": "known-fail:5582 px differ; unanalysed, may include stock-charset glyph differences (#43)",
+    "mismatches": 5582
   },
   {
     "name": "colorsplit/colorsplit.prg",
@@ -521,15 +521,15 @@
     "name": "flibug/blackmail-ee.prg",
     "prg": "VICII/flibug/blackmail-ee.prg",
     "reference": "VICII/flibug/references/blackmail-ee.prg.png",
-    "expect": "known-fail:45482 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 45482
+    "expect": "known-fail:44356 px differ; unanalysed, may include stock-charset glyph differences (#43)",
+    "mismatches": 44356
   },
   {
     "name": "flibug/blackmail-fixed.prg",
     "prg": "VICII/flibug/blackmail-fixed.prg",
     "reference": "VICII/flibug/references/blackmail-fixed.prg.png",
-    "expect": "known-fail:45482 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 45482
+    "expect": "known-fail:44356 px differ; unanalysed, may include stock-charset glyph differences (#43)",
+    "mismatches": 44356
   },
   {
     "name": "frodotests/text26.prg",
@@ -643,8 +643,8 @@
     "name": "spritecrunch/spritecrunch2-07.prg",
     "prg": "VICII/spritecrunch/spritecrunch2-07.prg",
     "reference": "VICII/spritecrunch/references/spritecrunch2-07.prg.png",
-    "expect": "known-fail:230 px differ; unanalysed, may include stock-charset glyph differences (#43)",
-    "mismatches": 230
+    "expect": "known-fail:38 px differ; unanalysed, may include stock-charset glyph differences (#43)",
+    "mismatches": 38
   },
   {
     "name": "spritecrunch/spritecrunch2-08.prg",
