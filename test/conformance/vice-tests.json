@@ -478,8 +478,9 @@
     "name": "frodotests/text26.prg",
     "prg": "VICII/frodotests/text26.prg",
     "reference": "VICII/frodotests/references/text26.prg.png",
-    "expect": "known-fail:29726 px differ; unanalysed (#43)",
-    "mismatches": 29726
+    "expect": "pass",
+    "start": 2061,
+    "stockIrqTail": true
   },
   {
     "name": "gfxfetch/gfxfetch.prg",

@@ -15,6 +15,8 @@ interface Entry {
    * run (it has no expression evaluator, so `SYS(2080)` fails with ?NOT IMPLEMENTED ERROR).
    */
   start?: number;
+  /** The program jumps to the stock IRQ tail at $FEBC, where OpenROMs keeps another routine. */
+  stockIrqTail?: boolean;
   /** Number of differing pixels tolerated (default 0). */
   tolerance?: number;
   /**
@@ -119,12 +121,20 @@ describe('VICE VIC-II reference screenshots', () => {
       if (!existsSync(prg) || !existsSync(reference)) {
         throw new Error(`${entry.name}: files missing, run "npm run fetch-test-data"`);
       }
-      const c64 = new C64(roms());
+      const rom = roms();
+      const c64 = new C64(rom);
       expect(c64.runUntilReady(600)).toBe(true);
       stockKernalState(c64);
       const bytes = new Uint8Array(readFileSync(prg));
       if (entry.start === undefined) c64.loadPrg(bytes);
       else c64.loadPrg(bytes, { run: 'sys', start: entry.start });
+      if (entry.stockIrqTail) {
+        // The program chains to the stock IRQ tail at $FEBC (PLA TAY PLA TAX PLA RTI), where
+        // OpenROMs keeps an unrelated routine. Patch the stock tail in when the program starts.
+        const cpu = (c64 as unknown as { cpu: { regs: { pc: number } } }).cpu;
+        for (let i = 0; i < 3_000_000 && cpu.regs.pc !== 0x0900; i++) c64.runCycles(1);
+        rom.kernal.set([0x68, 0xa8, 0x68, 0xaa, 0x68, 0x40], 0xfebc - 0xe000);
+      }
       for (let i = 0; i < (entry.frames ?? 200); i++) c64.runFrame();
       const mismatches = diff(c64, reference, entry.ignore);
       if (REPORT) console.log(`VICE ${entry.name}: ${mismatches} differing pixels`);
