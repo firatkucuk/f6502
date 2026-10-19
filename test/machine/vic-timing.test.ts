@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { C64 } from '../../src/machine/c64';
 import { VicII } from '../../src/machine/vic';
 import { filled } from './helpers';
+import { PALETTE } from '../../src/machine/palette';
 import { vicWorld } from './vic-helpers';
 
 /** Ticks until `raster` becomes R (cycle 1 of line R processed) and records BA for cycles 1..63. */
@@ -53,6 +54,41 @@ describe('BA waveform', () => {
     while (!(tooLate.vic.raster === 0x31 && tooLate.vic.debug.cycle === 2)) tooLate.vic.tick();
     tooLate.vic.write(0x11, 0x1b);
     expect(cyclesLow(recordLine(tooLate.vic, 51))).toEqual([]);
+  });
+
+  it('BA ends as soon as the badline condition goes false (it is re-evaluated every cycle)', () => {
+    const { vic } = setup();
+    vic.write(0x11, 0x1c); // YSCROLL 4: no badline on raster 51
+    while (!(vic.raster === 51 && vic.debug.cycle === 12)) vic.tick();
+    const ba: boolean[] = [];
+    for (let c = 12; c <= 54; c++) {
+      if (c === 12) vic.write(0x11, 0x1b); // badline condition true from cycle 12
+      if (c === 31) vic.write(0x11, 0x1c); // and false again from cycle 31
+      vic.tick();
+      ba.push(vic.baLow);
+    }
+    expect(ba.map((v, i) => (v ? 12 + i : 0)).filter(Boolean)).toEqual(range(12, 30));
+  });
+
+  it('a badline that starts late reads the floating bus for the first c-accesses (FLI bug)', () => {
+    const w = setup();
+    const { vic, ram } = w;
+    ram.fill(0, 0x0400, 0x0800); // screen: code 0 everywhere
+    ram[0x0401] = 1; // cell 1: code 1, glyph all zero -> background
+    ram.fill(0xff, 0x0800 + 0xff * 8, 0x0800 + 0xff * 8 + 8); // glyph of code $ff: solid
+    w.color.fill(0x05);
+    vic.write(0x11, 0x1c);
+    vic.write(0x16, 0x08);
+    vic.write(0x21, 0x06);
+    vic.write(0x20, 0x0e);
+    while (!(vic.raster === 51 && vic.debug.cycle === 14)) vic.tick();
+    vic.write(0x11, 0x1b); // badline condition true from cycle 14: BA low from 14
+    // BA low in cycles 14, 15, 16: the c-accesses of cycles 15 and 16 (cells 0 and 1) see the bus
+    while (vic.raster === 51) vic.tick();
+    const px0 = vic.frame[(51 - 15) * 384 + 32 + 0]!;
+    const px1 = vic.frame[(51 - 15) * 384 + 32 + 8]!;
+    expect(px0).toBe(PALETTE[15]!); // $ff: solid glyph in colour 15 (low nibble of the bus byte)
+    expect(px1).toBe(PALETTE[15]!);
   });
 
   it('one sprite adds a 5-cycle window; adjacent windows merge; wrapped windows cross the line', () => {

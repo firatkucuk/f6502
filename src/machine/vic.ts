@@ -22,6 +22,8 @@ const LAST_VISIBLE_RASTER = 286;
 export interface VicMemory {
   readMem(addr14: number): number;
   readColor(index: number): number;
+  /** The byte on the data bus when the VIC cannot fetch (VICE: RAM at the CPU's PC). */
+  floatingBus?(): number;
 }
 
 export class VicII implements IoChip {
@@ -37,7 +39,13 @@ export class VicII implements IoChip {
   private lineWrapPending = false;
   private denSeen = false;
   /** Cycle at which BA went low for the current badline, or -1. */
-  private baStart = -1;
+  /** Badline condition as evaluated in the current cycle. */
+  private badLine = false;
+  /**
+   * VICE prefetch_cycles: counts down while BA is low and is 4 while it is high. A matrix fetch
+   * with it still above 0 (BA low for fewer than 3 cycles, as in FLI) reads the floating bus.
+   */
+  private prefetchCycles = 4;
   private mainBorder = true;
   private verticalBorder = true;
   /** Latched vertical border state (VICE set_vborder); the live flag follows it at cycle 1. */
@@ -102,7 +110,8 @@ export class VicII implements IoChip {
     this.matched = false;
     this.denSeen = false;
     this.displayState = false;
-    this.baStart = -1;
+    this.badLine = false;
+    this.prefetchCycles = 4;
     this.mainBorder = true;
     this.verticalBorder = true;
     this.setVerticalBorder = true;
@@ -206,7 +215,6 @@ export class VicII implements IoChip {
     // write in the last cycle of line $30 still counts.
     if (c === 1 && this.raster === 0x30 && (regs[0x11]! & 0x10) !== 0) this.denSeen = true;
     if (c === 1) {
-      this.baStart = -1;
       if (this.raster === LINES - 1) {
         this.lineWrapPending = true;
       } else {
@@ -228,10 +236,8 @@ export class VicII implements IoChip {
       this.raster >= 0x30 &&
       this.raster <= 0xf7 &&
       (this.raster & 7) === (regs[0x11]! & 7);
-    if (cond) {
-      this.displayState = true;
-      if (c >= 12 && c <= LAST_C_CYCLE && this.baStart < 0) this.baStart = c;
-    }
+    this.badLine = cond;
+    if (cond) this.displayState = true;
     if (c === 14) {
       this.vc = this.vcBase;
       this.vmli = 0;
@@ -239,6 +245,18 @@ export class VicII implements IoChip {
     }
 
     this.sprites.cycle(c, this.raster);
+
+    // BA for this cycle: the CPU consults it before its access. The matrix fetch holds BA only
+    // while the badline condition holds (VICE re-evaluates it every cycle).
+    let ba = cond && c >= 12 && c <= LAST_C_CYCLE;
+    if (!ba && SPRITE_BA[c] !== 0) ba = (SPRITE_BA[c]! & this.sprites.dmaMask()) !== 0;
+    this.baLow = ba;
+    if (ba) {
+      if (this.prefetchCycles > 0) this.prefetchCycles--;
+    } else {
+      this.prefetchCycles = 4;
+    }
+
     this.graphics(c);
     const visible = c >= FIRST_VISIBLE_CYCLE && c <= LAST_VISIBLE_CYCLE;
     if (visible || this.sprites.busy) this.outputCycle(c, visible);
@@ -264,11 +282,6 @@ export class VicII implements IoChip {
       if (this.raster === (rsel ? 251 : 247)) this.setVerticalBorder = true;
       if (c === 1) this.verticalBorder = this.setVerticalBorder;
     }
-
-    // BA for this cycle: the CPU consults it before its access.
-    let ba = this.baStart >= 0 && c <= LAST_C_CYCLE;
-    if (!ba && SPRITE_BA[c] !== 0) ba = (SPRITE_BA[c]! & this.sprites.dmaMask()) !== 0;
-    this.baLow = ba;
 
     this.cycle = c === CYCLES_PER_LINE ? 1 : c + 1;
   }
@@ -316,10 +329,16 @@ export class VicII implements IoChip {
       this.gFg.fill(0);
     }
 
-    if (this.baStart >= 0 && c >= Math.max(FIRST_C_CYCLE, this.baStart + 3) && c <= LAST_C_CYCLE) {
-      const vm = ((regs[0x18]! >> 4) & 0x0f) << 10;
-      this.chars[this.vmli & 63] = this.mem.readMem(vm + this.vc);
-      this.colors[this.vmli & 63] = this.mem.readColor(this.vc & 0x3ff) & 0x0f;
+    if (this.badLine && c >= FIRST_C_CYCLE && c <= LAST_C_CYCLE) {
+      if (this.prefetchCycles > 0) {
+        // BA has been low for fewer than 3 cycles: no bus access, the VIC sees the floating bus.
+        this.chars[this.vmli & 63] = 0xff;
+        this.colors[this.vmli & 63] = (this.mem.floatingBus?.() ?? 0xff) & 0x0f;
+      } else {
+        const vm = ((regs[0x18]! >> 4) & 0x0f) << 10;
+        this.chars[this.vmli & 63] = this.mem.readMem(vm + this.vc);
+        this.colors[this.vmli & 63] = this.mem.readColor(this.vc & 0x3ff) & 0x0f;
+      }
     }
   }
 
