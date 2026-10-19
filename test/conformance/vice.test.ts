@@ -32,6 +32,8 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..', '..', '.testdata');
 const ROMS = join(ROOT, 'openroms', 'bin');
 const VICE = join(ROOT, 'vicetests');
+// The references were rendered with the stock character ROM, which is downloaded, never committed.
+const CHARGEN = join(ROOT, 'vicechargen', 'vice', 'data', 'C64', 'chargen-901225-01.bin');
 const manifest = JSON.parse(readFileSync(join(HERE, 'vice-tests.json'), 'utf8')) as Entry[];
 const REPORT = process.env.VICE_REPORT === '1';
 
@@ -54,7 +56,11 @@ function roms() {
   return {
     kernal,
     basic: read('basic_generic.rom'),
-    chargen: read('chargen_openroms.rom'),
+    chargen: (() => {
+      if (!existsSync(CHARGEN))
+        throw new Error(`${CHARGEN} missing: run "npm run fetch-test-data"`);
+      return new Uint8Array(readFileSync(CHARGEN));
+    })(),
   };
 }
 
