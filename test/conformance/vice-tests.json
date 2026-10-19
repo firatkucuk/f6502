@@ -862,8 +862,12 @@
     "name": "videomode/videomode-w.prg",
     "prg": "VICII/videomode/videomode-w.prg",
     "reference": "VICII/videomode/references/videomode-w.prg.png",
-    "expect": "known-fail:79 px differ; unanalysed (#43)",
-    "mismatches": 79
+    "remap": {
+      "area": [205, 105, 283, 105],
+      "map": { "5": 2, "7": 1 },
+      "reason": "reference predates VICE-testprogs 3d4cbce3, which made the program set $D022=7 and $D023=5 (the stock values 1 and 2 are what the reference shows)"
+    },
+    "expect": "pass"
   },
   {
     "name": "videomode/videomode-x.prg",
