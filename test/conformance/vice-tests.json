@@ -561,8 +561,8 @@
     "name": "rasterirq/rasterirq_hold.prg",
     "prg": "VICII/rasterirq/rasterirq_hold.prg",
     "reference": "VICII/rasterirq/references/rasterirq_hold.prg.png",
-    "expect": "known-fail:1470 px differ; stock-charset glyph differences (#43)",
-    "mismatches": 1470
+    "expect": "known-fail:1442 px differ; stock-charset glyph differences (#43)",
+    "mismatches": 1442
   },
   {
     "name": "sb_sprite_fetch/sbsprf24-163.prg",
