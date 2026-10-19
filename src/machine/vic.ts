@@ -462,7 +462,7 @@ export class VicII implements IoChip {
     const base = (c & 63) * 8;
     const x0 = ((((c - FIRST_VISIBLE_CYCLE) * 8 + 496) % 504) + 504) % 504;
     const sp = this.sprites;
-    sp.drawCycle(c, x0);
+    sp.drawCycle((c % CYCLES_PER_LINE) + 1, x0);
     let any = 0;
     for (let i = 0; i < 8; i++) {
       const mask = sp.outMask[i]!;

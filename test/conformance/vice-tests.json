@@ -535,8 +535,8 @@
     "name": "sb_sprite_fetch/sbsprf24-164.prg",
     "prg": "VICII/sb_sprite_fetch/sbsprf24-164.prg",
     "reference": "VICII/sb_sprite_fetch/references/sbsprf24-164.prg.png",
-    "expect": "known-fail:29 px differ; unanalysed (#43)",
-    "mismatches": 29
+    "expect": "known-fail:11 px differ; unanalysed (#43)",
+    "mismatches": 11
   },
   {
     "name": "screenpos/screenpos.prg",
@@ -714,8 +714,8 @@
     "name": "spritefetchbug/test-136-2a.prg",
     "prg": "VICII/spritefetchbug/test-136-2a.prg",
     "reference": "VICII/spritefetchbug/references/test-136-2a.prg.png",
-    "expect": "known-fail:248 px differ; unanalysed (#43)",
-    "mismatches": 248
+    "expect": "known-fail:160 px differ; unanalysed (#43)",
+    "mismatches": 160
   },
   {
     "name": "spritepriorities/test1.prg",
