@@ -17,18 +17,18 @@ describe('Timer A', () => {
   it('underflows after latch+1 cycles of counting (plus the start delay) and reloads', () => {
     const c = cia();
     startTimerA(c, 3);
-    ticks(c, 5);
+    ticks(c, 6);
     expect(c.read(0x0d)).toBe(0x00); // underflow happened this tick; flag visible next tick
     const d = cia();
     startTimerA(d, 3);
-    ticks(d, 6);
+    ticks(d, 7);
     expect(d.read(0x0d)).toBe(0x01);
   });
 
   it('has period latch+1', () => {
     const c = cia();
     startTimerA(c, 3);
-    ticks(c, 6);
+    ticks(c, 7);
     c.read(0x0d); // clear
     ticks(c, 4);
     expect(c.read(0x0d)).toBe(0x01);
@@ -37,7 +37,7 @@ describe('Timer A', () => {
   it('one-shot stops after one underflow', () => {
     const c = cia();
     startTimerA(c, 3, 0x09);
-    ticks(c, 6);
+    ticks(c, 7);
     expect(c.read(0x0d)).toBe(0x01);
     ticks(c, 50);
     expect(c.read(0x0d)).toBe(0x00);
@@ -47,7 +47,7 @@ describe('Timer A', () => {
   it('latch 0 underflows every cycle after the start delay', () => {
     const c = cia();
     startTimerA(c, 0);
-    ticks(c, 3); // tick 1: start delay, tick 2: underflow, tick 3: flag visible
+    ticks(c, 4); // ticks 1-2: start delay, tick 3: underflow, tick 4: flag visible
     expect(c.read(0x0d) & 1).toBe(1);
   });
 
@@ -63,7 +63,7 @@ describe('Timer A', () => {
     const c = cia();
     startTimerA(c, 100);
     ticks(c, 10);
-    expect(c.read(0x04)).toBe(91); // running, one start-delay tick
+    expect(c.read(0x04)).toBe(92); // running, two start-delay ticks
     c.write(0x0e, 0x11); // start + force load on a running timer
     expect(c.read(0x04)).toBe(100);
     ticks(c, 3);

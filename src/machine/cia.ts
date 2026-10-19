@@ -224,7 +224,9 @@ export class Cia implements IoChip {
         this.updateIrq();
         break;
       case 0x0e:
-        if (!(this.cra & 0x01) && value & 0x01) this.taDelay = 1;
+        // Starting a stopped timer takes two ticks before it counts (VICE ciatimer; the FLI
+        // displayer in VICII/flibug syncs its raster to a CIA2 timer B started this way).
+        if (!(this.cra & 0x01) && value & 0x01) this.taDelay = 2;
         // A force-load together with the start bit goes through the 6526 load pipeline: the
         // counter holds the latch for three ticks before it counts, whether the timer was
         // stopped or already running. The values a program can read match VICE's CIA timer
@@ -238,7 +240,7 @@ export class Cia implements IoChip {
         this.cra = value & ~0x10;
         break;
       default:
-        if (!(this.crb & 0x01) && value & 0x01) this.tbDelay = 1;
+        if (!(this.crb & 0x01) && value & 0x01) this.tbDelay = 2;
         if (value & 0x10) {
           this.tb = this.tbLatch;
           if (value & 0x01) this.tbDelay = 3;

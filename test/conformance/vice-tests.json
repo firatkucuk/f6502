@@ -464,15 +464,13 @@
     "name": "flibug/blackmail-ee.prg",
     "prg": "VICII/flibug/blackmail-ee.prg",
     "reference": "VICII/flibug/references/blackmail-ee.prg.png",
-    "expect": "known-fail:44476 px differ; unanalysed (#43)",
-    "mismatches": 44476
+    "expect": "pass"
   },
   {
     "name": "flibug/blackmail-fixed.prg",
     "prg": "VICII/flibug/blackmail-fixed.prg",
     "reference": "VICII/flibug/references/blackmail-fixed.prg.png",
-    "expect": "known-fail:44476 px differ; unanalysed (#43)",
-    "mismatches": 44476
+    "expect": "pass"
   },
   {
     "name": "frodotests/text26.prg",
