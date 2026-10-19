@@ -16,6 +16,11 @@ function recordLine(vic: VicII, raster: number): boolean[] {
   return ba;
 }
 
+/** Ticks until the next tick will process `cycle` of `raster`. */
+function tickTo(vic: VicII, raster: number, cycle: number): void {
+  while (!(vic.raster === raster && vic.debug.cycle === cycle)) vic.tick();
+}
+
 const cyclesLow = (ba: boolean[]) => ba.flatMap((v, i) => (v ? [i + 1] : []));
 const range = (a: number, b: number) => Array.from({ length: b - a + 1 }, (_, i) => a + i);
 
@@ -89,6 +94,37 @@ describe('BA waveform', () => {
     const px1 = vic.frame[(51 - 15) * 384 + 32 + 8]!;
     expect(px0).toBe(PALETTE[15]!); // $ff: solid glyph in colour 15 (low nibble of the bus byte)
     expect(px1).toBe(PALETTE[15]!);
+  });
+
+  describe('DMA delay: the display state starts after the g-access of the cycle', () => {
+    /** Cell index (0-based) whose first pixel row is solid, with the badline starting in `start`. */
+    function solidCell(start: number): number {
+      const w = setup();
+      const { vic, ram } = w;
+      vic.write(0x16, 0x08);
+      vic.write(0x21, 0x06);
+      vic.write(0x20, 0x0e);
+      w.color.fill(0x05);
+      ram.fill(32, 0x0400, 0x0800);
+      for (let i = 0; i < 40; i++) ram[0x0400 + i] = 100 + i;
+      ram.fill(0xff, 0x0800 + 108 * 8, 0x0800 + 108 * 8 + 8); // code 108 (cell 8) is solid
+      vic.write(0x11, 0x1c); // YSCROLL 4: no badline on raster 51
+      tickTo(vic, 51, start);
+      vic.write(0x11, 0x1b); // badline condition true from cycle `start`
+      tickTo(vic, 52, 5);
+      for (let k = 4; k < 40; k++) {
+        if (vic.frame[(51 - 15) * 384 + 32 + 8 * k]! === PALETTE[5]!) return k;
+      }
+      return -1;
+    }
+
+    it('a badline starting in cycle 15 shows the matrix unshifted', () => {
+      expect(solidCell(15)).toBe(8);
+    });
+
+    it('a badline starting in cycle 16 leaves the first g-access idle: the matrix shifts one cell', () => {
+      expect(solidCell(16)).toBe(9);
+    });
   });
 
   it('one sprite adds a 5-cycle window; adjacent windows merge; wrapped windows cross the line', () => {

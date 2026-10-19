@@ -252,7 +252,6 @@ export class VicII implements IoChip {
       this.raster <= 0xf7 &&
       (this.raster & 7) === (regs[0x11]! & 7);
     this.badLine = cond;
-    if (cond) this.displayState = true;
     if (c === 14) {
       this.vc = this.vcBase;
       this.vmli = 0;
@@ -273,6 +272,10 @@ export class VicII implements IoChip {
     }
 
     this.graphics(c);
+    // The condition enters display state after this cycle's g-access (phi1): VICE runs
+    // check_badline later in the cycle. A badline that starts in cycle 16 or later therefore
+    // leaves the g-access of that cycle idle, which does not advance VC (DMA delay).
+    if (cond) this.displayState = true;
     const visible = c >= FIRST_VISIBLE_CYCLE && c <= LAST_VISIBLE_CYCLE;
     if (visible || this.sprites.busy) this.outputCycle(c, visible);
 
