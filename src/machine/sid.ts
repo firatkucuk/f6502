@@ -99,7 +99,7 @@ export class Sid implements IoChip {
       case 0x1b:
         return this.voices[2]!.osc3(this.modelParams) >> 4;
       case 0x1c:
-        return this.envelopes[2]!.counter;
+        return this.envelopes[2]!.env3;
       default:
         return this.busValue;
     }

@@ -95,8 +95,7 @@
         "colour": 5
       }
     ],
-    "expect": "known-fail:gate/rate-counter pipeline timing (ENV3 start-up delays) is not modelled; the test plots measured vs expected grids on screen",
-    "failing": 1
+    "expect": "pass"
   },
   {
     "name": "env_test/env_test_adra_2.prg",
@@ -110,8 +109,7 @@
         "colour": 5
       }
     ],
-    "expect": "known-fail:gate/rate-counter pipeline timing (ENV3 start-up delays) is not modelled; the test plots measured vs expected grids on screen",
-    "failing": 1
+    "expect": "pass"
   },
   {
     "name": "env_test/env_test_ar_1.prg",
@@ -125,8 +123,7 @@
         "colour": 5
       }
     ],
-    "expect": "known-fail:gate/rate-counter pipeline timing (ENV3 start-up delays) is not modelled; the test plots measured vs expected grids on screen",
-    "failing": 1
+    "expect": "pass"
   },
   {
     "name": "env_test/env_test_ar_2.prg",
@@ -140,8 +137,7 @@
         "colour": 5
       }
     ],
-    "expect": "known-fail:gate/rate-counter pipeline timing (ENV3 start-up delays) is not modelled; the test plots measured vs expected grids on screen",
-    "failing": 1
+    "expect": "pass"
   },
   {
     "name": "env_test/env_test_ar_3.prg",
@@ -155,8 +151,7 @@
         "colour": 5
       }
     ],
-    "expect": "known-fail:gate/rate-counter pipeline timing (ENV3 start-up delays) is not modelled; the test plots measured vs expected grids on screen",
-    "failing": 1
+    "expect": "pass"
   },
   {
     "name": "env_test/env_test_ra_0000.prg",
@@ -170,8 +165,7 @@
         "colour": 5
       }
     ],
-    "expect": "known-fail:gate/rate-counter pipeline timing (ENV3 start-up delays) is not modelled; the test plots measured vs expected grids on screen",
-    "failing": 1
+    "expect": "pass"
   },
   {
     "name": "env_test/env_test_ra_0100.prg",
@@ -185,8 +179,7 @@
         "colour": 5
       }
     ],
-    "expect": "known-fail:gate/rate-counter pipeline timing (ENV3 start-up delays) is not modelled; the test plots measured vs expected grids on screen",
-    "failing": 1
+    "expect": "pass"
   },
   {
     "name": "env_test/env_test_ra_ff00.prg",
@@ -200,8 +193,7 @@
         "colour": 5
       }
     ],
-    "expect": "known-fail:gate/rate-counter pipeline timing (ENV3 start-up delays) is not modelled; the test plots measured vs expected grids on screen",
-    "failing": 1
+    "expect": "pass"
   },
   {
     "name": "envelope/lft-adsr-test.prg",
