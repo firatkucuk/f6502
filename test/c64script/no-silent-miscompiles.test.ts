@@ -308,11 +308,17 @@ describe('computed right operands', () => {
 });
 
 describe('unsupported constructs are errors, not no-ops', () => {
-  it('&& and || in a condition', () => {
+  it('&& and || as a value (they are conditions only)', () => {
     expectError(
-      'let @zp a: u8 = 2;\nprogram @ 0x0810 {\n  if (a == 1 && a == 2) { a = 0; }\n  loop {}\n}',
+      'let @zp a: u8 = 2;\nprogram @ 0x0810 {\n  a = a == 1 && a == 2;\n  loop {}\n}',
       'codegen',
-      /&&/,
+      /'&&' can only be used as a condition/,
+      3,
+    );
+    expectError(
+      'let @zp a: u8 = 2;\nprogram @ 0x0810 {\n  a = a || 1;\n  loop {}\n}',
+      'codegen',
+      /'\|\|' can only be used as a condition/,
       3,
     );
   });
