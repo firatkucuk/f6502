@@ -319,11 +319,9 @@ fn showFighters(): void {
     t = ffr[i];
     p = p + t;
     p = p + 223;
-    if (t > 1) {
-      if (t < 4) {
-        t = fface[i];
-        if (t == 1) { p = p + 4; }
-      }
+    if (t > 1 && t < 4) {
+      t = fface[i];
+      if (t == 1) { p = p + 4; }
     }
     poke(pp, p);
     x = fx[i];
@@ -389,12 +387,10 @@ fn aiThink(): void {
   if (t == 2) { threat = 1; }
   if (t == 3) { threat = 1; }
   if (t == 7) { threat = 1; }
-  if (threat == 1) {
-    if (d < 80) {
-      plan = 5;
-      t = aiBlock[aiLevel];
-      if (r > t) { plan = 3; }
-    }
+  if (threat == 1 && d < 80) {
+    plan = 5;
+    t = aiBlock[aiLevel];
+    if (r > t) { plan = 3; }
   }
   if (plan == 4) {
     if (d < 56) {
@@ -469,20 +465,18 @@ fn hit(i: u8, ax: u8, kind: u8, reach: u8, dmg: u8): u8 {
   if (ox > ax) { pd = 1; }
   if (st == 9) { st = 0; }
   t = fblk[o];
-  if (t != 0) {
-    if (st == 0) {
-      fst[o] = 9;
-      ftm[o] = 6;
-      fjd[o] = 0;
-      moveX(o, pd, 5);
-      pd = 1 - pd;
-      moveX(i, pd, 2);
-      addMeter(o, 3);
-      sfx(0x60, 0x81, 2);
-      freeze = 2;
-      drawSide(o);
-      return 1;
-    }
+  if (t != 0 && st == 0) {
+    fst[o] = 9;
+    ftm[o] = 6;
+    fjd[o] = 0;
+    moveX(o, pd, 5);
+    pd = 1 - pd;
+    moveX(i, pd, 2);
+    addMeter(o, 3);
+    sfx(0x60, 0x81, 2);
+    freeze = 2;
+    drawSide(o);
+    return 1;
   }
   t = fhp[o];
   if (dmg < t) { t = t - dmg; } else { t = 0; }
@@ -689,11 +683,9 @@ fn updateFighter(i: u8): void {
   }
   if (st > 5) {
     t = fjd[i];
-    if (t > 0) {
-      if (tm > 7) {
-        t = t - 1;
-        moveX(i, t, 3);
-      }
+    if (t > 0 && tm > 7) {
+      t = t - 1;
+      moveX(i, t, 3);
     }
     if (tm > 0) { ftm[i] = tm - 1; } else { fst[i] = 0; ffr[i] = 0; }
     return;
@@ -1023,14 +1015,12 @@ program @ 0x0810 {
       w = playMatch();
       clrscr();
       more = 0;
-      if (twoP == 0) {
-        if (w == 0) {
-          beaten = beaten + 1;
-          opp = opp + 1;
-          aiLevel = beaten;
-          if (aiLevel > 2) { aiLevel = 2; }
-          if (beaten < 3) { more = 1; }
-        }
+      if (twoP == 0 && w == 0) {
+        beaten = beaten + 1;
+        opp = opp + 1;
+        aiLevel = beaten;
+        if (aiLevel > 2) { aiLevel = 2; }
+        if (beaten < 3) { more = 1; }
       }
     }
     if (twoP == 1) {

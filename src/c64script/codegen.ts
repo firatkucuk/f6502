@@ -697,12 +697,10 @@ export function generate(cp: CheckedProgram): CodeBuffer {
   }
 
   function genBinary(e: Extract<Expr, { tag: 'binary' }>): void {
-    if (e.op === '&&' || e.op === '||') {
-      throw new CodeGenError(`'${e.op}' is not supported yet`, e.line, 0);
-    }
-    if (isCompareOp(e.op)) {
+    if (e.op === '&&' || e.op === '||' || isCompareOp(e.op)) {
+      const what = isCompareOp(e.op) ? `comparison '${e.op}'` : `'${e.op}'`;
       throw new CodeGenError(
-        `comparison '${e.op}' can only be used as a condition (if / while / for)`,
+        `${what} can only be used as a condition (if / while / for)`,
         e.line,
         0,
       );
@@ -868,10 +866,43 @@ export function generate(cp: CheckedProgram): CodeBuffer {
    * Emits code that continues at `label` when the condition is false (`invertForFalse`) or
    * true (otherwise). A 6502 branch reaches only ±127 bytes, so this never branches to `label`
    * directly: it branches the opposite way over a JMP, which can go anywhere.
+   *
+   * `&&`, `||` and `!` are control flow, not values: each operand is tested on its own and the
+   * right operand is skipped when the left one decides (short-circuit), so the operands may be
+   * comparisons, which have no value form.
    */
   function genCondBranch(cond: Expr, label: string, invertForFalse: boolean): void {
-    if (cond.tag === 'binary' && (cond.op === '&&' || cond.op === '||')) {
-      throw new CodeGenError(`'${cond.op}' is not supported yet`, cond.line, 0);
+    if (cond.tag === 'binary' && cond.op === '&&') {
+      if (invertForFalse) {
+        // Go to `label` when either operand is false.
+        genCondBranch(cond.lhs, label, true);
+        genCondBranch(cond.rhs, label, true);
+      } else {
+        // Go to `label` when both are true: a false left operand skips the right one.
+        const skip = freshLabel('and_skip');
+        genCondBranch(cond.lhs, skip, true);
+        genCondBranch(cond.rhs, label, false);
+        emitLabel(skip);
+      }
+      return;
+    }
+    if (cond.tag === 'binary' && cond.op === '||') {
+      if (invertForFalse) {
+        // Go to `label` when both operands are false: a true left operand skips the right one.
+        const skip = freshLabel('or_skip');
+        genCondBranch(cond.lhs, skip, false);
+        genCondBranch(cond.rhs, label, true);
+        emitLabel(skip);
+      } else {
+        // Go to `label` when either operand is true.
+        genCondBranch(cond.lhs, label, false);
+        genCondBranch(cond.rhs, label, false);
+      }
+      return;
+    }
+    if (cond.tag === 'unary' && cond.op === '!') {
+      genCondBranch(cond.rhs, label, !invertForFalse);
+      return;
     }
     const stay = freshLabel('cond_stay');
     if (cond.tag === 'binary' && isCompareOp(cond.op)) {

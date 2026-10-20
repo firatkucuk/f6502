@@ -222,13 +222,7 @@ fn moveTraffic(): void {
     let otherX: u8 = trafficX[car];
     let otherRight: u8 = otherX + 18;
     // The body and wheels fill the middle 18 pixels. Ignore transparent sprite margins.
-    if (y > 192) {
-      if (y < 230) {
-        if (x + 18 > otherX) {
-          if (x < otherRight) { alive = 0; }
-        }
-      }
-    }
+    if (y > 192 && y < 230 && x + 18 > otherX && x < otherRight) { alive = 0; }
   }
 }
 

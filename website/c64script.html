@@ -508,7 +508,9 @@
           <tr><td></td><td style="color:var(--text-muted)"><code>==</code> <code>!=</code></td><td style="color:var(--text-muted)">Same.</td></tr>
           <tr><td></td><td style="color:var(--text-muted)"><code>&amp;</code></td><td style="color:var(--text-muted)">Lower than comparisons, as in C: write <code>(a &amp; 1) == 0</code>.</td></tr>
           <tr><td></td><td style="color:var(--text-muted)"><code>^</code></td><td style="color:var(--text-muted)"></td></tr>
-          <tr><td>Loosest</td><td style="color:var(--text-muted)"><code>|</code></td><td style="color:var(--text-muted)"></td></tr>
+          <tr><td></td><td style="color:var(--text-muted)"><code>|</code></td><td style="color:var(--text-muted)"></td></tr>
+          <tr><td></td><td style="color:var(--text-muted)"><code>&amp;&amp;</code></td><td style="color:var(--text-muted)">Conditions only; short-circuits.</td></tr>
+          <tr><td>Loosest</td><td style="color:var(--text-muted)"><code>||</code></td><td style="color:var(--text-muted)">Same.</td></tr>
         </tbody>
       </table>
     </div>
@@ -551,7 +553,7 @@
   <section class="section" style="padding-top:0" id="control-flow">
     <p class="section-label">Language guide</p>
     <h2 class="section-title">Control flow</h2>
-    <p class="section-lead">Braces are always required, and a condition is a comparison or any value (non-zero is true).</p>
+    <p class="section-lead">Braces are always required, and a condition is a comparison or any value (non-zero is true), combined with <code>&amp;&amp;</code>, <code>||</code> and <code>!</code>.</p>
 
     <div class="table-wrap reveal">
       <table>
@@ -570,8 +572,12 @@
     </div>
     <p style="color:var(--text-muted);font-size:0.9rem;margin:1.25rem 0 0">
       Comparisons are unsigned (<code>200 &gt; 100</code> is true, <code>255 &lt; 0</code> is false).
-      <code>&amp;&amp;</code> and <code>||</code> are not in the language yet: nest the
-      <code>if</code> statements, or use a flag variable.
+      <code>a &amp;&amp; b</code>, <code>a || b</code> and <code>!a</code> combine conditions and
+      short-circuit: the right operand is not evaluated when the left one decides, so
+      <code>bulletOn == 1 &amp;&amp; hit() == 1</code> only calls <code>hit()</code> while a bullet
+      is live. <code>&amp;&amp;</code> binds tighter than <code>||</code>; parentheses group. They are
+      conditions, not values: <code>let hit: u8 = a &amp;&amp; b;</code> is a compile error, set the
+      flag in an <code>if</code>.
     </p>
     <div class="terminal reveal" style="margin-top:1.5rem">
       <div class="terminal-bar">
@@ -592,11 +598,12 @@
     VIC2.borderColor = COLOR_BLUE;
   }
 
-  <span class="cm">// two conditions: nest instead of &amp;&amp;</span>
-  <span class="kw">if</span> (x &gt; <span class="nu">1</span>) {
-    <span class="kw">if</span> (x &lt; <span class="nu">5</span>) {
-      VIC2.bgColor0 = COLOR_YELLOW;
-    }
+  <span class="cm">// two conditions; the right one only runs when the left one holds</span>
+  <span class="kw">if</span> (x &gt; <span class="nu">1</span> &amp;&amp; x &lt; <span class="nu">5</span>) {
+    VIC2.bgColor0 = COLOR_YELLOW;
+  }
+  <span class="kw">if</span> (!(x == <span class="nu">2</span> || x == <span class="nu">4</span>)) {
+    VIC2.bgColor0 = COLOR_GREEN;
   }
   <span class="kw">loop</span> {}
 }</pre>
@@ -1249,7 +1256,7 @@
         </thead>
         <tbody>
           <tr><td><code>elif</code>, <code>if (c) stmt;</code></td><td style="color:var(--text-muted)">parse error (expected <code>(</code> / <code>{</code>)</td><td style="color:var(--text-muted)"><code>else if (c) { … }</code>, always with braces</td></tr>
-          <tr><td><code>a == 1 &amp;&amp; b == 2</code>, <code>||</code></td><td style="color:var(--text-muted)"><code>'&amp;&amp;' is not supported yet</code></td><td style="color:var(--text-muted)">nested <code>if</code> statements, or a flag variable</td></tr>
+          <tr><td><code>let hit: u8 = a == 1 &amp;&amp; b == 2;</code>, <code>||</code> as a value</td><td style="color:var(--text-muted)"><code>'&amp;&amp;' can only be used as a condition (if / while / for)</code></td><td style="color:var(--text-muted)"><code>if (a == 1 &amp;&amp; b == 2) { hit = 1; }</code></td></tr>
           <tr><td><code>switch</code>, <code>do { } while</code>, <code>c ? a : b</code></td><td style="color:var(--text-muted)">parse error</td><td style="color:var(--text-muted)">an <code>if</code> / <code>else if</code> chain, or <code>while</code></td></tr>
           <tr><td><code>a * b</code>, <code>a &lt;&lt; n</code>, <code>a % b</code> (runtime)</td><td style="color:var(--text-muted)"><code>operator '*' is not supported yet</code></td><td style="color:var(--text-muted)">repeated addition or <code>asm</code>; <code>*</code>, <code>&lt;&lt;</code>, <code>&gt;&gt;</code> work on constants</td></tr>
           <tr><td><code>-a</code>, <code>~a</code></td><td style="color:var(--text-muted)"><code>unary operator '-' is not supported yet</code></td><td style="color:var(--text-muted)"><code>a ^ 0xFF</code> for the complement</td></tr>
@@ -1306,7 +1313,7 @@
         <div class="chip-card-num">NO RECURSION</div>
         <h3>Functions cannot call themselves</h3>
         <p class="chip-label">No stack frame</p>
-        <p>Parameters and locals live at fixed zero-page addresses, so a function that calls itself, directly or through another function, is a compile error. <code>&amp;&amp;</code>, <code>||</code>, <code>*</code>, <code>/</code> and shifts on variables are compile errors too, and the right-hand side of <code>+ - &amp; | ^</code> and of comparisons must be a literal, a variable or a hardware register.</p>
+        <p>Parameters and locals live at fixed zero-page addresses, so a function that calls itself, directly or through another function, is a compile error. <code>*</code>, <code>/</code> and shifts on variables are compile errors too, and the right-hand side of <code>+ - &amp; | ^</code> and of comparisons must be a literal, a variable or a hardware register.</p>
       </div>
     </div>
 
