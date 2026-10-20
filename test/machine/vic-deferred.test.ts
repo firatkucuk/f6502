@@ -79,14 +79,25 @@ describe('collisions in invisible cycles', () => {
 });
 
 describe('sprite throughput', () => {
-  it('eight sprites run faster than real time (guard against a large regression)', () => {
+  /** Wall-clock milliseconds for 100 frames (2 s of PAL time) with `sprites` solid sprites. */
+  function timeFrames(sprites: number): number {
     const w = vicWorld();
     setup(w);
-    for (let n = 0; n < 8; n++) solid(w, n, 40 + n * 20, 60 + n * 10, n + 1);
-    const frames = 100; // 2 s of PAL time
+    for (let n = 0; n < sprites; n++) solid(w, n, 40 + n * 20, 60 + n * 10, n + 1);
     const start = performance.now();
-    runFrames(w.vic, frames);
-    const seconds = (performance.now() - start) / 1000;
-    expect(seconds).toBeLessThan(frames / 50);
+    runFrames(w.vic, 100);
+    return performance.now() - start;
+  }
+
+  it('eight sprites cost about as much as none (guard against a large regression)', () => {
+    // A ratio against a run without sprites instead of an absolute limit: machine load slows
+    // both runs alike. The fastest of several interleaved runs drops one-off scheduling stalls.
+    let bare = Infinity;
+    let busy = Infinity;
+    for (let i = 0; i < 3; i++) {
+      bare = Math.min(bare, timeFrames(0));
+      busy = Math.min(busy, timeFrames(8));
+    }
+    expect(busy / bare).toBeLessThan(1.5);
   });
 });
