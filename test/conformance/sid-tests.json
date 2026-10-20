@@ -76,15 +76,14 @@
     "prg": "SID/detectmirrors/main.prg",
     "model": "6581",
     "frames": 150,
-    "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
+    "source": "readme: the detection routine from the \"to norah\" release; the program never writes $D020/$D7FF and prints \"DETECTED SECOND SID AT 0000.\" (the address 0000 = none found) on a single SID",
     "checks": [
       {
-        "type": "border",
-        "colour": 5
+        "type": "screen",
+        "contains": "DETECTED SECOND SID AT 0000."
       }
     ],
-    "expect": "known-fail:differs from the documented hardware behaviour",
-    "failing": 1
+    "expect": "pass"
   },
   {
     "name": "env_test/env_test_adra_1.prg",
@@ -265,15 +264,15 @@
   {
     "name": "noiselfsrinit/scan.prg",
     "prg": "SID/noiselfsrinit/scan.prg",
-    "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
+    "source": "self-checking program (border 13 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
     "checks": [
       {
         "type": "border",
-        "colour": 5
+        "colour": 13
       }
     ],
     "model": "6581",
-    "frames": 150,
+    "frames": 400,
     "expect": "known-fail:noise output after LFSR init at a fixed phase differs from the documented 8580 values",
     "failing": 1
   },
@@ -282,11 +281,11 @@
     "prg": "SID/noiselfsrinit/simple.prg",
     "model": "6581",
     "frames": 150,
-    "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
+    "source": "self-checking program (border 13 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
     "checks": [
       {
         "type": "border",
-        "colour": 5
+        "colour": 13
       }
     ],
     "expect": "known-fail:printed noise value after LFSR init differs from the documented hardware value ($7F)",
@@ -295,7 +294,7 @@
   {
     "name": "noisewriteback/noise_writeback_check_8_to_8_new.prg",
     "prg": "SID/noisewriteback/noise_writeback_check_8_to_8_new.prg",
-    "model": "6581",
+    "model": "8580",
     "frames": 150,
     "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
     "checks": [
@@ -325,7 +324,7 @@
   {
     "name": "noisewriteback/noise_writeback_check_8_to_9_new.prg",
     "prg": "SID/noisewriteback/noise_writeback_check_8_to_9_new.prg",
-    "model": "6581",
+    "model": "8580",
     "frames": 150,
     "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
     "checks": [
@@ -355,7 +354,7 @@
   {
     "name": "noisewriteback/noise_writeback_check_8_to_C_new.prg",
     "prg": "SID/noisewriteback/noise_writeback_check_8_to_C_new.prg",
-    "model": "6581",
+    "model": "8580",
     "frames": 150,
     "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
     "checks": [
@@ -385,7 +384,7 @@
   {
     "name": "noisewriteback/noise_writeback_check_9_to_8_new.prg",
     "prg": "SID/noisewriteback/noise_writeback_check_9_to_8_new.prg",
-    "model": "6581",
+    "model": "8580",
     "frames": 150,
     "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
     "checks": [
@@ -415,7 +414,7 @@
   {
     "name": "noisewriteback/noise_writeback_check_9_to_9_new.prg",
     "prg": "SID/noisewriteback/noise_writeback_check_9_to_9_new.prg",
-    "model": "6581",
+    "model": "8580",
     "frames": 150,
     "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
     "checks": [
@@ -445,7 +444,7 @@
   {
     "name": "noisewriteback/noise_writeback_check_9_to_A_new.prg",
     "prg": "SID/noisewriteback/noise_writeback_check_9_to_A_new.prg",
-    "model": "6581",
+    "model": "8580",
     "frames": 150,
     "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
     "checks": [
@@ -475,7 +474,7 @@
   {
     "name": "noisewriteback/noise_writeback_check_A_to_8_new.prg",
     "prg": "SID/noisewriteback/noise_writeback_check_A_to_8_new.prg",
-    "model": "6581",
+    "model": "8580",
     "frames": 150,
     "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
     "checks": [
@@ -505,7 +504,7 @@
   {
     "name": "noisewriteback/noise_writeback_check_A_to_9_new.prg",
     "prg": "SID/noisewriteback/noise_writeback_check_A_to_9_new.prg",
-    "model": "6581",
+    "model": "8580",
     "frames": 150,
     "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
     "checks": [
@@ -535,7 +534,7 @@
   {
     "name": "noisewriteback/noise_writeback_check_A_to_A_new.prg",
     "prg": "SID/noisewriteback/noise_writeback_check_A_to_A_new.prg",
-    "model": "6581",
+    "model": "8580",
     "frames": 150,
     "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
     "checks": [
@@ -565,7 +564,7 @@
   {
     "name": "noisewriteback/noise_writeback_check_C_to_C_new.prg",
     "prg": "SID/noisewriteback/noise_writeback_check_C_to_C_new.prg",
-    "model": "6581",
+    "model": "8580",
     "frames": 150,
     "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
     "checks": [
@@ -595,7 +594,7 @@
   {
     "name": "noisewriteback/noise_writeback_check_D_to_E_new.prg",
     "prg": "SID/noisewriteback/noise_writeback_check_D_to_E_new.prg",
-    "model": "6581",
+    "model": "8580",
     "frames": 150,
     "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
     "checks": [
@@ -625,7 +624,7 @@
   {
     "name": "noisewriteback/noise_writeback_check_E_to_B_new.prg",
     "prg": "SID/noisewriteback/noise_writeback_check_E_to_B_new.prg",
-    "model": "6581",
+    "model": "8580",
     "frames": 150,
     "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
     "checks": [
@@ -655,7 +654,7 @@
   {
     "name": "noisewriteback/noise_writeback_check_E_to_D_new.prg",
     "prg": "SID/noisewriteback/noise_writeback_check_E_to_D_new.prg",
-    "model": "6581",
+    "model": "8580",
     "frames": 150,
     "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
     "checks": [
@@ -946,7 +945,7 @@
   {
     "name": "wb_testsuite/noise_writeback_check_8_to_8_new.prg",
     "prg": "SID/wb_testsuite/noise_writeback_check_8_to_8_new.prg",
-    "model": "6581",
+    "model": "8580",
     "frames": 150,
     "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
     "checks": [
@@ -1006,7 +1005,7 @@
   {
     "name": "wb_testsuite/noise_writeback_check_B_to_B_new.prg",
     "prg": "SID/wb_testsuite/noise_writeback_check_B_to_B_new.prg",
-    "model": "6581",
+    "model": "8580",
     "frames": 150,
     "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
     "checks": [
@@ -1021,7 +1020,7 @@
   {
     "name": "wb_testsuite/noise_writeback_check_C_to_A_new.prg",
     "prg": "SID/wb_testsuite/noise_writeback_check_C_to_A_new.prg",
-    "model": "6581",
+    "model": "8580",
     "frames": 150,
     "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
     "checks": [
@@ -1051,7 +1050,7 @@
   {
     "name": "wb_testsuite/noise_writeback_check_E_to_9_new.prg",
     "prg": "SID/wb_testsuite/noise_writeback_check_E_to_9_new.prg",
-    "model": "6581",
+    "model": "8580",
     "frames": 150,
     "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
     "checks": [
@@ -1081,7 +1080,7 @@
   {
     "name": "wb_testsuite/noise_writeback_check_F_to_F_new.prg",
     "prg": "SID/wb_testsuite/noise_writeback_check_F_to_F_new.prg",
-    "model": "6581",
+    "model": "8580",
     "frames": 150,
     "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
     "checks": [
