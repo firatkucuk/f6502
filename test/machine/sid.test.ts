@@ -81,10 +81,14 @@ describe('SID registers', () => {
     const a = s.read(0x1b);
     ticks(s, 2000);
     expect(s.read(0x1b)).not.toBe(a);
+    ticks(s, 40000); // the envelope has released from its power-up value and is frozen at zero
+    expect(s.read(0x1c)).toBe(0);
     s.write(0x13, 0x00);
     s.write(0x14, 0xf0);
     s.write(0x12, 0x21); // gate
-    ticks(s, 9 * 20);
+    let n = 0;
+    while (s.read(0x1c) !== 1 && ++n < 40) ticks(s, 1); // sync to the first attack step
+    ticks(s, 9 * 19);
     expect(s.read(0x1c)).toBe(20);
   });
 
