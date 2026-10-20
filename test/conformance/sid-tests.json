@@ -53,8 +53,7 @@
         "colour": 5
       }
     ],
-    "expect": "known-fail:the detection method relies on a combined-waveform/noise behaviour our approximation does not reproduce",
-    "failing": 1
+    "expect": "pass"
   },
   {
     "name": "detect/detect-2-old.prg",
@@ -879,8 +878,7 @@
         "colour": 5
       }
     ],
-    "expect": "known-fail:combined waveforms are analytical approximations, not the measured per-chip tables",
-    "failing": 1
+    "expect": "pass"
   },
   {
     "name": "waveforms/waveforms-20-6581.prg",
@@ -908,8 +906,7 @@
         "colour": 5
       }
     ],
-    "expect": "known-fail:combined waveforms are analytical approximations, not the measured per-chip tables",
-    "failing": 1
+    "expect": "pass"
   },
   {
     "name": "waveforms/waveforms-40-6581.prg",

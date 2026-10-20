@@ -16,6 +16,11 @@ export interface SidModelParams {
    * and $A2000 on an 8580.
    */
   busTtl: number;
+  /**
+   * The 8580 latches the triangle/sawtooth output in the first clock phase, so OSC3 shows it
+   * one cycle late (the audio output is not delayed). The 6581 connects it directly.
+   */
+  osc3Delay: boolean;
 }
 
 export const MODEL_8580: SidModelParams = {
@@ -26,6 +31,7 @@ export const MODEL_8580: SidModelParams = {
   q: (r) => 0.707 + (r / 15) * 6,
   dcLevel: 0.01,
   busTtl: 0xa2000,
+  osc3Delay: true,
 };
 
 export const MODEL_6581: SidModelParams = {
@@ -41,6 +47,7 @@ export const MODEL_6581: SidModelParams = {
   q: (r) => 0.707 + (r / 15) * 8,
   dcLevel: 0.05,
   busTtl: 0x1d00,
+  osc3Delay: false,
 };
 
 export function modelByName(name: '6581' | '8580'): SidModelParams {

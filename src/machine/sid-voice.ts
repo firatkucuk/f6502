@@ -23,9 +23,17 @@ export class SidVoice {
    * pipelined one cycle behind the accumulator, and the TEST bit forces it high.
    */
   pulseOut = 0xfff;
+  /**
+   * The 8580's triangle/sawtooth latch (`SidModelParams.osc3Delay`): `triSawPipe` is what the
+   * last cycle computed, `triSawPrev` the value before it, which is what OSC3 shows.
+   * Power-up values; reset does not touch them.
+   */
+  private triSawPipe = 0x555;
+  private triSawPrev = 0x555;
 
   private testCycles = 0;
   private floating = 0;
+  private floatingOsc3 = 0;
   private floatAge = 0;
 
   reset(): void {
@@ -38,6 +46,7 @@ export class SidVoice {
     this.pulseOut = 0xfff;
     this.testCycles = 0;
     this.floating = 0;
+    this.floatingOsc3 = 0;
     this.floatAge = 0;
   }
 
@@ -45,15 +54,30 @@ export class SidVoice {
   setControl(value: number, model: SidModelParams): void {
     const oldSel = this.control & 0xf0;
     const newSel = value & 0xf0;
-    if (oldSel !== 0 && newSel === 0) this.wave(model); // latch what was last on the output
+    if (oldSel !== 0 && newSel === 0) {
+      // Latch what was last on the output (and what OSC3 showed of it).
+      this.floatingOsc3 = this.osc3(model);
+      this.wave(model);
+      this.floatAge = 0;
+    }
     const testRising = (value & ~this.control & 0x08) !== 0;
     this.control = value;
-    if (newSel === 0 && oldSel !== 0) this.floatAge = 0;
     if (testRising) {
       // TEST clears the accumulator at once and holds the pulse line high.
       this.acc = 0;
       this.msbRising = false;
       this.pulseOut = 0xfff;
+    }
+    // A write recomputes the output, which also feeds the OSC3 pipeline.
+    this.latch(model);
+  }
+
+  /** End of a cycle (after sync): the per-cycle output stages that keep state. */
+  latch(model: SidModelParams): void {
+    const sel = this.control & 0xf0;
+    if (model.osc3Delay && (sel & 0x30) !== 0) {
+      this.triSawPrev = this.triSawPipe;
+      this.triSawPipe = this.triSaw(sel);
     }
   }
 
@@ -103,6 +127,35 @@ export class SidVoice {
     );
   }
 
+  /** The triangle and/or sawtooth bits for the current accumulator (all ones if neither). */
+  private triSaw(sel: number): number {
+    const acc = this.acc;
+    let out = 0xfff;
+    if (sel & 0x10) {
+      const ring = (this.control & 0x04) !== 0;
+      const srcMsb = (this.source.acc >> 23) & 1;
+      const invert =
+        (sel & 0x20) === 0 && ((ring && srcMsb === 0 ? 1 : 0) ^ ((acc >> 23) & 1)) === 1;
+      out &= ((invert ? ~acc & 0xffffff : acc) >> 11) & 0xfff;
+    }
+    if (sel & 0x20) out &= (acc >> 12) & 0xfff;
+    return out;
+  }
+
+  /** What a read of OSC3 shows: the output, with the 8580's one-cycle triangle/sawtooth delay. */
+  osc3(model: SidModelParams): number {
+    const sel = this.control & 0xf0;
+    if (sel === 0) {
+      if (this.floatAge >= FLOAT_DECAY_CYCLES) this.floatingOsc3 = 0;
+      return this.floatingOsc3;
+    }
+    if (!model.osc3Delay || (sel & 0x30) === 0) return this.wave(model);
+    let out = this.triSawPrev;
+    if (sel & 0x40) out &= this.pulseOut;
+    if (sel & 0x80) out &= this.noiseOut();
+    return out;
+  }
+
   /** 12-bit waveform output for the current accumulator and control bits. */
   wave(model: SidModelParams): number {
     const sel = this.control & 0xf0;
@@ -110,21 +163,8 @@ export class SidVoice {
       if (this.floatAge >= FLOAT_DECAY_CYCLES) this.floating = 0;
       return this.floating;
     }
-    const acc = this.acc;
-    let out = 0xfff;
-    let waves = 0;
-    if (sel & 0x10) {
-      const ring = (this.control & 0x04) !== 0;
-      const srcMsb = (this.source.acc >> 23) & 1;
-      const invert =
-        (sel & 0x20) === 0 && ((ring && srcMsb === 0 ? 1 : 0) ^ ((acc >> 23) & 1)) === 1;
-      out &= ((invert ? ~acc & 0xffffff : acc) >> 11) & 0xfff;
-      waves++;
-    }
-    if (sel & 0x20) {
-      out &= (acc >> 12) & 0xfff;
-      waves++;
-    }
+    let out = this.triSaw(sel);
+    let waves = (sel & 0x10 ? 1 : 0) + (sel & 0x20 ? 1 : 0);
     if (sel & 0x40) {
       out &= this.pulseOut;
       waves++;
