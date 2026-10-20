@@ -99,6 +99,28 @@ describe('Voice waveforms', () => {
     expect(v.wave(MODEL_8580)).toBe(0);
   });
 
+  it('the 8580 shows triangle and sawtooth on OSC3 one cycle late, the 6581 at once', () => {
+    const v = new Voice();
+    v.control = 0x20;
+    v.freq = 0x1000;
+    v.acc = 0;
+    for (let i = 0; i < 2; i++) {
+      v.advance();
+      v.latch(MODEL_8580);
+    }
+    expect(v.wave(MODEL_8580)).toBe(2); // the audio output is not delayed
+    expect(v.osc3(MODEL_8580)).toBe(1);
+    expect(v.osc3(MODEL_6581)).toBe(2);
+    v.setControl(0x20, MODEL_8580); // a control write feeds the latch from the current value
+    expect(v.osc3(MODEL_8580)).toBe(2);
+    v.pw = 0xfff;
+    v.setControl(0x60, MODEL_8580); // saw + pulse: the (pipelined) pulse level masks the latch
+    expect(v.osc3(MODEL_8580)).toBe(2);
+    v.advance();
+    v.latch(MODEL_8580);
+    expect(v.osc3(MODEL_8580)).toBe(0);
+  });
+
   it('ring mod with both oscillators at zero inverts the triangle (OSC3 = $FF)', () => {
     const { a, b } = pair();
     a.acc = 0;

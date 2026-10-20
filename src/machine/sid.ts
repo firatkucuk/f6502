@@ -97,7 +97,7 @@ export class Sid implements IoChip {
       case 0x1a:
         return 0xff;
       case 0x1b:
-        return this.voices[2]!.wave(this.modelParams) >> 4;
+        return this.voices[2]!.osc3(this.modelParams) >> 4;
       case 0x1c:
         return this.envelopes[2]!.counter;
       default:
@@ -188,6 +188,10 @@ export class Sid implements IoChip {
       v1.applySync();
       v2.applySync();
     }
+    const m = this.modelParams;
+    v0.latch(m);
+    v1.latch(m);
+    v2.latch(m);
     const e = this.envelopes;
     e[0]!.tick();
     e[1]!.tick();
