@@ -63,16 +63,40 @@ describe('Voice waveforms', () => {
     v.control = 0x40;
     v.pw = 0x800;
     v.acc = 0x7ff000;
+    v.advance(); // freq 0: the accumulator stays, the comparator result is latched
     expect(v.wave(MODEL_8580)).toBe(0);
     v.acc = 0x800000;
+    v.advance();
+    expect(v.wave(MODEL_8580)).toBe(0xfff);
+  });
+
+  it('the pulse comparator result is one cycle behind the accumulator', () => {
+    const v = new Voice();
+    v.control = 0x40;
+    v.pw = 0x800;
+    v.acc = 0x7ff000;
+    v.freq = 0x1000;
+    v.advance(); // accumulator reaches $800000, but the output still shows the old compare
+    expect(v.acc).toBe(0x800000);
+    expect(v.wave(MODEL_8580)).toBe(0);
+    v.advance();
     expect(v.wave(MODEL_8580)).toBe(0xfff);
   });
 
   it('pulse is held high by the TEST bit', () => {
     const v = new Voice();
-    v.control = 0x48;
+    v.control = 0x40;
     v.pw = 0xfff;
+    v.acc = 0;
+    v.advance();
+    expect(v.wave(MODEL_8580)).toBe(0);
+    v.setControl(0x48, MODEL_8580);
     expect(v.wave(MODEL_8580)).toBe(0xfff);
+    v.advance();
+    expect(v.wave(MODEL_8580)).toBe(0xfff);
+    v.setControl(0x40, MODEL_8580); // released: the compare of accumulator 0 against PW=$FFF
+    v.advance();
+    expect(v.wave(MODEL_8580)).toBe(0);
   });
 
   it('ring mod with both oscillators at zero inverts the triangle (OSC3 = $FF)', () => {

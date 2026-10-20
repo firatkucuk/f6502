@@ -18,6 +18,11 @@ export class SidVoice {
   source: SidVoice = this;
   /** True for the cycle in which the accumulator MSB went from 0 to 1. */
   msbRising = false;
+  /**
+   * The pulse comparator output (all ones or all zeros) for the current cycle. The compare is
+   * pipelined one cycle behind the accumulator, and the TEST bit forces it high.
+   */
+  pulseOut = 0xfff;
 
   private testCycles = 0;
   private floating = 0;
@@ -30,6 +35,7 @@ export class SidVoice {
     this.pw = 0;
     this.control = 0;
     this.msbRising = false;
+    this.pulseOut = 0xfff;
     this.testCycles = 0;
     this.floating = 0;
     this.floatAge = 0;
@@ -40,8 +46,15 @@ export class SidVoice {
     const oldSel = this.control & 0xf0;
     const newSel = value & 0xf0;
     if (oldSel !== 0 && newSel === 0) this.wave(model); // latch what was last on the output
+    const testRising = (value & ~this.control & 0x08) !== 0;
     this.control = value;
     if (newSel === 0 && oldSel !== 0) this.floatAge = 0;
+    if (testRising) {
+      // TEST clears the accumulator at once and holds the pulse line high.
+      this.acc = 0;
+      this.msbRising = false;
+      this.pulseOut = 0xfff;
+    }
   }
 
   /** Advance the oscillator by one cycle (before sync is applied). */
@@ -50,10 +63,13 @@ export class SidVoice {
     if ((control & 0x08) !== 0) {
       this.acc = 0;
       this.msbRising = false;
+      this.pulseOut = 0xfff;
       if (++this.testCycles >= TEST_LFSR_DELAY) this.lfsr = NOISE_RESET;
     } else {
       if (this.testCycles !== 0) this.testCycles = 0;
       const old = this.acc;
+      // The comparator result reaches the output one cycle after the accumulator it compared.
+      this.pulseOut = old >> 12 >= this.pw ? 0xfff : 0;
       const acc = (old + this.freq) & 0xffffff;
       this.acc = acc;
       const rose = (old ^ acc) & acc; // bits that went 0 -> 1
@@ -110,7 +126,7 @@ export class SidVoice {
       waves++;
     }
     if (sel & 0x40) {
-      out &= (this.control & 0x08) !== 0 || acc >> 12 >= this.pw ? 0xfff : 0;
+      out &= this.pulseOut;
       waves++;
     }
     if (waves > 1) out = model.combine(out, sel);

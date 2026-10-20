@@ -923,8 +923,7 @@
         "colour": 5
       }
     ],
-    "expect": "known-fail:combined waveforms are analytical approximations, not the measured per-chip tables",
-    "failing": 1
+    "expect": "pass"
   },
   {
     "name": "waveforms/waveforms-40-8580.prg",
@@ -938,8 +937,7 @@
         "colour": 5
       }
     ],
-    "expect": "known-fail:combined waveforms are analytical approximations, not the measured per-chip tables",
-    "failing": 1
+    "expect": "pass"
   },
   {
     "name": "wb_testsuite/noise_writeback_check_8_to_8_new.prg",
