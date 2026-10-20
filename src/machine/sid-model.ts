@@ -21,6 +21,23 @@ export interface SidModelParams {
    * one cycle late (the audio output is not delayed). The 6581 connects it directly.
    */
   osc3Delay: boolean;
+  /**
+   * On the 6581 the accumulator MSB feeds the sawtooth switch directly, so when a combined
+   * waveform with sawtooth drives output bit 11 low, the MSB is pulled low for the next cycle.
+   * The 8580 buffers the MSB with a flip-flop.
+   */
+  msbPulldown: boolean;
+  /**
+   * Noise combined with pulse (waveform selections $C-$F): the shift register bits are shorted
+   * through the pulse line, which leaves only runs of set bits (per model) on the output.
+   */
+  noisePulse(noise: number): number;
+  /**
+   * Cycles the TEST bit must be held before the noise shift register starts to recover (its
+   * cells drift to one), and the cycles per further step of that recovery.
+   */
+  lfsrResetStart: number;
+  lfsrResetStep: number;
 }
 
 export const MODEL_8580: SidModelParams = {
@@ -32,6 +49,11 @@ export const MODEL_8580: SidModelParams = {
   dcLevel: 0.01,
   busTtl: 0xa2000,
   osc3Delay: true,
+  msbPulldown: false,
+  // A bit survives if the one below it is set as well; the top six bits always come through.
+  noisePulse: (noise) => (noise < 0xfc0 ? noise & (noise << 1) & 0xfff : 0xfc0),
+  lfsrResetStart: 2_519_864, // about 2.5 s, then roughly 0.3 s per bit
+  lfsrResetStep: 315_000,
 };
 
 export const MODEL_6581: SidModelParams = {
@@ -48,6 +70,11 @@ export const MODEL_6581: SidModelParams = {
   dcLevel: 0.05,
   busTtl: 0x1d00,
   osc3Delay: false,
+  msbPulldown: true,
+  // Nothing comes through unless the top four bits are set; then a bit needs the two below it.
+  noisePulse: (noise) => (noise < 0xf00 ? 0 : noise & (noise << 1) & (noise << 2) & 0xfff),
+  lfsrResetStart: 35_000, // about $8000 cycles, then a step per bit
+  lfsrResetStep: 1_000,
 };
 
 export function modelByName(name: '6581' | '8580'): SidModelParams {
