@@ -104,6 +104,7 @@ its source, list entry, showcase card and screenshot, and a focused test as desc
   for it to pass.
 - For movement and collisions, update coordinates once per frame and check bounds before changing
   screen or sprite state. Keep collision results in a small state flag when a scenario needs to
-  assert them.
+  assert them. Write a bounds check as one condition, `if (x + 18 > ex && x < er) { … }`, rather
+  than nested `if` statements; `&&`, `||` and `!` short-circuit and compile to the same branches.
 - Avoid runtime multiplication; use additions and lookup tables. Use `asm {}` only when the
   compiler's supported language cannot express a needed instruction sequence.
