@@ -504,17 +504,15 @@ fn turnAndThrust(): void {
 
   // A gentle impulse every fourth held-thrust frame. Turning alone preserves velocity.
   if (thrustTick > 0) { thrustTick = thrustTick - 1; }
-  if (thrustKey() == 1) {
-    if (thrustTick == 0) {
-      thrustTick = 4;
-      impulse = directionX[heading];
-      if (heading < 8) { shipVX = shipVX + impulse; }
-      else { shipVX = shipVX - impulse; }
-      impulse = directionY[heading];
-      if (heading < 4) { shipVY = shipVY - impulse; }
-      else if (heading < 12) { shipVY = shipVY + impulse; }
-      else { shipVY = shipVY - impulse; }
-    }
+  if (thrustKey() == 1 && thrustTick == 0) {
+    thrustTick = 4;
+    impulse = directionX[heading];
+    if (heading < 8) { shipVX = shipVX + impulse; }
+    else { shipVX = shipVX - impulse; }
+    impulse = directionY[heading];
+    if (heading < 4) { shipVY = shipVY - impulse; }
+    else if (heading < 12) { shipVY = shipVY + impulse; }
+    else { shipVY = shipVY - impulse; }
   }
 
   // Integrate velocity every frame, including all frames with no keys held.
@@ -571,40 +569,38 @@ fn moveRocks(): void {
 fn launchBullet(): void {
   let impulse: u16 = 0;
   let offset: u8 = 0;
-  if (bulletOn == 0) {
-    if (fireKey() == 1) {
-      bulletOn = 1;
-      // Sprite centers coincide; offset the shot toward the nose in the same heading.
-      bulletX = shipX;
-      bulletY = shipY;
-      offset = directionX[heading];
-      if (heading < 8) { bulletX = bulletX + offset; }
-      else { bulletX = bulletX - offset; }
-      if (heading < 4) { bulletY = bulletY - directionY[heading]; }
-      else if (heading < 12) { bulletY = bulletY + directionY[heading]; }
-      else { bulletY = bulletY - directionY[heading]; }
-      bulletFracX = shipFracX;
-      bulletFracY = shipFracY;
-      // Shots inherit ship velocity, plus five pixels/frame along the nose.
-      impulse = shotX[heading];
-      impulse = impulse + impulse;
-      impulse = impulse + impulse;
-      impulse = impulse + impulse;
-      impulse = impulse + impulse;
-      if (heading < 8) { bulletVX = shipVX + impulse; }
-      else { bulletVX = shipVX - impulse; }
-      impulse = shotY[heading];
-      impulse = impulse + impulse;
-      impulse = impulse + impulse;
-      impulse = impulse + impulse;
-      impulse = impulse + impulse;
-      if (heading < 4) { bulletVY = shipVY - impulse; }
-      else if (heading < 12) { bulletVY = shipVY + impulse; }
-      else { bulletVY = shipVY - impulse; }
-      VIC2.spriteEnable = VIC2.spriteEnable | 0x20;
-      poke(SPRITE_PTRS + 5, 255);
-      setSpritePosition(5, lo(bulletX), hi(bulletX), bulletY);
-    }
+  if (bulletOn == 0 && fireKey() == 1) {
+    bulletOn = 1;
+    // Sprite centers coincide; offset the shot toward the nose in the same heading.
+    bulletX = shipX;
+    bulletY = shipY;
+    offset = directionX[heading];
+    if (heading < 8) { bulletX = bulletX + offset; }
+    else { bulletX = bulletX - offset; }
+    if (heading < 4) { bulletY = bulletY - directionY[heading]; }
+    else if (heading < 12) { bulletY = bulletY + directionY[heading]; }
+    else { bulletY = bulletY - directionY[heading]; }
+    bulletFracX = shipFracX;
+    bulletFracY = shipFracY;
+    // Shots inherit ship velocity, plus five pixels/frame along the nose.
+    impulse = shotX[heading];
+    impulse = impulse + impulse;
+    impulse = impulse + impulse;
+    impulse = impulse + impulse;
+    impulse = impulse + impulse;
+    if (heading < 8) { bulletVX = shipVX + impulse; }
+    else { bulletVX = shipVX - impulse; }
+    impulse = shotY[heading];
+    impulse = impulse + impulse;
+    impulse = impulse + impulse;
+    impulse = impulse + impulse;
+    impulse = impulse + impulse;
+    if (heading < 4) { bulletVY = shipVY - impulse; }
+    else if (heading < 12) { bulletVY = shipVY + impulse; }
+    else { bulletVY = shipVY - impulse; }
+    VIC2.spriteEnable = VIC2.spriteEnable | 0x20;
+    poke(SPRITE_PTRS + 5, 255);
+    setSpritePosition(5, lo(bulletX), hi(bulletX), bulletY);
   }
 }
 

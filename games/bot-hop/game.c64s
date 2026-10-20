@@ -286,11 +286,7 @@ fn supported(): u8 {
     let s: u8 = pyy[idx];
     let a: u8 = pxa[idx];
     let b: u8 = pxb[idx];
-    if (feet == s) {
-      if (xa > a) {
-        if (xb < b) { return 1; }
-      }
-    }
+    if (feet == s && xa > a && xb < b) { return 1; }
   }
   return 0;
 }
@@ -306,17 +302,9 @@ fn dropStep(): void {
     let s: u8 = pyy[idx];
     let a: u8 = pxa[idx];
     let b: u8 = pxb[idx];
-    if (landed == 0) {
-      if (s >= feet) {
-        if (nf >= s) {
-          if (xa > a) {
-            if (xb < b) {
-              landed = 1;
-              y = s - 21;
-            }
-          }
-        }
-      }
+    if (landed == 0 && s >= feet && nf >= s && xa > a && xb < b) {
+      landed = 1;
+      y = s - 21;
     }
   }
   if (landed == 0) { y = y + 3; }
@@ -336,11 +324,7 @@ fn moveHero(): void {
     if (x < 229) { x = x + 3; } else { x = 232; }
   }
   let g: u8 = supported();
-  if (space() == 1) {
-    if (jump == 0) {
-      if (g == 1) { jump = 14; }
-    }
-  }
+  if (space() == 1 && jump == 0 && g == 1) { jump = 14; }
   if (jump > 0) {
     y = y - 3;
     jump = jump - 1;
@@ -349,14 +333,12 @@ fn moveHero(): void {
     if (g == 0) { dropStep(); }
   }
   if (y >= 222) { alive = 0; }
-  if (fireKey() == 1) {
-    if (bon == 0) {
-      bon = 1;
-      bd = face;
-      by = y - 1;
-      if (face == 0) { bx = x + 12; } else { bx = x - 12; }
-      mask = mask + 128;
-    }
+  if (fireKey() == 1 && bon == 0) {
+    bon = 1;
+    bd = face;
+    by = y - 1;
+    if (face == 0) { bx = x + 12; } else { bx = x - 12; }
+    mask = mask + 128;
   }
 }
 
@@ -391,24 +373,20 @@ fn hitEnemy(k: u8, bit: u8): void {
   let ey: u8 = enY[k];
   let xr: u8 = x + 18;
   let er: u8 = ex + 18;
-  if (xr > ex) {
-    if (x < er) {
-      let feet: u8 = y + 21;
-      let etop: u8 = ey + 8;
-      let ebot: u8 = ey + 21;
-      let mid: u8 = ey + 14;
-      if (feet > etop) {
-        if (y < ebot) {
-          if (feet < mid) {
-            mask = mask - bit;
-            addScore();
-            addScore();
-            addScore();
-            jump = 8;
-          } else {
-            alive = 0;
-          }
-        }
+  if (xr > ex && x < er) {
+    let feet: u8 = y + 21;
+    let etop: u8 = ey + 8;
+    let ebot: u8 = ey + 21;
+    let mid: u8 = ey + 14;
+    if (feet > etop && y < ebot) {
+      if (feet < mid) {
+        mask = mask - bit;
+        addScore();
+        addScore();
+        addScore();
+        jump = 8;
+      } else {
+        alive = 0;
       }
     }
   }
@@ -424,17 +402,11 @@ fn hitBullet(k: u8, bit: u8): void {
   let er: u8 = ex + 22;
   let etop: u8 = ey + 6;
   let ebot: u8 = ey + 21;
-  if (bcx > ex) {
-    if (bcx < er) {
-      if (bcy > etop) {
-        if (bcy < ebot) {
-          mask = mask - bit;
-          killBullet();
-          addScore();
-          addScore();
-        }
-      }
-    }
+  if (bcx > ex && bcx < er && bcy > etop && bcy < ebot) {
+    mask = mask - bit;
+    killBullet();
+    addScore();
+    addScore();
   }
 }
 
@@ -444,17 +416,13 @@ fn hitCoin(bit: u8, idx: u8): void {
   let cy: u8 = ccy[idx];
   let xr: u8 = x + 18;
   let cr: u8 = cx + 18;
-  if (xr > cx) {
-    if (x < cr) {
-      let feet: u8 = y + 21;
-      let cbot: u8 = cy + 21;
-      if (feet > cy) {
-        if (y < cbot) {
-          mask = mask - bit;
-          coinsLeft = coinsLeft - 1;
-          addScore();
-        }
-      }
+  if (xr > cx && x < cr) {
+    let feet: u8 = y + 21;
+    let cbot: u8 = cy + 21;
+    if (feet > cy && y < cbot) {
+      mask = mask - bit;
+      coinsLeft = coinsLeft - 1;
+      addScore();
     }
   }
 }
@@ -467,13 +435,7 @@ fn atDoor(): u8 {
   let dr: u8 = dx + 16;
   let feet: u8 = y + 21;
   let db: u8 = dy + 24;
-  if (xr > dx) {
-    if (x < dr) {
-      if (feet > dy) {
-        if (y < db) { return 1; }
-      }
-    }
-  }
+  if (xr > dx && x < dr && feet > dy && y < db) { return 1; }
   return 0;
 }
 

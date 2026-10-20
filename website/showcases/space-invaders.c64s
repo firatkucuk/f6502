@@ -167,24 +167,18 @@ fn hitInvader(): u8 {
     for (let i: u8 = 0; i < 8; i++) {
       let mid: u8 = left + 1;
       let right: u8 = left + 2;
-      if (rk == brow) {
-        if (bcol >= left) {
-          if (bcol <= right) {
-            if (alive[n] == 1) {
-              alive[n] = 0;
-              plot(rk, left, BLANK, COLOR_BLACK);
-              plot(rk, mid, BLANK, COLOR_BLACK);
-              plot(rk, right, BLANK, COLOR_BLACK);
-              addScore();
-              remaining = remaining - 1;
-              if (remaining == 0) { outcome = 1; }
-              if (remaining == 20) { period = 8; }
-              if (remaining == 8) { period = 4; }
-              low = lowestRow();
-              return 1;
-            }
-          }
-        }
+      if (rk == brow && bcol >= left && bcol <= right && alive[n] == 1) {
+        alive[n] = 0;
+        plot(rk, left, BLANK, COLOR_BLACK);
+        plot(rk, mid, BLANK, COLOR_BLACK);
+        plot(rk, right, BLANK, COLOR_BLACK);
+        addScore();
+        remaining = remaining - 1;
+        if (remaining == 0) { outcome = 1; }
+        if (remaining == 20) { period = 8; }
+        if (remaining == 8) { period = 4; }
+        low = lowestRow();
+        return 1;
       }
       left = left + 4;
       n = n + 1;
@@ -205,11 +199,9 @@ fn stepBullet(): void {
     bulletOn = 0;
     return;
   }
-  if (brow >= top) {
-    if (hitInvader() == 1) {
-      bulletOn = 0;
-      return;
-    }
+  if (brow >= top && hitInvader() == 1) {
+    bulletOn = 0;
+    return;
   }
   plot(brow, bcol, SHOT, COLOR_WHITE);
 }
@@ -288,30 +280,24 @@ program @ 0x0810 {
         cannonTick = 0;
       }
       if (cannonTick == 0) {
-        if (leftKey() == 1) {
-          if (cx > 2) {
-            drawCannon(cx, BLANK);
-            cx = cx - 1;
-            drawCannon(cx, BLOCK);
-          }
+        if (leftKey() == 1 && cx > 2) {
+          drawCannon(cx, BLANK);
+          cx = cx - 1;
+          drawCannon(cx, BLOCK);
         }
-        if (rightKey() == 1) {
-          if (cx < 37) {
-            drawCannon(cx, BLANK);
-            cx = cx + 1;
-            drawCannon(cx, BLOCK);
-          }
+        if (rightKey() == 1 && cx < 37) {
+          drawCannon(cx, BLANK);
+          cx = cx + 1;
+          drawCannon(cx, BLOCK);
         }
       }
 
       stepBullet();
-      if (bulletOn == 0) {
-        if (fireKey() == 1) {
-          bulletOn = 1;
-          bcol = cx;
-          brow = 21;
-          plot(brow, bcol, SHOT, COLOR_WHITE);
-        }
+      if (bulletOn == 0 && fireKey() == 1) {
+        bulletOn = 1;
+        bcol = cx;
+        brow = 21;
+        plot(brow, bcol, SHOT, COLOR_WHITE);
       }
 
       moveTick = moveTick + 1;

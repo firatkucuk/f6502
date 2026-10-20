@@ -184,12 +184,10 @@ fn readControls(): void {
     if (x < 324) { x += 2; }
   }
   if (space() == 1) {
-    if (held == 0) {
-      if (grounded == 1) {
-        rising = 1;
-        jumpIndex = 0;
-        grounded = 0;
-      }
+    if (held == 0 && grounded == 1) {
+      rising = 1;
+      jumpIndex = 0;
+      grounded = 0;
     }
     held = 1;
   } else { held = 0; }
@@ -215,21 +213,17 @@ fn movePlayer(): void {
     grounded = 0;
     for (let p: u8 = 0; p < 7; p++) {
       let top: u8 = ledgeY[p];
-      if (oldFeet <= top) {
-        if (y + 16 >= top) {
-          pixelX(ledgeCol[p]);
-          let left: u16 = pixel;
-          let width: u8 = ledgeWidth[p];
-          pixelX(ledgeCol[p] + width);
-          let right: u16 = pixel;
-          if (x + 10 > left) {
-            if (x + 2 < right) {
-              y = top - 16;
-              grounded = 1;
-              fallSpeed = 1;
-              fallTick = 0;
-            }
-          }
+      if (oldFeet <= top && y + 16 >= top) {
+        pixelX(ledgeCol[p]);
+        let left: u16 = pixel;
+        let width: u8 = ledgeWidth[p];
+        pixelX(ledgeCol[p] + width);
+        let right: u16 = pixel;
+        if (x + 10 > left && x + 2 < right) {
+          y = top - 16;
+          grounded = 1;
+          fallSpeed = 1;
+          fallTick = 0;
         }
       }
     }
@@ -244,18 +238,12 @@ fn collectGems(): void {
       let gxEnd: u16 = gx + 8;
       let gy: u8 = gemY[g];
       let gyEnd: u8 = gy + 8;
-      if (x + 10 > gx) {
-        if (x < gxEnd) {
-          if (y + 16 > gy) {
-            if (y < gyEnd) {
-              collected[g] = 1;
-              gems += 1;
-              plot(gemRow[g], gemCol[g], 32, COLOR_YELLOW);
-              poke(screen(0, 23), gems + 0x30);
-              if (gems == 4) { drawDoor(COLOR_LIGHT_GREEN); }
-            }
-          }
-        }
+      if (x + 10 > gx && x < gxEnd && y + 16 > gy && y < gyEnd) {
+        collected[g] = 1;
+        gems += 1;
+        plot(gemRow[g], gemCol[g], 32, COLOR_YELLOW);
+        poke(screen(0, 23), gems + 0x30);
+        if (gems == 4) { drawDoor(COLOR_LIGHT_GREEN); }
       }
     }
   }
@@ -278,11 +266,7 @@ fn checkHazards(): void {
   let hit: u8 = 0;
   let patrolEnd: u16 = (patrolX as u16) + 10;
   if (y > 218) { hit = 1; } // lava, before an 8-bit Y can wrap
-  if (y + 16 > 216) {
-    if (x + 10 > patrolX) {
-      if (x < patrolEnd) { hit = 1; }
-    }
-  }
+  if (y + 16 > 216 && x + 10 > patrolX && x < patrolEnd) { hit = 1; }
   if (hit == 1) {
     lives -= 1;
     poke(screen(0, 38), lives + 0x30);
@@ -301,15 +285,7 @@ fn play(): void {
     movePatrol();
     checkHazards();
     showPlayer();
-    if (gems == 4) {
-      if (grounded == 1) {
-        if (y == 66) {
-          if (x + 10 > 184) {
-            if (x < 200) { won = 1; }
-          }
-        }
-      }
-    }
+    if (gems == 4 && grounded == 1 && y == 66 && x + 10 > 184 && x < 200) { won = 1; }
   }
 }
 
