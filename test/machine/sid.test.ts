@@ -42,6 +42,37 @@ describe('SID registers', () => {
     expect(s.read(0x01)).toBe(0);
   });
 
+  it('reads of the readable registers refresh the bus value that write-only registers return', () => {
+    const s = new Sid();
+    s.write(0x0f, 0x10); // voice 3 FREQ hi
+    s.write(0x12, 0x20); // saw
+    ticks(s, 3000);
+    s.write(0x10, 0xa5);
+    expect(s.read(0x10)).toBe(0xa5);
+    const osc3 = s.read(0x1b);
+    expect(osc3).not.toBe(0xa5);
+    expect(s.read(0x10)).toBe(osc3); // busvalue.prg: a write-only register reads the last OSC3 read
+    expect(s.read(0x1d)).toBe(osc3); // and so does an unused register
+    expect(s.read(0x19)).toBe(0xff);
+    expect(s.read(0x10)).toBe(0xff);
+    expect(s.peek(0x10)).toBe(0xff); // peek has no side effects
+  });
+
+  it('the bus value lives about $1D00 cycles on a 6581 and $A2000 cycles on an 8580', () => {
+    const old = new Sid({ model: '6581' });
+    old.write(0x00, 0xab);
+    ticks(old, 0x1d00 - 1);
+    expect(old.read(0x01)).toBe(0xab);
+    ticks(old, 1);
+    expect(old.read(0x01)).toBe(0);
+    const neu = new Sid({ model: '8580' });
+    neu.write(0x00, 0xab);
+    ticks(neu, 0xa2000 - 1);
+    expect(neu.read(0x01)).toBe(0xab);
+    ticks(neu, 1);
+    expect(neu.read(0x01)).toBe(0);
+  });
+
   it('OSC3 and ENV3 read the live digital values of voice 3', () => {
     const s = new Sid();
     s.write(0x0f, 0x10); // voice 3 FREQ hi

@@ -10,6 +10,12 @@ export interface SidModelParams {
   q(resonance: number): number;
   /** DC level (relative to one voice's full scale) that the master volume scales. */
   dcLevel: number;
+  /**
+   * Cycles a value stays on the internal data bus (what write-only and unused registers read)
+   * before it has decayed to zero. Measured with bitfade/delayfrq0.prg: about $1D00 on a 6581
+   * and $A2000 on an 8580.
+   */
+  busTtl: number;
 }
 
 export const MODEL_8580: SidModelParams = {
@@ -19,6 +25,7 @@ export const MODEL_8580: SidModelParams = {
   cutoffHz: (fc) => 30 + (12000 * fc) / 2047,
   q: (r) => 0.707 + (r / 15) * 6,
   dcLevel: 0.01,
+  busTtl: 0xa2000,
 };
 
 export const MODEL_6581: SidModelParams = {
@@ -33,6 +40,7 @@ export const MODEL_6581: SidModelParams = {
   cutoffHz: (fc) => 200 * Math.pow(60, fc / 2047),
   q: (r) => 0.707 + (r / 15) * 8,
   dcLevel: 0.05,
+  busTtl: 0x1d00,
 };
 
 export function modelByName(name: '6581' | '8580'): SidModelParams {
