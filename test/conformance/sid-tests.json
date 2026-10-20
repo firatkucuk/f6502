@@ -271,8 +271,7 @@
     ],
     "model": "6581",
     "frames": 400,
-    "expect": "known-fail:noise output after LFSR init at a fixed phase differs from the documented 8580 values",
-    "failing": 1
+    "expect": "pass"
   },
   {
     "name": "noiselfsrinit/simple.prg",
@@ -286,14 +285,13 @@
         "colour": 13
       }
     ],
-    "expect": "known-fail:printed noise value after LFSR init differs from the documented hardware value ($7F)",
-    "failing": 1
+    "expect": "pass"
   },
   {
     "name": "noisewriteback/noise_writeback_check_8_to_8_new.prg",
     "prg": "SID/noisewriteback/noise_writeback_check_8_to_8_new.prg",
     "model": "8580",
-    "frames": 150,
+    "frames": 650,
     "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
     "checks": [
       {
@@ -301,8 +299,7 @@
         "colour": 5
       }
     ],
-    "expect": "known-fail:noise-waveform LFSR write-back with combined waveforms is only approximated",
-    "failing": 1
+    "expect": "pass"
   },
   {
     "name": "noisewriteback/noise_writeback_check_8_to_8_old.prg",
@@ -316,14 +313,13 @@
         "colour": 5
       }
     ],
-    "expect": "known-fail:noise-waveform LFSR write-back with combined waveforms is only approximated",
-    "failing": 1
+    "expect": "pass"
   },
   {
     "name": "noisewriteback/noise_writeback_check_8_to_9_new.prg",
     "prg": "SID/noisewriteback/noise_writeback_check_8_to_9_new.prg",
     "model": "8580",
-    "frames": 150,
+    "frames": 650,
     "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
     "checks": [
       {
@@ -331,8 +327,7 @@
         "colour": 5
       }
     ],
-    "expect": "known-fail:noise-waveform LFSR write-back with combined waveforms is only approximated",
-    "failing": 1
+    "expect": "pass"
   },
   {
     "name": "noisewriteback/noise_writeback_check_8_to_9_old.prg",
@@ -346,14 +341,13 @@
         "colour": 5
       }
     ],
-    "expect": "known-fail:noise-waveform LFSR write-back with combined waveforms is only approximated",
-    "failing": 1
+    "expect": "pass"
   },
   {
     "name": "noisewriteback/noise_writeback_check_8_to_C_new.prg",
     "prg": "SID/noisewriteback/noise_writeback_check_8_to_C_new.prg",
     "model": "8580",
-    "frames": 150,
+    "frames": 650,
     "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
     "checks": [
       {
@@ -361,7 +355,7 @@
         "colour": 5
       }
     ],
-    "expect": "known-fail:noise-waveform LFSR write-back with combined waveforms is only approximated",
+    "expect": "known-fail:noise combined with pulse ($C) shorts the shift register bits through the pulse line in a way neither reSID nor libresidfp reproduces (both fail this program too); our output model for that selection is an approximation",
     "failing": 1
   },
   {
@@ -376,14 +370,14 @@
         "colour": 5
       }
     ],
-    "expect": "known-fail:noise-waveform LFSR write-back with combined waveforms is only approximated",
+    "expect": "known-fail:noise combined with pulse ($C) shorts the shift register bits through the pulse line in a way neither reSID nor libresidfp reproduces (both fail this program too); our output model for that selection is an approximation",
     "failing": 1
   },
   {
     "name": "noisewriteback/noise_writeback_check_9_to_8_new.prg",
     "prg": "SID/noisewriteback/noise_writeback_check_9_to_8_new.prg",
     "model": "8580",
-    "frames": 150,
+    "frames": 650,
     "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
     "checks": [
       {
@@ -391,7 +385,7 @@
         "colour": 5
       }
     ],
-    "expect": "known-fail:noise-waveform LFSR write-back with combined waveforms is only approximated",
+    "expect": "known-fail:on the 8580 the switch from noise+triangle to plain noise clears one more shift register bit than our write-back rules do; reSID fails this program the same way",
     "failing": 1
   },
   {
@@ -406,14 +400,13 @@
         "colour": 5
       }
     ],
-    "expect": "known-fail:noise-waveform LFSR write-back with combined waveforms is only approximated",
-    "failing": 1
+    "expect": "pass"
   },
   {
     "name": "noisewriteback/noise_writeback_check_9_to_9_new.prg",
     "prg": "SID/noisewriteback/noise_writeback_check_9_to_9_new.prg",
     "model": "8580",
-    "frames": 150,
+    "frames": 650,
     "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
     "checks": [
       {
@@ -421,8 +414,7 @@
         "colour": 5
       }
     ],
-    "expect": "known-fail:noise-waveform LFSR write-back with combined waveforms is only approximated",
-    "failing": 1
+    "expect": "pass"
   },
   {
     "name": "noisewriteback/noise_writeback_check_9_to_9_old.prg",
@@ -436,14 +428,13 @@
         "colour": 5
       }
     ],
-    "expect": "known-fail:noise-waveform LFSR write-back with combined waveforms is only approximated",
-    "failing": 1
+    "expect": "pass"
   },
   {
     "name": "noisewriteback/noise_writeback_check_9_to_A_new.prg",
     "prg": "SID/noisewriteback/noise_writeback_check_9_to_A_new.prg",
     "model": "8580",
-    "frames": 150,
+    "frames": 650,
     "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
     "checks": [
       {
@@ -451,8 +442,7 @@
         "colour": 5
       }
     ],
-    "expect": "known-fail:noise-waveform LFSR write-back with combined waveforms is only approximated",
-    "failing": 1
+    "expect": "pass"
   },
   {
     "name": "noisewriteback/noise_writeback_check_9_to_A_old.prg",
@@ -466,14 +456,13 @@
         "colour": 5
       }
     ],
-    "expect": "known-fail:noise-waveform LFSR write-back with combined waveforms is only approximated",
-    "failing": 1
+    "expect": "pass"
   },
   {
     "name": "noisewriteback/noise_writeback_check_A_to_8_new.prg",
     "prg": "SID/noisewriteback/noise_writeback_check_A_to_8_new.prg",
     "model": "8580",
-    "frames": 150,
+    "frames": 650,
     "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
     "checks": [
       {
@@ -481,8 +470,7 @@
         "colour": 5
       }
     ],
-    "expect": "known-fail:noise-waveform LFSR write-back with combined waveforms is only approximated",
-    "failing": 1
+    "expect": "pass"
   },
   {
     "name": "noisewriteback/noise_writeback_check_A_to_8_old.prg",
@@ -496,14 +484,13 @@
         "colour": 5
       }
     ],
-    "expect": "known-fail:noise-waveform LFSR write-back with combined waveforms is only approximated",
-    "failing": 1
+    "expect": "pass"
   },
   {
     "name": "noisewriteback/noise_writeback_check_A_to_9_new.prg",
     "prg": "SID/noisewriteback/noise_writeback_check_A_to_9_new.prg",
     "model": "8580",
-    "frames": 150,
+    "frames": 650,
     "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
     "checks": [
       {
@@ -511,8 +498,7 @@
         "colour": 5
       }
     ],
-    "expect": "known-fail:noise-waveform LFSR write-back with combined waveforms is only approximated",
-    "failing": 1
+    "expect": "pass"
   },
   {
     "name": "noisewriteback/noise_writeback_check_A_to_9_old.prg",
@@ -526,14 +512,13 @@
         "colour": 5
       }
     ],
-    "expect": "known-fail:noise-waveform LFSR write-back with combined waveforms is only approximated",
-    "failing": 1
+    "expect": "pass"
   },
   {
     "name": "noisewriteback/noise_writeback_check_A_to_A_new.prg",
     "prg": "SID/noisewriteback/noise_writeback_check_A_to_A_new.prg",
     "model": "8580",
-    "frames": 150,
+    "frames": 650,
     "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
     "checks": [
       {
@@ -541,8 +526,7 @@
         "colour": 5
       }
     ],
-    "expect": "known-fail:noise-waveform LFSR write-back with combined waveforms is only approximated",
-    "failing": 1
+    "expect": "pass"
   },
   {
     "name": "noisewriteback/noise_writeback_check_A_to_A_old.prg",
@@ -556,14 +540,13 @@
         "colour": 5
       }
     ],
-    "expect": "known-fail:noise-waveform LFSR write-back with combined waveforms is only approximated",
-    "failing": 1
+    "expect": "pass"
   },
   {
     "name": "noisewriteback/noise_writeback_check_C_to_C_new.prg",
     "prg": "SID/noisewriteback/noise_writeback_check_C_to_C_new.prg",
     "model": "8580",
-    "frames": 150,
+    "frames": 650,
     "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
     "checks": [
       {
@@ -571,7 +554,7 @@
         "colour": 5
       }
     ],
-    "expect": "known-fail:noise-waveform LFSR write-back with combined waveforms is only approximated",
+    "expect": "known-fail:noise combined with pulse ($C) shorts the shift register bits through the pulse line in a way neither reSID nor libresidfp reproduces (both fail this program too); our output model for that selection is an approximation",
     "failing": 1
   },
   {
@@ -586,14 +569,14 @@
         "colour": 5
       }
     ],
-    "expect": "known-fail:noise-waveform LFSR write-back with combined waveforms is only approximated",
+    "expect": "known-fail:noise combined with pulse ($C) shorts the shift register bits through the pulse line in a way neither reSID nor libresidfp reproduces (both fail this program too); our output model for that selection is an approximation",
     "failing": 1
   },
   {
     "name": "noisewriteback/noise_writeback_check_D_to_E_new.prg",
     "prg": "SID/noisewriteback/noise_writeback_check_D_to_E_new.prg",
     "model": "8580",
-    "frames": 150,
+    "frames": 650,
     "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
     "checks": [
       {
@@ -601,8 +584,7 @@
         "colour": 5
       }
     ],
-    "expect": "known-fail:noise-waveform LFSR write-back with combined waveforms is only approximated",
-    "failing": 1
+    "expect": "pass"
   },
   {
     "name": "noisewriteback/noise_writeback_check_D_to_E_old.prg",
@@ -616,14 +598,14 @@
         "colour": 5
       }
     ],
-    "expect": "known-fail:noise-waveform LFSR write-back with combined waveforms is only approximated",
+    "expect": "known-fail:switching between triangle+pulse and sawtooth+pulse noise combinations on the 6581 writes bits back that the sampled reference does not show; reSID fails this program the same way",
     "failing": 1
   },
   {
     "name": "noisewriteback/noise_writeback_check_E_to_B_new.prg",
     "prg": "SID/noisewriteback/noise_writeback_check_E_to_B_new.prg",
     "model": "8580",
-    "frames": 150,
+    "frames": 650,
     "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
     "checks": [
       {
@@ -631,8 +613,7 @@
         "colour": 5
       }
     ],
-    "expect": "known-fail:noise-waveform LFSR write-back with combined waveforms is only approximated",
-    "failing": 1
+    "expect": "pass"
   },
   {
     "name": "noisewriteback/noise_writeback_check_E_to_B_old.prg",
@@ -646,14 +627,13 @@
         "colour": 5
       }
     ],
-    "expect": "known-fail:noise-waveform LFSR write-back with combined waveforms is only approximated",
-    "failing": 1
+    "expect": "pass"
   },
   {
     "name": "noisewriteback/noise_writeback_check_E_to_D_new.prg",
     "prg": "SID/noisewriteback/noise_writeback_check_E_to_D_new.prg",
     "model": "8580",
-    "frames": 150,
+    "frames": 650,
     "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
     "checks": [
       {
@@ -661,8 +641,7 @@
         "colour": 5
       }
     ],
-    "expect": "known-fail:noise-waveform LFSR write-back with combined waveforms is only approximated",
-    "failing": 1
+    "expect": "pass"
   },
   {
     "name": "noisewriteback/noise_writeback_check_E_to_D_old.prg",
@@ -676,7 +655,7 @@
         "colour": 5
       }
     ],
-    "expect": "known-fail:noise-waveform LFSR write-back with combined waveforms is only approximated",
+    "expect": "known-fail:switching between triangle+pulse and sawtooth+pulse noise combinations on the 6581 writes bits back that the sampled reference does not show; reSID fails this program the same way",
     "failing": 1
   },
   {
@@ -733,8 +712,7 @@
     ],
     "model": "6581",
     "frames": 600,
-    "expect": "known-fail:oscillator top-bit behaviour of the old chip revision (new/old variants differ) is not modelled",
-    "failing": 1
+    "expect": "pass"
   },
   {
     "name": "osc_topbit/osc_topbit_test_pulse_new.prg",
@@ -762,8 +740,7 @@
     ],
     "model": "6581",
     "frames": 600,
-    "expect": "known-fail:oscillator top-bit behaviour of the old chip revision (new/old variants differ) is not modelled",
-    "failing": 1
+    "expect": "pass"
   },
   {
     "name": "osc_topbit/osc_topbit_test_triangle_new.prg",
@@ -791,8 +768,7 @@
     ],
     "model": "6581",
     "frames": 600,
-    "expect": "known-fail:oscillator top-bit behaviour of the old chip revision (new/old variants differ) is not modelled",
-    "failing": 1
+    "expect": "pass"
   },
   {
     "name": "oscinit/allinit.prg",
@@ -806,8 +782,7 @@
         "colour": 5
       }
     ],
-    "expect": "known-fail:noise/all oscillator power-up state differs from the documented values",
-    "failing": 1
+    "expect": "pass"
   },
   {
     "name": "oscinit/noiseinit.prg",
@@ -821,8 +796,7 @@
         "colour": 5
       }
     ],
-    "expect": "known-fail:noise/all oscillator power-up state differs from the documented values",
-    "failing": 1
+    "expect": "pass"
   },
   {
     "name": "oscinit/oscinit.prg",
@@ -940,7 +914,7 @@
     "name": "wb_testsuite/noise_writeback_check_8_to_8_new.prg",
     "prg": "SID/wb_testsuite/noise_writeback_check_8_to_8_new.prg",
     "model": "8580",
-    "frames": 150,
+    "frames": 650,
     "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
     "checks": [
       {
@@ -948,8 +922,7 @@
         "colour": 5
       }
     ],
-    "expect": "known-fail:noise-waveform LFSR write-back with combined waveforms is only approximated",
-    "failing": 1
+    "expect": "pass"
   },
   {
     "name": "wb_testsuite/noise_writeback_check_8_to_E_old.prg",
@@ -963,8 +936,7 @@
         "colour": 5
       }
     ],
-    "expect": "known-fail:noise-waveform LFSR write-back with combined waveforms is only approximated",
-    "failing": 1
+    "expect": "pass"
   },
   {
     "name": "wb_testsuite/noise_writeback_check_9_to_D_old.prg",
@@ -978,8 +950,7 @@
         "colour": 5
       }
     ],
-    "expect": "known-fail:noise-waveform LFSR write-back with combined waveforms is only approximated",
-    "failing": 1
+    "expect": "pass"
   },
   {
     "name": "wb_testsuite/noise_writeback_check_A_to_C_old.prg",
@@ -993,14 +964,14 @@
         "colour": 5
       }
     ],
-    "expect": "known-fail:noise-waveform LFSR write-back with combined waveforms is only approximated",
+    "expect": "known-fail:noise combined with pulse ($C) shorts the shift register bits through the pulse line in a way neither reSID nor libresidfp reproduces (both fail this program too); our output model for that selection is an approximation",
     "failing": 1
   },
   {
     "name": "wb_testsuite/noise_writeback_check_B_to_B_new.prg",
     "prg": "SID/wb_testsuite/noise_writeback_check_B_to_B_new.prg",
     "model": "8580",
-    "frames": 150,
+    "frames": 650,
     "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
     "checks": [
       {
@@ -1008,14 +979,13 @@
         "colour": 5
       }
     ],
-    "expect": "known-fail:noise-waveform LFSR write-back with combined waveforms is only approximated",
-    "failing": 1
+    "expect": "pass"
   },
   {
     "name": "wb_testsuite/noise_writeback_check_C_to_A_new.prg",
     "prg": "SID/wb_testsuite/noise_writeback_check_C_to_A_new.prg",
     "model": "8580",
-    "frames": 150,
+    "frames": 650,
     "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
     "checks": [
       {
@@ -1023,8 +993,7 @@
         "colour": 5
       }
     ],
-    "expect": "known-fail:noise-waveform LFSR write-back with combined waveforms is only approximated",
-    "failing": 1
+    "expect": "pass"
   },
   {
     "name": "wb_testsuite/noise_writeback_check_D_to_9_old.prg",
@@ -1038,14 +1007,13 @@
         "colour": 5
       }
     ],
-    "expect": "known-fail:noise-waveform LFSR write-back with combined waveforms is only approximated",
-    "failing": 1
+    "expect": "pass"
   },
   {
     "name": "wb_testsuite/noise_writeback_check_E_to_9_new.prg",
     "prg": "SID/wb_testsuite/noise_writeback_check_E_to_9_new.prg",
     "model": "8580",
-    "frames": 150,
+    "frames": 650,
     "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
     "checks": [
       {
@@ -1053,8 +1021,7 @@
         "colour": 5
       }
     ],
-    "expect": "known-fail:noise-waveform LFSR write-back with combined waveforms is only approximated",
-    "failing": 1
+    "expect": "pass"
   },
   {
     "name": "wb_testsuite/noise_writeback_check_F_to_8_old.prg",
@@ -1068,14 +1035,14 @@
         "colour": 5
       }
     ],
-    "expect": "known-fail:noise-waveform LFSR write-back with combined waveforms is only approximated",
+    "expect": "known-fail:the write-back rule that makes noiselfsrinit and the other X-to-8 switches match (no write-back when switching to plain noise unless from $F) does not fit this sampling; reSID fails this program the same way",
     "failing": 1
   },
   {
     "name": "wb_testsuite/noise_writeback_check_F_to_F_new.prg",
     "prg": "SID/wb_testsuite/noise_writeback_check_F_to_F_new.prg",
     "model": "8580",
-    "frames": 150,
+    "frames": 650,
     "source": "self-checking program (border 5 / $D7FF=0 = its own assertions passed); expected behaviour documented in the readme/source of the same directory",
     "checks": [
       {
@@ -1083,8 +1050,7 @@
         "colour": 5
       }
     ],
-    "expect": "known-fail:noise-waveform LFSR write-back with combined waveforms is only approximated",
-    "failing": 1
+    "expect": "pass"
   },
   {
     "name": "writedelay/writedelay.prg",
