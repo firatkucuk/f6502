@@ -5,7 +5,6 @@ import { SampleRing } from './sid-output';
 import { SidVoice as Voice } from './sid-voice';
 
 export const SID_CLOCK = 985_248;
-const BUS_DECAY_CYCLES = 8192;
 /** The model runs in batches: at most this many CPU cycles behind, or on any read/drain. */
 const CATCH_UP_CYCLES = 16384;
 const QUEUE_SIZE = 256;
@@ -22,8 +21,9 @@ export class Sid implements IoChip {
   protected readonly regs = new Uint8Array(0x20);
   protected modelParams: SidModelParams;
   protected readonly ring: SampleRing;
+  /** The internal data bus: the last byte written or read, decaying to zero after `busTtl`. */
   private busValue = 0;
-  private busAge = 0;
+  private busTtl = 0;
   private phase = 0;
   private accDry = 0;
   private accFilt = 0;
@@ -71,7 +71,7 @@ export class Sid implements IoChip {
     for (const e of this.envelopes) e.reset();
     for (const v of this.voices) v.reset();
     this.busValue = 0;
-    this.busAge = 0;
+    this.busTtl = 0;
     this.ring.clear();
     this.ic1 = this.ic2 = this.dcIn = this.dcOut = 0;
     this.phase = 0;
@@ -79,8 +79,14 @@ export class Sid implements IoChip {
     this.accCount = 0;
   }
 
+  /** A CPU read: the readable registers also put their value on the internal data bus. */
   read(reg: number): number {
-    return this.peek(reg);
+    const value = this.peek(reg);
+    if ((reg & 0x1f) >= 0x19 && (reg & 0x1f) <= 0x1c) {
+      this.busValue = value;
+      this.busTtl = this.modelParams.busTtl;
+    }
+    return value;
   }
 
   peek(reg: number): number {
@@ -109,7 +115,7 @@ export class Sid implements IoChip {
 
   private applyWrite(reg: number, value: number): void {
     this.busValue = value;
-    this.busAge = 0;
+    this.busTtl = this.modelParams.busTtl;
     if (reg >= 0x19) {
       this.regs[reg] = value;
       return;
@@ -186,7 +192,7 @@ export class Sid implements IoChip {
     e[0]!.tick();
     e[1]!.tick();
     e[2]!.tick();
-    if (this.busAge < BUS_DECAY_CYCLES && ++this.busAge >= BUS_DECAY_CYCLES) this.busValue = 0;
+    if (this.busTtl !== 0 && --this.busTtl === 0) this.busValue = 0;
     this.mix();
   }
 

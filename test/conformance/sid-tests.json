@@ -11,8 +11,7 @@
         "colour": 5
       }
     ],
-    "expect": "known-fail:data-bus value decay details of write-only registers differ",
-    "failing": 1
+    "expect": "pass"
   },
   {
     "name": "detect/detect-1-new.prg",
