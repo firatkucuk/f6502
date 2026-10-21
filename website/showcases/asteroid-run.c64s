@@ -323,12 +323,12 @@ fn drawStars(): void {
 }
 
 fn drawScore(): void {
-  poke(screen(0, 37), scoreHundreds + 0x30);
-  poke(screen(0, 38), scoreTens + 0x30);
-  poke(screen(0, 39), scoreOnes + 0x30);
+  poke(screen(0, 36), scoreHundreds + 0x30);
+  poke(screen(0, 37), scoreTens + 0x30);
+  poke(screen(0, 38), scoreOnes + 0x30);
+  poke(color(0, 36), COLOR_WHITE);
   poke(color(0, 37), COLOR_WHITE);
   poke(color(0, 38), COLOR_WHITE);
-  poke(color(0, 39), COLOR_WHITE);
 }
 
 fn addScore(): void {
@@ -360,12 +360,9 @@ fn showSplash(): void {
   puts(16, 13, "*  *  **  *  *", COLOR_CYAN);
 }
 
-fn showInstructions(): void {
-  drawStars();
-  puts(9, 12, "LEFT/RIGHT TURN", COLOR_LIGHT_GREY);
-  puts(11, 9, "UP THRUST  SPACE FIRE", COLOR_LIGHT_GREEN);
-  puts(14, 14, "THREE LIVES", COLOR_LIGHT_BLUE);
-  puts(18, 14, "PRESS SPACE", COLOR_WHITE);
+// The prompt appears under the wordmark once the splash has been on screen for a moment.
+fn showPrompt(): void {
+  puts(20, 14, "PRESS SPACE", COLOR_WHITE);
 }
 
 fn drawLives(): void {
@@ -710,7 +707,7 @@ program @ 0x0810 {
     if (mode == 0) {
       if (introTimer > 0) {
         introTimer = introTimer - 1;
-        if (introTimer == 0) { showInstructions(); }
+        if (introTimer == 0) { showPrompt(); }
       } else {
         if (fireKey() == 0) { fireArmed = 1; }
         else if (fireArmed == 1) { fireArmed = 0; startGame(); }
