@@ -40,7 +40,9 @@ describe('showcase: character-art', () => {
     expect(cell(0, 0)).toBe(0xa0);
     expect(cell(24, 39)).toBe(0xa0);
     expect(cell(20, 20)).toBe(0xa0);
-    expect(cell(1, 14)).toBe(3); // C
+    expect(cell(1, 15)).toBe(3); // C of C64SCRIPT: 9 characters centred start at column 15
+    expect(cell(1, 14)).toBe(0xa0);
+    expect(cell(1, 24)).toBe(0xa0);
   });
 
   it('colours every cell of a row alike, with the sky above the sea', () => {
@@ -66,11 +68,33 @@ describe('showcase page', () => {
       'showcase-blurb',
       'showcase-file',
       'showcase-hint',
+      'showcase-controls',
     ]) {
       expect(page).toContain(`id="${id}"`);
       expect(script).toContain(`'${id}'`);
     }
     expect(page).toMatch(/<script type="module" src="js\/showcase\.js">/);
+  });
+
+  it('explains the keys of every game on the page, since the games draw no key help', async () => {
+    const { SHOWCASES } = await import('../../website/js/showcase-list.js');
+    const games = SHOWCASES.filter((s) => s.hint !== undefined && s.id !== 'music-box');
+    expect(games.length).toBe(9);
+    for (const s of games) {
+      expect(s.controls, s.id).toBeDefined();
+      expect(s.controls.length, s.id).toBeGreaterThan(0);
+      for (const row of s.controls) {
+        expect(row).toHaveLength(2);
+        expect(row[0]).toMatch(/\S/);
+        expect(row[1]).toMatch(/\S/);
+      }
+      // the hint says how the game starts; it is the only start prompt besides PRESS SPACE
+      expect(s.hint, s.id).toMatch(/Press (SPACE|1)/);
+    }
+    for (const id of ['space-invaders', 'bot-hop', 'blast-maze', 'crystal-climb', 'turbo-sprint']) {
+      const s = SHOWCASES.find((x) => x.id === id);
+      expect(s.blurb + s.hint, id).not.toMatch(/A, D or the arrow keys/); // the keys moved to controls
+    }
   });
 
   it('every listed showcase has a source file, and a card on the showcases page', async () => {
