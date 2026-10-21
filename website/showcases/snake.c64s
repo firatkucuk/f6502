@@ -99,9 +99,9 @@ fn addScore(): void {
       if (hundreds == 10) { hundreds = 0; }
     }
   }
-  poke(screen(0, 35), hundreds + 0x30);
-  poke(screen(0, 36), tens + 0x30);
-  poke(screen(0, 37), ones + 0x30);
+  poke(screen(0, 36), hundreds + 0x30);
+  poke(screen(0, 37), tens + 0x30);
+  poke(screen(0, 38), ones + 0x30);
 }
 
 // Pick a random empty cell for the food and draw it.
@@ -147,8 +147,7 @@ fn drawField(): void {
     plot(row, 39, COLOR_DARK_GREY);
   }
   puts(0, 1, "SNAKE", COLOR_LIGHT_GREEN);
-  puts(0, 9, "WASD OR ARROWS", COLOR_LIGHT_GREY);
-  puts(0, 29, "SCORE 000", COLOR_WHITE);
+  puts(0, 30, "SCORE 000", COLOR_WHITE);
 }
 
 fn newGame(): void {
@@ -269,23 +268,20 @@ program @ 0x0810 {
   CIA1.ddrA = 0xFF;
   CIA1.ddrB = 0;
   newGame();
-  puts(8, 16, "SNAKE", COLOR_LIGHT_GREEN);
-  puts(11, 8, "EAT THE RED BLOCKS TO GROW", COLOR_YELLOW);
-  puts(13, 6, "DONT HIT THE WALLS OR YOURSELF", COLOR_LIGHT_GREY);
-  puts(15, 9, "REACH LENGTH 100 TO WIN", COLOR_CYAN);
-  puts(18, 14, "PRESS SPACE", COLOR_WHITE);
+  puts(9, 17, "SNAKE", COLOR_LIGHT_GREEN);
+  puts(15, 14, "PRESS SPACE", COLOR_WHITE);
   waitForSpace();
   loop {
     newGame();
     play();
     if (length >= 100) {
       VIC2.borderColor = COLOR_GREEN;
-      puts(10, 15, "YOU WIN", COLOR_YELLOW);
+      puts(10, 16, "YOU WIN", COLOR_YELLOW);
     } else {
       VIC2.borderColor = COLOR_RED;
       puts(10, 15, "GAME OVER", COLOR_YELLOW);
     }
-    puts(12, 11, "SPACE TO PLAY AGAIN", COLOR_WHITE);
+    puts(12, 10, "SPACE TO PLAY AGAIN", COLOR_WHITE);
     waitForSpace();
     VIC2.borderColor = COLOR_BLACK;
   }
