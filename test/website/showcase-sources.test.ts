@@ -997,13 +997,30 @@ describe('showcase: space-invaders', () => {
 describe('showcase: asteroid-run', () => {
   const cell = (c: C64, row: number, col: number) => c.peek(0x0400 + row * 40 + col);
 
-  it('compiles and shows the ASCII title before instructions', () => {
+  it('compiles and shows the ASCII title, then the start prompt under it', () => {
     expect(compile(source('asteroid-run')).length).toBeGreaterThan(2);
     const splash = boot(source('asteroid-run'), 5);
     expect(cell(splash, 5, 1)).toBe(0x2a); // '*' in the ASTEROID wordmark
+    expect(cell(splash, 20, 14)).toBe(0x20); // no prompt yet
 
-    const instructions = boot(source('asteroid-run'), 65);
-    expect(cell(instructions, 9, 12)).toBe(12); // L of LEFT/RIGHT TURN
+    const prompt = boot(source('asteroid-run'), 65);
+    expect(cell(prompt, 5, 1)).toBe(0x2a); // the wordmark stays
+    expect(cell(prompt, 20, 14)).toBe(16); // P of PRESS SPACE: 11 characters centred, column 14
+    expect(cell(prompt, 11, 9)).toBe(0x20); // the key help (UP THRUST ...) is on the page now
+  });
+
+  it('starts on SPACE with three lives on the left and the score ending at column 38', () => {
+    const c = boot(source('asteroid-run'), 65);
+    c.keyDown('SPACE');
+    for (let f = 0; f < 4; f++) c.runFrame();
+    c.keyUp('SPACE');
+    for (let f = 0; f < 20; f++) c.runFrame();
+    expect(cell(c, 0, 1)).toBe(0x2a); // first of three '*' lives
+    expect(cell(c, 0, 3)).toBe(0x2a);
+    expect(cell(c, 0, 36)).toBe(0x30); // SCORE 000 at columns 36..38
+    expect(cell(c, 0, 38)).toBe(0x30);
+    expect(cell(c, 0, 39)).toBe(0x20);
+    expect(cell(c, 20, 14)).toBe(0x20); // the prompt is gone with the splash
   });
 });
 
