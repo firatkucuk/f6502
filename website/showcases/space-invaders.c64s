@@ -153,8 +153,8 @@ fn addScore(): void {
     tens = tens + 1;
     if (tens == 10) { tens = 0; }
   }
-  poke(screen(0, 38), tens + 0x30);
-  poke(screen(0, 39), ones + 0x30);
+  poke(screen(0, 37), tens + 0x30);
+  poke(screen(0, 38), ones + 0x30);
 }
 
 // The bullet is on an invader row at column bcol: if a live invader covers that cell, remove it
@@ -256,18 +256,17 @@ program @ 0x0810 {
     tens = 0;
     ones = 0;
     for (let n: u8 = 0; n < 40; n++) { alive[n] = 1; }
-    puts(0, 31, "SCORE", COLOR_WHITE);
-    puts(0, 38, "00", COLOR_WHITE);
+    puts(0, 31, "SCORE 00", COLOR_WHITE);
     drawFormation();
     drawCannon(cx, BLOCK);
 
     if (title == 1) {
-      puts(13, 12, "SPACE INVADERS", COLOR_WHITE);
-      puts(15, 12, "PRESS SPACE", COLOR_WHITE);
+      puts(13, 13, "SPACE INVADERS", COLOR_WHITE);
+      puts(15, 14, "PRESS SPACE", COLOR_WHITE);
       while (fireKey() == 0) { frame(); }
       while (fireKey() == 1) { frame(); }
-      puts(13, 12, "              ", COLOR_WHITE);
-      puts(15, 12, "           ", COLOR_WHITE);
+      puts(13, 13, "              ", COLOR_WHITE);
+      puts(15, 14, "           ", COLOR_WHITE);
       title = 0;
     }
 
@@ -311,11 +310,11 @@ program @ 0x0810 {
     for (let r: u8 = 2; r < 22; r++) { clearRow(r); }   // clear the block away from the message
     bulletOn = 0;
     if (outcome == 1) {
-      puts(13, 15, "YOU WIN", COLOR_WHITE);
+      puts(13, 16, "YOU WIN", COLOR_WHITE);
     } else {
-      puts(13, 14, "GAME OVER", COLOR_WHITE);
+      puts(13, 15, "GAME OVER", COLOR_WHITE);
     }
-    puts(15, 12, "PRESS SPACE", COLOR_WHITE);
+    puts(15, 14, "PRESS SPACE", COLOR_WHITE);
     ticks = 0;
     while (ticks < 120) {
       frame();

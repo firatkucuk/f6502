@@ -100,8 +100,8 @@ fn addScore(): void {
     tens = tens + 1;
     if (tens == 10) { tens = 0; }
   }
-  poke(screen(0, 38), tens + 0x30);
-  poke(screen(0, 39), ones + 0x30);
+  poke(screen(0, 37), tens + 0x30);
+  poke(screen(0, 38), ones + 0x30);
 }
 
 // Waits until SPACE has been released and pressed again. The random seed keeps stirring meanwhile,
@@ -157,8 +157,7 @@ fn resetGame(): void {
   tens = 0;
   ones = 0;
   VIC2.sprite0y = y;
-  puts(0, 31, "SCORE", COLOR_WHITE);
-  puts(0, 38, "00", COLOR_WHITE);
+  puts(0, 31, "SCORE 00", COLOR_WHITE);
 }
 
 // Shown once, before the first game.
