@@ -1276,6 +1276,40 @@ describe('showcase: street-fighter', () => {
     expect(compile(source('street-fighter')).length).toBeGreaterThan(2);
     const c = boot(source('street-fighter'), 400);
     expect(cell(c, 5, 13)).toBe(0x13); // S of STREET FIGHTER
-    expect(cell(c, 8, 12)).toBe(0x10); // P of PRESS 1 OR 2
+    expect(cell(c, 8, 14)).toBe(0x10); // P of PRESS 1 OR 2: 12 characters centred, column 14
+    expect(cell(c, 10, 13)).toBe(0x31); // 1  ONE PLAYER and 2  TWO PLAYERS line up at column 13
+    expect(cell(c, 12, 13)).toBe(0x32);
+    expect(cell(c, 16, 3)).toBe(0x20); // the key help is on the showcase page now
+  });
+
+  it('centres the fighter select and the round messages', () => {
+    const c = boot(source('street-fighter'), 20);
+    const tap = (key: 'SPACE' | '1' | 'F') => {
+      c.keyDown(key);
+      for (let f = 0; f < 4; f++) c.runFrame();
+      c.keyUp(key);
+    };
+    tap('1');
+    for (let f = 0; f < 30; f++) c.runFrame();
+    expect(cell(c, 1, 10)).toBe(3); // C of CHOOSE YOUR FIGHTER (19 characters: column 10)
+    expect(cell(c, 4, 16)).toBe(16); // P of PLAYER 1
+    expect(cell(c, 4, 23)).toBe(0x31); // its digit
+    expect(cell(c, 10, 5)).toBe(11); // K of KAI, the first card
+    expect(cell(c, 10, 32)).toBe(13); // M of MEI, the last one
+    expect(cell(c, 18, 5)).toBe(0x20); // no key help under the cards
+    tap('F');
+    for (let f = 0; f < 120; f++) c.runFrame();
+    expect(cell(c, 10, 16)).toBe(18); // R of ROUND 1 (7 characters: column 16)
+    expect(cell(c, 10, 22)).toBe(0x31);
+    // An idle player is knocked out by the computer; K.O. is centred on the same row.
+    let frames = 0;
+    while (cell(c, 10, 18) !== 11 && frames < 3000) {
+      c.runFrame();
+      frames += 1;
+    }
+    expect(cell(c, 10, 18)).toBe(11); // K of K.O. (4 characters: column 18)
+    expect(cell(c, 10, 21)).toBe(0x2e); // its last dot at column 21
+    expect(cell(c, 10, 15)).toBe(0xa0); // TIME OVER is not drawn under it: the stage shows
+    expect(cell(c, 10, 23)).toBe(0xa0);
   });
 });
