@@ -390,7 +390,7 @@ describe('showcase: turbo-sprint', () => {
   const score = (c: C64) =>
     (cell(c, 0, 29) - 0x30) * 100 + (cell(c, 0, 30) - 0x30) * 10 + cell(c, 0, 31) - 0x30;
   const gear = (c: C64) => cell(c, 0, 38) - 0x30;
-  const crashed = (c: C64) => text(c, 10, 15, 5) === 'CRASH';
+  const crashed = (c: C64) => text(c, 10, 17, 5) === 'CRASH'; // 5 characters centred: column 17
   const hold = (c: C64, key: 'A' | 'D' | 'SPACE', frames: number) => {
     c.keyDown(key);
     run(c, frames);
@@ -423,7 +423,10 @@ describe('showcase: turbo-sprint', () => {
     expect(c.peek(0xd015)).toBe(1);
     expect(c.peek(0xd000)).toBe(168);
     expect(c.peek(0xd001)).toBe(210);
+    expect(text(c, 7, 14, 12)).toBe('TURBO SPRINT'); // 12 characters centred: column 14
     expect(c.peek(0x0400 + 12 * 40 + 14)).toBe(16); // PRESS SPACE
+    expect(text(c, 10, 12, 17)).not.toBe('DODGE THE TRAFFIC'); // the how-to lines are on the page
+    expect(text(c, 24, 3, 19)).not.toBe('A D OR ARROWS STEER'); // and so is the key help
     expect(c.peek(0x0400 + 3 * 40 + 12)).toBe(0xa0);
     expect(c.peek(0xd800 + 3 * 40 + 12) & 15).toBe(11);
     expect(c.peek(0xd800 + 3 * 40 + 2) & 15).toBe(5);
@@ -643,7 +646,10 @@ describe('showcase: crystal-climb', () => {
 
   it('waits on the title with platforms, gems and three lives', () => {
     const c = boot(source('crystal-climb'), 90);
-    expect(cell(c, 14, 2)).toBe(19); // SPACE TO START
+    expect(cell(c, 13, 13)).toBe(3); // C of CRYSTAL CLIMB: 13 characters centred start at column 13
+    expect(cell(c, 17, 13)).toBe(19); // S of SPACE TO START: 14 characters, column 13
+    expect(cell(c, 14, 21)).toBe(0xa0); // the ledge on row 14 is not written over by the prompt
+    expect(cell(c, 24, 3)).toBe(0x20); // the key help line is on the showcase page now
     expect(cell(c, 22, 1)).toBe(0xa0);
     expect(cell(c, 18, 10)).toBe(0xa0);
     expect(cell(c, 16, 14)).toBe(42); // first gem
