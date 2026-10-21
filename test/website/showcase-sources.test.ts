@@ -69,11 +69,31 @@ describe('showcase page', () => {
       'showcase-file',
       'showcase-hint',
       'showcase-controls',
+      'showcase-author',
     ]) {
       expect(page).toContain(`id="${id}"`);
       expect(script).toContain(`'${id}'`);
     }
     expect(page).toMatch(/<script type="module" src="js\/showcase\.js">/);
+  });
+
+  it('credits the author of every showcase: on its card and on the page', async () => {
+    const { SHOWCASES } = await import('../../website/js/showcase-list.js');
+    const cards = readFileSync('website/showcases.html', 'utf8');
+    const byNuri = ['bot-hop', 'snake', 'street-fighter', 'blast-maze'];
+    expect(SHOWCASES.length).toBe(13);
+    for (const s of SHOWCASES) {
+      const author = byNuri.includes(s.id) ? 'nuricanozturk01' : 'firatkucuk';
+      expect(s.author, s.id).toBe(author);
+      const card = cards.split('<div class="showcase-card').find((c) => c.includes(`id=${s.id}"`));
+      expect(card, `${s.id} card`).toContain(`href="https://github.com/${author}"`);
+    }
+    expect(script).toContain('github.com/${showcase.author}');
+  });
+
+  it('keeps no link inside another link on the cards', () => {
+    const cards = readFileSync('website/showcases.html', 'utf8');
+    expect(cards).not.toMatch(/<a class="showcase-card/);
   });
 
   it('explains the keys of every game on the page, since the games draw no key help', async () => {
