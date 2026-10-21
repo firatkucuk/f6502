@@ -173,7 +173,8 @@ describe('showcase: flappy-bird', () => {
       )
       .join('');
   const y = (c: Game) => c.peek(0xd001);
-  const score = (c: Game) => (cell(c, 0, 38) - 0x30) * 10 + (cell(c, 0, 39) - 0x30);
+  // "SCORE 00" ends one column in from the right edge, like the HUD of every other game
+  const score = (c: Game) => (cell(c, 0, 37) - 0x30) * 10 + (cell(c, 0, 38) - 0x30);
   const run = (c: Game, frames: number) => {
     for (let i = 0; i < frames; i++) c.runFrame();
   };
@@ -308,7 +309,7 @@ describe('showcase: flappy-bird', () => {
     autopilot(c, 900);
     expect(text(c, 9, 15, 9)).not.toBe('GAME OVER');
     expect(score(c)).toBeGreaterThanOrEqual(3);
-    for (const col of [38, 39]) {
+    for (const col of [37, 38]) {
       expect(cell(c, 0, col)).toBeGreaterThanOrEqual(0x30);
       expect(cell(c, 0, col)).toBeLessThanOrEqual(0x39);
     }
@@ -832,7 +833,7 @@ describe('showcase: space-invaders', () => {
     );
     return left === undefined ? -1 : left + 1;
   };
-  const score = (c: C64) => (cell(c, 0, 38) - 0x30) * 10 + (cell(c, 0, 39) - 0x30);
+  const score = (c: C64) => (cell(c, 0, 37) - 0x30) * 10 + (cell(c, 0, 38) - 0x30);
   const INVADER_ROWS = [3, 5, 7, 9, 11];
 
   it('draws five rows of eight invaders, each row in its own colour, and the cannon', () => {
@@ -850,12 +851,15 @@ describe('showcase: space-invaders', () => {
 
   it('shows the title until SPACE starts the game', () => {
     const c = boot(source('space-invaders'), 10);
-    expect(cell(c, 13, 12)).toBe(19); // S of SPACE INVADERS
-    expect(cell(c, 15, 12)).toBe(16); // P of PRESS SPACE
+    // 14 characters centred on 40 columns start at column 13; 11 characters at column 14
+    expect(cell(c, 13, 13)).toBe(19); // S of SPACE INVADERS
+    expect(cell(c, 15, 14)).toBe(16); // P of PRESS SPACE
+    expect(cell(c, 13, 12)).toBe(0x20);
+    expect(cell(c, 15, 13)).toBe(0x20);
     tap(c, 'SPACE', 3);
     run(c, 2);
-    expect(cell(c, 13, 12)).toBe(0x20);
-    expect(cell(c, 15, 12)).toBe(0x20);
+    expect(cell(c, 13, 13)).toBe(0x20);
+    expect(cell(c, 15, 14)).toBe(0x20);
   });
 
   it('marches the block sideways and the cannon follows A and D', () => {
@@ -927,16 +931,17 @@ describe('showcase: space-invaders', () => {
   it('loses when the block reaches the cannon, shows GAME OVER and restarts on SPACE', () => {
     const c = started();
     let frames = 0;
-    while (cell(c, 13, 14) !== 7 && frames < 4000) {
+    while (cell(c, 13, 15) !== 7 && frames < 4000) {
       run(c, 50);
       frames += 50;
     }
-    expect(cell(c, 13, 14)).toBe(7); // G of GAME OVER
-    expect(cell(c, 13, 15)).toBe(1); // A
+    expect(cell(c, 13, 15)).toBe(7); // G of GAME OVER (9 characters centred: column 15)
+    expect(cell(c, 13, 16)).toBe(1); // A
+    expect(cell(c, 15, 14)).toBe(16); // P of PRESS SPACE
     run(c, 130); // the message stays for a while, then the game waits for SPACE
     tap(c, 'SPACE');
     run(c, 8); // the new block is drawn over a few frames, before its first step
-    expect(cell(c, 13, 14)).toBe(0x20);
+    expect(cell(c, 13, 15)).toBe(0x20);
     expect(blocks(c, INVADER_ROWS)).toBe(120); // a fresh block of 40
     expect(score(c)).toBe(0);
   });
@@ -970,11 +975,11 @@ describe('showcase: space-invaders', () => {
     }
     expect(cyanLeft()).toBe(false);
     let frames = 0;
-    while (cell(c, 13, 14) !== 7 && frames < 4000) {
+    while (cell(c, 13, 15) !== 7 && frames < 4000) {
       run(c, 10);
       frames += 10;
     }
-    expect(cell(c, 13, 14)).toBe(7); // G of GAME OVER
+    expect(cell(c, 13, 15)).toBe(7); // G of GAME OVER
     // The row left on the cannon's row is the green one: the block kept coming after its cyan
     // row was gone, and lost only when its lowest live row reached the cannon.
     const bottom = cells.filter((col) => cell(c, 22, col) === BLOCK);
