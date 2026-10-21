@@ -523,7 +523,6 @@ fn loadStage(): void {
   clrscr();
   genMap();
   puts(0, 1, "BLAST MAZE", COLOR_LIGHT_RED);
-  puts(0, 13, "SPACE BOMB", COLOR_LIGHT_GREY);
   puts(3, 32, "SCORE", COLOR_WHITE);
   puts(4, 32, "000", COLOR_YELLOW);
   puts(7, 32, "LIVES", COLOR_WHITE);
@@ -615,13 +614,8 @@ program @ 0x0810 {
   poke(0xD02B, COLOR_LIGHT_GREY);
   VIC2.spriteEnable = 0;
   clrscr();
-  puts(6, 14, "BLAST MAZE", COLOR_LIGHT_RED);
-  puts(9, 5, "BOMB THE BRICKS AND THE BUGS", COLOR_YELLOW);
-  puts(11, 7, "W A S D OR ARROWS MOVE", COLOR_LIGHT_GREY);
-  puts(12, 7, "SPACE PLANTS A BOMB", COLOR_LIGHT_GREY);
-  puts(14, 4, "R = MORE RANGE   B = MORE BOMBS", COLOR_CYAN);
-  puts(16, 6, "STAY OUT OF THE FLAMES", COLOR_LIGHT_RED);
-  puts(19, 14, "PRESS SPACE", COLOR_WHITE);
+  puts(9, 15, "BLAST MAZE", COLOR_LIGHT_RED);
+  puts(12, 14, "PRESS SPACE", COLOR_WHITE);
   waitForSpace();
   loop {
     stage = 0;
@@ -659,13 +653,13 @@ program @ 0x0810 {
     clrscr();
     if (won == 1) {
       VIC2.borderColor = COLOR_GREEN;
-      puts(10, 15, "YOU WIN", COLOR_YELLOW);
-      puts(12, 8, "THE MAZE IS CLEAR", COLOR_WHITE);
+      puts(10, 16, "YOU WIN", COLOR_YELLOW);
+      puts(12, 11, "THE MAZE IS CLEAR", COLOR_WHITE);
     } else {
       VIC2.borderColor = COLOR_RED;
       puts(10, 15, "GAME OVER", COLOR_YELLOW);
     }
-    puts(15, 11, "SPACE TO PLAY AGAIN", COLOR_WHITE);
+    puts(15, 10, "SPACE TO PLAY AGAIN", COLOR_WHITE);
     waitForSpace();
     VIC2.borderColor = COLOR_BLACK;
   }
