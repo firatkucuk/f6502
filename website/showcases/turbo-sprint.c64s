@@ -140,7 +140,6 @@ fn drawField(): void {
   puts(0, 1, "TURBO SPRINT", COLOR_CYAN);
   puts(0, 24, "PASS 000", COLOR_WHITE);
   puts(0, 33, "GEAR 1", COLOR_YELLOW);
-  puts(24, 3, "A D OR ARROWS STEER   SPACE START", COLOR_LIGHT_GREY);
 }
 
 fn showCars(): void {
@@ -259,18 +258,16 @@ program @ 0x0810 {
   VIC2.sprite1color = COLOR_YELLOW;
   VIC2.sprite2color = COLOR_LIGHT_RED;
   resetGame();
-  VIC2.spriteEnable = 1;      // keep traffic from covering the title instructions
+  VIC2.spriteEnable = 1;      // keep traffic from covering the title
   puts(7, 14, "TURBO SPRINT", COLOR_WHITE);
-  puts(10, 12, "DODGE THE TRAFFIC", COLOR_YELLOW);
   puts(12, 14, "PRESS SPACE", COLOR_WHITE);
-  puts(14, 12, "PASS CARS TO SCORE", COLOR_CYAN);
   waitForSpace();
   loop {
     resetGame();
     play();
     VIC2.borderColor = COLOR_RED;
     VIC2.sprite0color = COLOR_WHITE;
-    puts(10, 15, "CRASH", COLOR_YELLOW);
+    puts(10, 17, "CRASH", COLOR_YELLOW);
     puts(12, 13, "SPACE TO RETRY", COLOR_WHITE);
     waitForSpace();
   }

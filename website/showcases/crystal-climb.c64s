@@ -142,7 +142,6 @@ fn drawField(): void {
   puts(0, 1, "CRYSTAL CLIMB", COLOR_CYAN);
   puts(0, 18, "GEMS 0 OF 4", COLOR_YELLOW);
   puts(0, 32, "LIVES 3", COLOR_WHITE);
-  puts(24, 3, "A D MOVE   SPACE JUMP   GET ALL GEMS", COLOR_LIGHT_GREY);
   drawDoor(COLOR_BROWN);
 }
 
@@ -301,11 +300,12 @@ program @ 0x0810 {
   VIC2.sprite0color = COLOR_CYAN;
   VIC2.sprite1color = COLOR_LIGHT_RED;
   resetGame();
-  puts(12, 3, "CRYSTAL CLIMB", COLOR_WHITE);
-  puts(14, 2, "SPACE TO START", COLOR_WHITE);
+  // Centred on two empty rows: row 13 is above the middle ledge, row 17 below it.
+  puts(13, 13, "CRYSTAL CLIMB", COLOR_WHITE);
+  puts(17, 13, "SPACE TO START", COLOR_WHITE);
   waitForSpace();
-  puts(12, 3, "             ", COLOR_WHITE);
-  puts(14, 2, "              ", COLOR_WHITE);
+  puts(13, 13, "             ", COLOR_WHITE);
+  puts(17, 13, "              ", COLOR_WHITE);
   loop {
     play();
     if (won == 1) {
