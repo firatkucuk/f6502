@@ -1106,8 +1106,29 @@ describe('showcase: blast-maze', () => {
   it('compiles and shows the title screen', () => {
     expect(compile(source('blast-maze')).length).toBeGreaterThan(2);
     const c = boot(source('blast-maze'), 400);
-    expect(cell(c, 6, 14)).toBe(2); // B of BLAST MAZE
-    expect(cell(c, 19, 14)).toBe(16); // P of PRESS SPACE
+    expect(cell(c, 9, 15)).toBe(2); // B of BLAST MAZE: 10 characters centred start at column 15
+    expect(cell(c, 12, 14)).toBe(16); // P of PRESS SPACE
+    expect(cell(c, 11, 7)).toBe(0x20); // the how-to lines are on the showcase page now
+  });
+
+  it('shows the HUD title without key help, and centres GAME OVER after three deaths', () => {
+    const c = boot(source('blast-maze'), 400);
+    const tap = () => {
+      c.keyDown('SPACE');
+      for (let f = 0; f < 4; f++) c.runFrame();
+      c.keyUp('SPACE');
+    };
+    tap();
+    for (let f = 0; f < 40; f++) c.runFrame();
+    expect(cell(c, 0, 1)).toBe(2); // B of BLAST MAZE on the HUD line
+    expect(cell(c, 0, 13)).toBe(0x20); // no SPACE BOMB help next to it
+    for (let life = 0; life < 3; life++) {
+      tap(); // plant a bomb and stand in its blast
+      for (let f = 0; f < 300; f++) c.runFrame();
+    }
+    expect(cell(c, 10, 15)).toBe(7); // G of GAME OVER
+    expect(cell(c, 15, 10)).toBe(0x13); // S of SPACE TO PLAY AGAIN (19 characters: column 10)
+    expect(cell(c, 15, 28)).toBe(0x0e); // N at column 28
   });
 
   it('starts stage 1 and plants a bomb on SPACE', () => {
