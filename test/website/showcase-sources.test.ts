@@ -81,19 +81,17 @@ describe('showcase page', () => {
     const games = SHOWCASES.filter((s) => s.hint !== undefined && s.id !== 'music-box');
     expect(games.length).toBe(9);
     for (const s of games) {
-      expect(s.controls, s.id).toBeDefined();
-      expect(s.controls.length, s.id).toBeGreaterThan(0);
-      for (const row of s.controls) {
+      const controls = s.controls ?? [];
+      expect(controls.length, s.id).toBeGreaterThan(0);
+      for (const row of controls) {
         expect(row).toHaveLength(2);
         expect(row[0]).toMatch(/\S/);
         expect(row[1]).toMatch(/\S/);
       }
       // the hint says how the game starts; it is the only start prompt besides PRESS SPACE
       expect(s.hint, s.id).toMatch(/Press (SPACE|1)/);
-    }
-    for (const id of ['space-invaders', 'bot-hop', 'blast-maze', 'crystal-climb', 'turbo-sprint']) {
-      const s = SHOWCASES.find((x) => x.id === id);
-      expect(s.blurb + s.hint, id).not.toMatch(/A, D or the arrow keys/); // the keys moved to controls
+      // the key names live in the controls rows, not in the prose
+      expect(s.blurb + s.hint, s.id).not.toMatch(/A, D or the arrow keys/);
     }
   });
 

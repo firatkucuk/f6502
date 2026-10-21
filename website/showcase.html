@@ -27,6 +27,13 @@
                  font-size: 0.8rem; color: var(--text-muted); }
     .sc-hint { margin: 0.4rem 0 0; font-size: 0.82rem; color: var(--text-dim); }
     .sc-hint:empty { display: none; }
+    .sc-controls { display: grid; grid-template-columns: max-content minmax(0, 1fr);
+                   gap: 0.3rem 0.9rem; margin: 0.7rem 0 0; font-size: 0.82rem; color: var(--text-dim); }
+    .sc-controls:empty { display: none; }
+    .sc-controls dt, .sc-controls dd { margin: 0; }
+    .sc-controls kbd { font-family: var(--font-mono); font-size: 0.74rem; color: var(--text-muted);
+                       border: 1px solid var(--border-2); border-radius: 4px; padding: 0.05rem 0.4rem;
+                       white-space: nowrap; }
     .sc-source { position: relative; max-height: 560px; overflow: auto; }
     .sc-source pre { margin: 0; background: none; border: 0; padding: 0; }
     .sc-source code { font-family: var(--font-mono); font-size: 0.8rem; line-height: 1.6; color: #c0c4e0; }
@@ -95,6 +102,7 @@
       </div>
       <div id="showcase-status" class="sc-status" role="status" aria-live="polite">Starting the emulator…</div>
       <p id="showcase-hint" class="sc-hint"></p>
+      <dl id="showcase-controls" class="sc-controls" aria-label="Controls"></dl>
     </section>
 
     <section aria-label="Source">
