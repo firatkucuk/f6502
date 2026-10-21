@@ -18,6 +18,7 @@ const titleEl = document.getElementById('showcase-title');
 const blurbEl = document.getElementById('showcase-blurb');
 const fileEl = document.getElementById('showcase-file');
 const hintEl = document.getElementById('showcase-hint');
+const authorEl = document.getElementById('showcase-author');
 const controlsEl = document.getElementById('showcase-controls');
 const crtEl = document.getElementById('showcase-crt');
 const pauseBtn = document.getElementById('showcase-pause');
@@ -49,6 +50,12 @@ function showControls(controls) {
 async function run() {
   titleEl.textContent = showcase.title;
   blurbEl.textContent = showcase.blurb;
+  const link = document.createElement('a');
+  link.href = `https://github.com/${showcase.author}`;
+  link.target = '_blank';
+  link.rel = 'noopener';
+  link.textContent = `@${showcase.author}`;
+  authorEl.replaceChildren('by ', link);
   hintEl.textContent = showcase.hint ?? '';
   showControls(showcase.controls ?? []);
   fileEl.textContent = `${showcase.id}.c64s`;

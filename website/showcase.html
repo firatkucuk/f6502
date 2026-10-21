@@ -27,6 +27,8 @@
                  font-size: 0.8rem; color: var(--text-muted); }
     .sc-hint { margin: 0.4rem 0 0; font-size: 0.82rem; color: var(--text-dim); }
     .sc-hint:empty { display: none; }
+    .sc-author { margin: 0.4rem 0 0; font-size: 0.82rem; color: var(--text-dim); }
+    .sc-author a { color: var(--primary); }
     .sc-controls { display: grid; grid-template-columns: max-content minmax(0, 1fr);
                    gap: 0.3rem 0.9rem; margin: 0.7rem 0 0; font-size: 0.82rem; color: var(--text-dim); }
     .sc-controls:empty { display: none; }
@@ -74,6 +76,7 @@
     <a class="hero-badge" href="showcases.html">&larr; SHOWCASES</a>
     <h1 id="showcase-title">Loading…</h1>
     <p id="showcase-blurb"></p>
+    <p id="showcase-author" class="sc-author"></p>
   </header>
 
   <main class="sc">
