@@ -1030,8 +1030,25 @@ describe('showcase: bot-hop', () => {
   it('compiles and shows the title screen', () => {
     expect(compile(source('bot-hop')).length).toBeGreaterThan(2);
     const c = boot(source('bot-hop'), 400);
-    expect(cell(c, 8, 8)).toBe(2); // B of BOT HOP 2
-    expect(cell(c, 16, 6)).toBe(16); // P of PRESS SPACE
+    // The playfield is columns 0..28, so 9 characters centre at column 10 and 11 at column 9.
+    expect(cell(c, 9, 10)).toBe(2); // B of BOT HOP 2
+    expect(cell(c, 12, 9)).toBe(16); // P of PRESS SPACE
+    expect(cell(c, 11, 3)).toBe(0xa0); // the how-to lines are on the showcase page now
+    expect(cell(c, 1, 1)).toBe(0x20); // and so is the key help under the HUD title
+    expect(cell(c, 0, 1)).toBe(2); // B of BOT HOP
+  });
+
+  it('centres GAME OVER on the playfield when the lives run out', () => {
+    const c = boot(source('bot-hop'), 400);
+    c.keyDown('SPACE');
+    for (let f = 0; f < 5; f++) c.runFrame();
+    c.keyUp('SPACE');
+    c.keyDown('D'); // walking right into the bugs costs all three lives
+    for (let f = 0; f < 1500; f++) c.runFrame();
+    c.keyUp('D');
+    expect(cell(c, 10, 10)).toBe(7); // G of GAME OVER
+    expect(cell(c, 12, 5)).toBe(0x13); // S of SPACE TO PLAY AGAIN (19 characters: column 5)
+    expect(cell(c, 12, 23)).toBe(0x0e); // N at column 23, five columns from the HUD panel
   });
 
   it('starts level 1 with three lives and three coins on SPACE', () => {

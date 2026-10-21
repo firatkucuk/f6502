@@ -229,7 +229,6 @@ fn loadLevel(): void {
   drawPlatforms();
   drawDoor();
   puts(0, 1, "BOT HOP", COLOR_WHITE);
-  puts(1, 1, "A D MOVE SPACE JUMP F FIRE", COLOR_LIGHT_GREY);
   puts(3, 30, "SCORE", COLOR_WHITE);
   puts(4, 30, "000", COLOR_YELLOW);
   puts(7, 30, "LIVES", COLOR_WHITE);
@@ -506,7 +505,7 @@ fn finale(): void {
   plot(7, 20, COLOR_YELLOW);
   plot(6, 28, COLOR_RED);
   plot(7, 28, COLOR_YELLOW);
-  puts(9, 10, "THE BOT REACHES THE HALL", COLOR_WHITE);
+  puts(9, 8, "THE BOT REACHES THE HALL", COLOR_WHITE);
   poke(SPRITE_PTRS + 1, spritePtr(ROBESHAPE));
   poke(SPRITE_PTRS + 2, spritePtr(TRIMSHAPE));
   poke(SPRITE_PTRS + 3, spritePtr(FACESHAPE));
@@ -534,7 +533,7 @@ fn finale(): void {
     x = x + 2;
     VIC2.sprite0x = x;
   }
-  puts(11, 11, "XIE XIE, BRAVE BOT!", COLOR_YELLOW);
+  puts(11, 10, "XIE XIE, BRAVE BOT!", COLOR_YELLOW);
   puts(13, 10, "PRINCESS MEI IS SAFE", COLOR_LIGHT_GREEN);
   let t: u8 = 0;
   while (t < 200) {
@@ -564,11 +563,9 @@ program @ 0x0810 {
   initSprites();
   loadLevel();
   VIC2.spriteEnable = 1;
-  puts(8, 8, "BOT HOP 2", COLOR_WHITE);
-  puts(11, 3, "COLLECT 3 COINS THEN", COLOR_YELLOW);
-  puts(12, 3, "ENTER THE GREEN DOOR", COLOR_LIGHT_GREEN);
-  puts(14, 3, "STOMP BUGS OR PRESS F", COLOR_LIGHT_GREY);
-  puts(16, 6, "PRESS SPACE", COLOR_WHITE);
+  // Centred on the 29-column playfield (columns 0..28), left of the HUD panel.
+  puts(9, 10, "BOT HOP 2", COLOR_WHITE);
+  puts(12, 9, "PRESS SPACE", COLOR_WHITE);
   waitForSpace();
   loop {
     initSprites();
@@ -609,8 +606,8 @@ program @ 0x0810 {
       finale();
     } else {
       VIC2.borderColor = COLOR_RED;
-      puts(10, 8, "GAME OVER", COLOR_YELLOW);
-      puts(12, 4, "SPACE TO PLAY AGAIN", COLOR_WHITE);
+      puts(10, 10, "GAME OVER", COLOR_YELLOW);
+      puts(12, 5, "SPACE TO PLAY AGAIN", COLOR_WHITE);
       waitForSpace();
       VIC2.borderColor = COLOR_BLACK;
     }
