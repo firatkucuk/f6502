@@ -29,6 +29,6 @@ program @ 0x0810 {
     }
   }
 
-  puts(1, 14, "C64SCRIPT", COLOR_WHITE);
+  puts(1, 15, "C64SCRIPT", COLOR_WHITE);   // 9 characters centred: column (40 - 9) / 2
   loop {}
 }
