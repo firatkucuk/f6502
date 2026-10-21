@@ -47,15 +47,37 @@ function showControls(controls) {
   }
 }
 
+// The avatar covers a coloured initial, so the chip still looks right when github.com is blocked.
+function authorChip(author) {
+  const link = document.createElement('a');
+  link.className = 'author-chip';
+  link.href = `https://github.com/${author}`;
+  link.target = '_blank';
+  link.rel = 'noopener';
+  const avatar = document.createElement('span');
+  avatar.className = 'author-chip-avatar';
+  avatar.setAttribute('aria-hidden', 'true');
+  const img = document.createElement('img');
+  img.src = `https://github.com/${author}.png?size=48`;
+  img.alt = '';
+  img.width = 24;
+  img.height = 24;
+  img.addEventListener('error', () => img.remove());
+  avatar.append(author[0].toUpperCase(), img);
+  const by = document.createElement('span');
+  by.className = 'author-chip-by';
+  by.textContent = 'by';
+  const name = document.createElement('span');
+  name.className = 'author-chip-name';
+  name.textContent = `@${author}`;
+  link.append(avatar, by, ' ', name);
+  return link;
+}
+
 async function run() {
   titleEl.textContent = showcase.title;
   blurbEl.textContent = showcase.blurb;
-  const link = document.createElement('a');
-  link.href = `https://github.com/${showcase.author}`;
-  link.target = '_blank';
-  link.rel = 'noopener';
-  link.textContent = `@${showcase.author}`;
-  authorEl.replaceChildren('by ', link);
+  authorEl.replaceChildren(authorChip(showcase.author));
   hintEl.textContent = showcase.hint ?? '';
   showControls(showcase.controls ?? []);
   fileEl.textContent = `${showcase.id}.c64s`;
