@@ -18,6 +18,7 @@ const titleEl = document.getElementById('showcase-title');
 const blurbEl = document.getElementById('showcase-blurb');
 const fileEl = document.getElementById('showcase-file');
 const hintEl = document.getElementById('showcase-hint');
+const controlsEl = document.getElementById('showcase-controls');
 const crtEl = document.getElementById('showcase-crt');
 const pauseBtn = document.getElementById('showcase-pause');
 const rebootBtn = document.getElementById('showcase-reboot');
@@ -30,10 +31,26 @@ function showUnknown() {
   statusEl.textContent = '';
 }
 
+// The key list under the screen: one row per [keys, what they do] pair. The games draw no
+// control help themselves, so this is where a player learns the keys.
+function showControls(controls) {
+  controlsEl.replaceChildren();
+  for (const [keys, does] of controls) {
+    const dt = document.createElement('dt');
+    const kbd = document.createElement('kbd');
+    kbd.textContent = keys;
+    dt.append(kbd);
+    const dd = document.createElement('dd');
+    dd.textContent = does;
+    controlsEl.append(dt, dd);
+  }
+}
+
 async function run() {
   titleEl.textContent = showcase.title;
   blurbEl.textContent = showcase.blurb;
   hintEl.textContent = showcase.hint ?? '';
+  showControls(showcase.controls ?? []);
   fileEl.textContent = `${showcase.id}.c64s`;
   document.title = `${showcase.title} — f6502`;
 
