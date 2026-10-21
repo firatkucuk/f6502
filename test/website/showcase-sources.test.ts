@@ -1029,8 +1029,13 @@ describe('showcase: snake', () => {
   it('compiles and shows the title screen', () => {
     expect(compile(source('snake')).length).toBeGreaterThan(2);
     const c = boot(source('snake'), 400);
-    expect(cell(c, 8, 16)).toBe(0x13); // S of SNAKE
-    expect(cell(c, 18, 14)).toBe(0x10); // P of PRESS SPACE
+    expect(cell(c, 9, 17)).toBe(0x13); // S of SNAKE: 5 characters centred start at column 17
+    expect(cell(c, 15, 14)).toBe(0x10); // P of PRESS SPACE
+    expect(cell(c, 11, 8)).toBe(0x20); // the how-to-play lines live on the showcase page now
+    expect(cell(c, 0, 1)).toBe(0x13); // the HUD title starts one column in
+    expect(cell(c, 0, 9)).toBe(0x20); // no key help on the HUD line
+    expect(cell(c, 0, 38)).toBe(0x30); // SCORE 000 ends one column in from the right edge
+    expect(cell(c, 0, 30)).toBe(0x13); // S of SCORE
   });
 
   it('starts on SPACE and moves the head to the right', () => {
@@ -1041,6 +1046,17 @@ describe('showcase: snake', () => {
     for (let f = 0; f < 60; f++) c.runFrame();
     expect(c.peek(0x3080 + 2)).toBe(20); // starting head column
     expect(c.peek(0x3080 + 3)).toBe(21); // moved one cell right
+  });
+
+  it('hits the right wall when nobody steers, and centres GAME OVER', () => {
+    const c = boot(source('snake'), 400);
+    c.keyDown('SPACE');
+    for (let f = 0; f < 5; f++) c.runFrame();
+    c.keyUp('SPACE');
+    for (let f = 0; f < 700; f++) c.runFrame();
+    expect(cell(c, 10, 15)).toBe(7); // G of GAME OVER (9 characters: column 15)
+    expect(cell(c, 12, 10)).toBe(0x13); // S of SPACE TO PLAY AGAIN (19 characters: column 10)
+    expect(cell(c, 12, 28)).toBe(0x0e); // N, its last letter, at column 28
   });
 });
 
