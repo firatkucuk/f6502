@@ -86,9 +86,22 @@ describe('showcase page', () => {
       const author = byNuri.includes(s.id) ? 'nuricanozturk01' : 'firatkucuk';
       expect(s.author, s.id).toBe(author);
       const card = cards.split('<div class="showcase-card').find((c) => c.includes(`id=${s.id}"`));
-      expect(card, `${s.id} card`).toContain(`href="https://github.com/${author}"`);
+      expect(card, `${s.id} card`).toContain(
+        `<a class="author-chip" href="https://github.com/${author}"`,
+      );
+      expect(card, `${s.id} card`).toContain(`>@${author}</span>`);
+      // the avatar is decorative (the handle is next to it) and drops out when github.com is unreachable,
+      // leaving the coloured initial behind it
+      const avatar = card?.match(/<img src="https:\/\/github\.com\/[^"]+"[^>]*>/)?.[0] ?? '';
+      expect(avatar, `${s.id} avatar`).toContain(`src="https://github.com/${author}.png?size=40"`);
+      expect(avatar).toContain('alt=""');
+      expect(avatar).toContain('loading="lazy"');
+      expect(avatar).toContain('onerror="this.remove()"');
+      expect(card).toContain(`aria-hidden="true">${author.charAt(0).toUpperCase()}<img`);
     }
-    expect(script).toContain('github.com/${showcase.author}');
+    expect(script).toContain('github.com/${author}');
+    expect(script).toContain("link.className = 'author-chip'");
+    expect(script).toContain("addEventListener('error', () => img.remove())");
   });
 
   it('keeps no link inside another link on the cards', () => {
