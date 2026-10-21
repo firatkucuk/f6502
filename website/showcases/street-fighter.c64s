@@ -853,9 +853,9 @@ fn playRound(): void {
       drawSide(1);
     }
   }
-  puts(10, 15, "TIME OVER", COLOR_LIGHT_RED);
+  if (roundOver != 1) { puts(10, 15, "TIME OVER", COLOR_LIGHT_RED); }
   if (roundOver == 1) {
-    puts(10, 15, " K.O.     ", COLOR_LIGHT_RED);
+    puts(10, 18, "K.O.", COLOR_LIGHT_RED);
     sfxKo();
     inm[0] = 0;
     inm[1] = 0;
@@ -902,7 +902,7 @@ fn playMatch(): u8 {
 // ---------------------------------------------------------------- menus
 
 fn drawCards(cur: u8): void {
-  let col: u8 = 2;
+  let col: u8 = 5;   // KAI .. MEI span columns 5..34, centred on the screen
   for (let c: u8 = 0; c < 4; c++) {
     let hue: u8 = COLOR_DARK_GREY;
     if (c == cur) { hue = COLOR_YELLOW; }
@@ -928,14 +928,9 @@ fn pickFighter(w: u8): void {
   let held: u8 = 12;
   let done: u8 = 0;
   clrscr();
-  puts(1, 12, "CHOOSE YOUR FIGHTER", COLOR_WHITE);
-  puts(4, 15, "PLAYER  ", COLOR_LIGHT_GREY);
-  poke(screen(4, 22), w + 0x31);
-  if (w == 0) {
-    puts(18, 5, "A D = MOVE     F = PICK FIGHTER", COLOR_YELLOW);
-  } else {
-    puts(18, 5, "J L = MOVE     O = PICK FIGHTER", COLOR_CYAN);
-  }
+  puts(1, 10, "CHOOSE YOUR FIGHTER", COLOR_WHITE);
+  puts(4, 16, "PLAYER  ", COLOR_LIGHT_GREY);
+  poke(screen(4, 23), w + 0x31);
   drawCards(s);
   while (done == 0) {
     frame();
@@ -964,13 +959,9 @@ fn titleScreen(): void {
   VIC2.borderColor = COLOR_BLACK;
   clrscr();
   puts(5, 13, "STREET FIGHTER", COLOR_WHITE);
-  puts(8, 12, "PRESS 1 OR 2", COLOR_YELLOW);
-  puts(10, 12, "1  ONE PLAYER", COLOR_WHITE);
-  puts(12, 12, "2  TWO PLAYERS", COLOR_WHITE);
-  puts(16, 3, "P1  W A S D  F PUNCH  G KICK", COLOR_LIGHT_GREY);
-  puts(17, 3, "P2  I J K L  O PUNCH  P KICK", COLOR_LIGHT_GREY);
-  puts(19, 3, "HOLD BACK = BLOCK", COLOR_CYAN);
-  puts(20, 3, "DOWN FWD PUNCH = SPECIAL", COLOR_CYAN);
+  puts(8, 14, "PRESS 1 OR 2", COLOR_YELLOW);
+  puts(10, 13, "1  ONE PLAYER", COLOR_WHITE);   // the menu is one block, centred on its
+  puts(12, 13, "2  TWO PLAYERS", COLOR_WHITE);  // longer line
   let choice: u8 = 0;
   while (choice == 0) {
     frame();
@@ -1024,8 +1015,8 @@ program @ 0x0810 {
       }
     }
     if (twoP == 1) {
-      puts(10, 14, "PLAYER   WINS", COLOR_YELLOW);
-      poke(screen(10, 21), w + 0x31);
+      puts(10, 13, "PLAYER   WINS", COLOR_YELLOW);
+      poke(screen(10, 20), w + 0x31);
     } else {
       if (beaten == 3) {
         VIC2.borderColor = COLOR_YELLOW;
